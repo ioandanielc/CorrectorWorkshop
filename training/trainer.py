@@ -1,4 +1,6 @@
+import importlib
 import shutil
+import time
 import numpy as np
 import torch
 import torch.optim as optim
@@ -12,13 +14,14 @@ from utils.logger import create_run_dir, setup_logger
 from utils.visualizations import plot_comparison
 from data.data_generator import PoissonDiskDataset
 from data.data_processor import DataProcessor
-from training.loss import classic_loss, rd_weighted_loss
-from models.fixed_rd.model1 import CorrectorModel
+from training.loss import classic_loss, rd_weighted_loss, coverage_loss, hybrid_loss
 
 
 LOSS_FNS = {
     'classic_loss': classic_loss,
     'rd_weighted_loss': rd_weighted_loss,
+    'coverage_loss': coverage_loss,
+    'hybrid_loss': hybrid_loss,
 }
 
 
@@ -57,6 +60,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     np.save(run_dir / "validation_set.npy", val_noisy)
     logger.info("Validation set saved")
 
+    model_module = importlib.import_module(model_cfg['model_file'].replace('/', '.'))
+    CorrectorModel = model_module.CorrectorModel
     model = CorrectorModel(
         model_config=model_cfg,
         input_dim=dataset_cfg['dim'],
@@ -75,10 +80,18 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     rd = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
 
     loss_csv = open(run_dir / "loss.csv", "w")
-    loss_csv.write("iteration,loss,mean_violation,illegal_pair_pct,legal_cloud_pct,mean_nn_dist,displacement\n")
+    loss_csv.write(
+        "iteration,loss,lr,"
+        "mean_violation_pre,mean_violation,median_violation_pre,median_violation,"
+        "illegal_pair_pct_pre,illegal_pair_pct,"
+        "legal_cloud_pct_pre,legal_cloud_pct,"
+        "mean_nn_dist_pre,mean_nn_dist,median_nn_dist_pre,median_nn_dist,"
+        "displacement,displacement_rel_rd,displacement_median,displacement_rel_rd_median\n"
+    )
 
     logger.info(f"Starting training for {train_cfg['num_iterations']} iterations")
 
+    iter_timer = time.time()
     for iteration in range(1, train_cfg['num_iterations'] + 1):
         model.train()
 
@@ -87,7 +100,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
         noisy_processed, _, _ = processor.make_invariant(noisy)
         x = torch.tensor(noisy_processed, dtype=torch.float32).to(device)
 
-        displacement = model(x)
+        displacement = model(x, rd=rd) if getattr(model, 'uses_rd', False) else model(x)
         corrected = x + displacement
         loss_val = loss_fn(x, corrected, rd, **loss_cfg['params'])
 
@@ -98,32 +111,69 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
         if iteration % eval_cfg['log_interval'] == 0:
             with torch.no_grad():
-                pairwise = torch.cdist(corrected, corrected)
-                off_diag = ~torch.eye(pairwise.shape[1], dtype=torch.bool, device=device)
+                eye     = torch.eye(x.shape[1], dtype=torch.bool, device=device)
+                off_diag = ~eye
 
-                pair_dists = pairwise[:, off_diag]                          # (B, N*(N-1))
-                mean_violation = torch.relu(rd - pair_dists).mean().item()
-                illegal_pair_pct = (pair_dists < rd).float().mean().item() * 100
-                legal_cloud_pct = (~(pair_dists < rd).any(dim=-1)).float().mean().item() * 100
+                # ── Pre-correction (noisy input x) ─────────────────────────────
+                pw_pre        = torch.cdist(x, x)
+                pd_pre        = pw_pre[:, off_diag]                         # (B, N*(N-1))
+                viol_pre      = torch.relu(rd - pd_pre)
+                mean_viol_pre = viol_pre.mean().item()
+                med_viol_pre  = viol_pre.median().item()
+                ill_pct_pre   = (pd_pre < rd).float().mean().item() * 100
+                leg_pct_pre   = (~(pd_pre < rd).any(dim=-1)).float().mean().item() * 100
+                nn_pre        = pw_pre.masked_fill(eye.unsqueeze(0), float('inf')).min(dim=-1).values
+                mean_nn_pre   = nn_pre.mean().item()
+                med_nn_pre    = nn_pre.median().item()
 
-                eye = torch.eye(pairwise.shape[1], dtype=torch.bool, device=device)
-                nn_dist = pairwise.masked_fill(eye.unsqueeze(0), float('inf')).min(dim=-1).values
-                mean_nn_dist = nn_dist.mean().item()
+                # ── Post-correction ────────────────────────────────────────────
+                pw_post        = torch.cdist(corrected, corrected)
+                pd_post        = pw_post[:, off_diag]
+                viol_post      = torch.relu(rd - pd_post)
+                mean_violation = viol_post.mean().item()
+                med_violation  = viol_post.median().item()
+                illegal_pair_pct = (pd_post < rd).float().mean().item() * 100
+                legal_cloud_pct  = (~(pd_post < rd).any(dim=-1)).float().mean().item() * 100
+                nn_post        = pw_post.masked_fill(eye.unsqueeze(0), float('inf')).min(dim=-1).values
+                mean_nn_dist   = nn_post.mean().item()
+                med_nn_dist    = nn_post.median().item()
 
-                disp = displacement.norm(dim=-1).mean().item()
+                # ── Displacement ───────────────────────────────────────────────
+                disp_per_pt    = displacement.norm(dim=-1)                  # (B, N)
+                disp           = disp_per_pt.mean().item()
+                disp_med       = disp_per_pt.median().item()
+                disp_rel       = disp     / dataset_cfg['rd']
+                disp_rel_med   = disp_med / dataset_cfg['rd']
+
+            secs_per_iter = (time.time() - iter_timer) / eval_cfg['log_interval']
+            iter_timer = time.time()
+            current_lr = optimizer.param_groups[0]['lr']
 
             logger.info(
-                f"iter={iteration:6d}  [train batch, post-correction]\n"
-                f"  loss             = {loss_val.item():.6f}\n"
-                f"  mean_violation   = {mean_violation:.6f}  (avg relu(rd-dist) per pair; 0 = perfect)\n"
-                f"  illegal_pairs    = {illegal_pair_pct:.2f}%     (pairs closer than rd; 0% = perfect)\n"
-                f"  legal_clouds     = {legal_cloud_pct:.2f}%     (fully valid clouds; 100% = perfect)\n"
-                f"  mean_nn_dist     = {mean_nn_dist:.6f}  (nearest-neighbour dist; >= rd={dataset_cfg['rd']} = perfect)\n"
-                f"  displacement     = {disp:.6f}  (mean point displacement magnitude)"
+                f"iter={iteration:6d}  {secs_per_iter:.3f}s/iter  lr={current_lr:.2e}  "
+                f"loss={loss_val.item():.6f}\n"
+                f"  mean_violation   = {mean_viol_pre:.6f} -> {mean_violation:.6f}"
+                f"   (median: {med_viol_pre:.6f} -> {med_violation:.6f})"
+                f"   [0 = perfect]\n"
+                f"  illegal_pairs    = {ill_pct_pre:.2f}% -> {illegal_pair_pct:.2f}%"
+                f"   [0% = perfect]\n"
+                f"  legal_clouds     = {leg_pct_pre:.2f}% -> {legal_cloud_pct:.2f}%"
+                f"   [100% = perfect]\n"
+                f"  mean_nn_dist     = {mean_nn_pre:.6f} -> {mean_nn_dist:.6f}"
+                f"   (median: {med_nn_pre:.6f} -> {med_nn_dist:.6f})"
+                f"   [>= rd={dataset_cfg['rd']}]\n"
+                f"  displacement     = {disp:.6f} ({disp_rel:.3f}x rd)"
+                f"   (median: {disp_med:.6f} = {disp_rel_med:.3f}x rd)"
             )
             loss_csv.write(
-                f"{iteration},{loss_val.item():.6f},{mean_violation:.6f},"
-                f"{illegal_pair_pct:.2f},{legal_cloud_pct:.2f},{mean_nn_dist:.6f},{disp:.6f}\n"
+                f"{iteration},{loss_val.item():.6f},{current_lr:.2e},"
+                f"{mean_viol_pre:.6f},{mean_violation:.6f},"
+                f"{med_viol_pre:.6f},{med_violation:.6f},"
+                f"{ill_pct_pre:.2f},{illegal_pair_pct:.2f},"
+                f"{leg_pct_pre:.2f},{legal_cloud_pct:.2f},"
+                f"{mean_nn_pre:.6f},{mean_nn_dist:.6f},"
+                f"{med_nn_pre:.6f},{med_nn_dist:.6f},"
+                f"{disp:.6f},{disp_rel:.6f},{disp_med:.6f},{disp_rel_med:.6f}\n"
             )
             loss_csv.flush()
 
@@ -143,7 +193,8 @@ def _save_sample(model, processor, val_noisy, dataset_cfg, device, run_dir, iter
         batch = val_noisy[:num_visual_samples]
         processed, _, _ = processor.make_invariant(batch)
         x = torch.tensor(processed, dtype=torch.float32).to(device)
-        displacement = model(x)
+        rd_tensor = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
+        displacement = model(x, rd=rd_tensor) if getattr(model, 'uses_rd', False) else model(x)
         corrected = (x + displacement).cpu().numpy()
 
     plot_comparison(

@@ -1,0 +1,6 @@
+name: coverage_loss
+params:
+  lambda1: 500
+  lambda2: 1
+  lambda3: 10
+  coverage_target: 3.0

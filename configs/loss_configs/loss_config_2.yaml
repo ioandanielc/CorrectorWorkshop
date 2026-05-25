@@ -1,0 +1,18 @@
+name: coverage_loss
+
+params:
+  # Term 1 — quadratic illegality: relu(rd - dist)^2 per pair
+  # Larger than classic_loss lambda1 (was 30) to compensate for the squared
+  # magnitude being much smaller than the linear version.
+  lambda1: 500
+
+  # Term 2 — displacement regularisation: mean L2 from noisy input
+  lambda2: 1
+
+  # Term 3 — compactness: penalise nearest-neighbour > coverage_target * rd
+  # Prevents trivially legal but over-spaced solutions.
+  lambda3: 10
+
+  # Nearest-neighbour threshold as a multiple of rd.
+  # 3.0 = penalise only if nn_dist > 3 * rd (generous; catches pathological spreading).
+  coverage_target: 3.0

@@ -1,4 +1,5 @@
 architecture: self_attention_mlp
+model_file: models/fixed_rd/model1
 output: displacement  # options: displacement, corrected_positions
 
 hidden_dim: 128

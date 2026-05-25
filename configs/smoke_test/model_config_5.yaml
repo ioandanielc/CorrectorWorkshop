@@ -1,0 +1,7 @@
+architecture: self_attention_mlp
+model_file: models/fixed_rd/model5
+
+hidden_dim: 64
+num_attention_modules: 2
+norm: layer
+activation: ELU

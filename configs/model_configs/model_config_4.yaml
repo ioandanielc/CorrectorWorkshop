@@ -1,0 +1,10 @@
+architecture: self_attention_mlp
+model_file: models/fixed_rd/model4  # model1 without redundant centroid subtraction
+
+# Scaled for RTX 4080 SUPER (16 GB VRAM).
+# With N=50 points and dim=2, attention maps are tiny (50x50) so we can afford
+# a much wider network than the 128-dim baseline without approaching memory limits.
+hidden_dim: 512
+num_attention_modules: 8
+batch_norm: true
+activation: ReLU  # options: ELU, ReLU, LeakyReLU, GELU

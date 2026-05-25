@@ -1,0 +1,7 @@
+# 3-D dataset — matches the original thesis model 
+points_per_cloud: 50
+dim: 2
+rd: 0.05
+seed: 42
+noise_scale_min: 0.01
+noise_scale_max: 0.01
