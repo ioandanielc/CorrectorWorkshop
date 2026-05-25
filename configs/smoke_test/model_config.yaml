@@ -1,0 +1,7 @@
+architecture: self_attention_mlp
+output: displacement
+
+hidden_dim: 32
+num_attention_modules: 2
+batch_norm: true
+activation: ELU

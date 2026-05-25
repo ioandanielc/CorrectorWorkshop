@@ -1,0 +1,27 @@
+# -- Training --
+batch_size: 32
+num_iterations: 10000
+initialization: xavier_uniform  # options: xavier_uniform, xavier_normal, kaiming_uniform, kaiming_normal, random
+device: cuda  # options: cuda, mps, cpu
+
+# -- Optimizer --
+optimizer:
+  name: Adam  # options: Adam, AdamW, SGD, RMSprop
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+
+# -- LR Scheduler --
+lr_scheduler:
+  name: CosineAnnealingLR  # options: StepLR, CosineAnnealingLR, ExponentialLR, ReduceLROnPlateau
+  params:
+    T_max: 10000
+    eta_min: 1.0e-6
+
+# -- Eval --
+eval:
+  validation_size: 256
+  num_visual_samples: 6
+  log_interval: 100
+  sample_interval: 500

@@ -1,0 +1,17 @@
+.venv/
+.idea/
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.DS_Store
+
+# Training artifacts (large files / run outputs)
+training_artifacts/
+*.pt
+*.npy
