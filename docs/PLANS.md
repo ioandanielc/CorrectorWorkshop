@@ -49,12 +49,12 @@ Concatenate a small learned embedding of `x_i` to the violation-aggregated repre
 ### Step 10 — Final training run
 Train the winning configuration (best width/depth × self-feature decision) at the hardest feasible packedness. This is the production model.
 
+### Step 11 — Periodic boundary conditions
+Remove domain-boundary artefacts by switching to a toroidal domain: minimum-image-convention (MIC) wrapping in the model forward pass, post-displacement modulo, custom toroidal Poisson disk sampler. The physically correct setting for materials / MD applications where every point should be geometrically equivalent.
+
 ---
 
 ## Next — with colleague
-
-### Step 11 — Periodic boundary conditions
-Remove domain-boundary artefacts by switching to a toroidal domain: minimum-image-convention (MIC) wrapping in the model forward pass, post-displacement modulo, custom toroidal Poisson disk sampler. The physically correct setting for materials / MD applications where every point should be geometrically equivalent.
 
 ### Step 12 — Real data benchmark
 **The decisive test.** Synthetic experiments show the trade-off clearly — model6 wins on raw single-pass clearance, model9 wins on surgical precision and displacement conservation. On real packed data with no slack, model6's global push is expected to cascade new violations; model9's violation-weighted approach is the hypothesis to confirm.
@@ -66,3 +66,4 @@ Evaluation protocol (no ground truth clean cloud available):
 - **Zero-violation stability** — feed clean real clouds, model must output near-zero displacement
 
 Implementation: normalise real clouds to [0,1]², infer rd from 5th-percentile NN distance on clean examples, run all model checkpoints, produce comparison table and visualisations.
+
