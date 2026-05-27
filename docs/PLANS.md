@@ -6,6 +6,31 @@ A PyTorch framework for a **Poisson disk corrector**: given a 2D point cloud tha
 
 ---
 
+## Ablation map
+
+This project is a **forward ablation** (reverse of the usual): we start from the simplest possible baseline and add one component at a time, each motivated by a specific failure of the previous version. Every architectural decision has a controlled comparison.
+
+### Completed
+
+| Component | Baseline (without) | Why added | Outcome |
+|---|---|---|---|
+| Violation-weighted aggregation | model6: uniform sum over all N−1 neighbours | Uniform sum dilutes the single violating-neighbour signal across 49 legal ones; gradient is 50× too small on the pair that actually matters | model7: surgical corrections, median displacement = 0.000×rd, +48% efficiency; but single-pass clearance lower — exposes the multi-point cluster ceiling |
+| K=3 iterative unrolling | K=1 single pass (always compared side-by-side) | One pass cannot resolve 3+ mutually-violating points without moving legal neighbours; K passes compound precision | Violation reduction ×1→×3: 70.7% → 94.6%; K=3 advantage grows with packedness — at p=0.5 it halves residual violations vs K=1 |
+| Output clamping (tanh × max_disp) | model7/8: unbounded linear output | Packed training showed runaway displacements up to 3.4×rd, cascading new violations in early iterations | model9: max displacement bounded to 0.96×rd; packed training stable from the start |
+| 3-layer edge MLP | 2-layer (model7/8) | 2-layer MLP undersells the geometry of multi-point conflict clusters | Improved efficiency and packed-regime performance; marginal over model8 GELU but consistent |
+| Packed training data (p=0.5) | Sparse N=50 (p≈0.11) | Sparse clouds have slack — model never sees the failure mode it needs to solve | K=3 advantage 2× larger in packed regime; confirms that training distribution must match deployment density |
+
+### Planned
+
+| Component | Baseline (without) | Why testing | What we'll measure |
+|---|---|---|---|
+| hidden_dim ∈ {128, 256, 512} | 128 (current) | High packedness → more violating neighbours per point → richer aggregated signal that may need more capacity to interpret | Violation reduction and efficiency at hardest packedness; plateau identifies the capacity ceiling |
+| edge_depth ∈ {3, 4} | 3 (current) | Deeper MLP = higher-order reasoning about local cluster geometry; diminishing returns expected but one data point needed | Marginal gain vs compute; determines whether width or depth is the right scaling axis |
+| Self-feature (embed x_i) | No positional signal | Near-boundary points have legal neighbours on one side only — asymmetric geometry the model cannot currently distinguish from interior points | Improvement concentrated at boundary; if negligible after PBC (toroidal domain) then the feature is a boundary workaround, not a genuine gain |
+| Periodic boundary conditions | Hard domain boundary [0,1]² | Boundary artefacts conflate "near-boundary" with "genuinely hard geometry"; toroidal domain makes every point equivalent | Reduction in boundary-region errors; cleaner test of model capacity independent of domain edge effects |
+
+---
+
 ## Completed
 
 ### Step 1 — Baseline (model6, sparse)
