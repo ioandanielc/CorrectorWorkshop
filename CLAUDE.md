@@ -4,7 +4,7 @@
 
 A PyTorch training framework for a **Poisson disk corrector model**: given a noisy point cloud that violates the Poisson disk constraint (minimum distance `rd` between all point pairs), the model predicts per-point displacement vectors to produce a valid cloud.
 
-The model is a self-attention MLP over point sets (PointNet-style). Training data is generated online using `scipy.stats.qmc.PoissonDisk`.
+The active model is **model9** (violation-weighted edge network, output-clamped). Training data is generated online using `scipy.stats.qmc.PoissonDisk`.
 
 ---
 
@@ -13,29 +13,37 @@ The model is a self-attention MLP over point sets (PointNet-style). Training dat
 ```
 CorrectorWorkshop/
 ├── data/
-│   ├── data_generator.py     # PoissonDiskDataset — generates clean + noisy clouds
-│   └── data_processor.py     # DataProcessor — make_invariant (centers + normalises)
+│   ├── data_generator.py       # PoissonDiskDataset + PackedPoissonDiskDataset
+│   └── data_processor.py       # DataProcessor — make_invariant (centers + normalises)
 ├── models/
 │   └── fixed_rd/
-│       ├── model1.py         # Baseline: BatchNorm, concatenative skip
-│       ├── model2.py         # + additive residuals (NOT YET USED in trainer)
-│       └── model3.py         # + LayerNorm + tanh output (NOT YET USED in trainer)
+│       ├── model6.py           # ViolationAwareEdgeNetwork — uniform-push baseline
+│       ├── model7.py           # ViolationWeightedEdgeNetwork — violation-weighted agg
+│       ├── model9.py           # model7 + deeper edge MLP (3→3 layers) + tanh clamping (CURRENT)
+│       └── archive/            # model1–5 (superseded)
 ├── training/
-│   ├── trainer.py            # Main training loop
-│   └── loss.py               # classic_loss, rd_weighted_loss
+│   ├── trainer.py              # Main training loop (iterative unrolling, dual K=1/K=K eval)
+│   └── loss.py                 # hybrid_loss (linear viol penalty + displacement reg)
 ├── utils/
-│   ├── config.py             # load_*_config helpers (yaml → dict)
-│   ├── logger.py             # setup_logger, create_run_dir
-│   └── visualizations.py     # plot_poisson_disk, plot_comparison
+│   ├── config.py               # load_*_config helpers (yaml → dict)
+│   ├── logger.py               # setup_logger, create_run_dir
+│   └── visualizations.py       # plot_comparison, make_sample_gif
 ├── configs/
-│   ├── trainer_configs/      # train_config_1.yaml
-│   ├── dataset_configs/      # dataset_config_1.yaml
-│   ├── loss_configs/         # loss_config_1.yaml
-│   ├── model_configs/        # model_config_1/2/3.yaml
-│   └── smoke_test/           # low-cost configs for quick testing
-├── training_artifacts/       # auto-created per run (see below)
-├── PLANS.md                  # pending model architecture improvements
-└── CLAUDE.md                 # this file
+│   ├── trainer_configs/        # train_config_2 (K=3), _3 (K=5), _packed (packed regime)
+│   ├── dataset_configs/        # dataset_config_3 (50pts sparse), dataset_config_packed (N≈231, p=0.5)
+│   ├── loss_configs/           # loss_config_5 (principled sparse), loss_config_packed (N≈231)
+│   ├── model_configs/          # model_config_7, model_config_8, model_config_9 (current)
+│   ├── smoke_test/             # fast CPU configs for quick testing
+│   ├── sweep/                  # auto-generated per-run configs (sweep_packedness.py)
+│   └── archive/                # superseded configs
+├── analysis/                   # comparison outputs + scripts (comparison_report.md, *.png)
+├── docs/                       # architecture diagrams, PLANS.md
+├── logs/                       # stdout/stderr logs from background training runs
+├── training_artifacts/         # auto-created per run (see below)
+├── sweep_packedness.py         # sweeper — packedness in {0.75, 0.90}, restart-safe
+├── tracker.py                  # Streamlit live dashboard — run with: streamlit run tracker.py
+├── COMMANDS.md                 # reference commands for common tasks
+└── CLAUDE.md                   # this file
 ```
 
 ---
@@ -43,21 +51,26 @@ CorrectorWorkshop/
 ## Running
 
 **Smoke test (fast, CPU-friendly):**
-```bash
-.venv/bin/python -m training.trainer \
-  --train-config  configs/smoke_test/train_config.yaml \
-  --dataset-config configs/smoke_test/dataset_config.yaml \
-  --loss-config   configs/smoke_test/loss_config.yaml \
-  --model-config  configs/smoke_test/model_config.yaml
+```
+.venv\Scripts\python.exe -m training.trainer ^
+  --train-config   configs/smoke_test/train_config.yaml ^
+  --dataset-config configs/smoke_test/dataset_config.yaml ^
+  --loss-config    configs/smoke_test/loss_config.yaml ^
+  --model-config   configs/smoke_test/model_config_9.yaml
 ```
 
-**Full training run:**
-```bash
-.venv/bin/python -m training.trainer \
-  --train-config  configs/trainer_configs/train_config_1.yaml \
-  --dataset-config configs/dataset_configs/dataset_config_1.yaml \
-  --loss-config   configs/loss_configs/loss_config_1.yaml \
-  --model-config  configs/model_configs/model_config_1.yaml
+**Packed regime (model9, K=3, packedness=0.5):**
+```
+.venv\Scripts\python.exe -m training.trainer ^
+  --train-config   configs/trainer_configs/train_config_packed.yaml ^
+  --dataset-config configs/dataset_configs/dataset_config_packed.yaml ^
+  --loss-config    configs/loss_configs/loss_config_packed.yaml ^
+  --model-config   configs/model_configs/model_config_9.yaml
+```
+
+**Packedness sweep (0.75 → 0.90, restart-safe):**
+```
+.venv\Scripts\python.exe sweep_packedness.py
 ```
 
 ---
@@ -67,64 +80,96 @@ CorrectorWorkshop/
 Each run creates `training_artifacts/train_run_YYYY-MM-DD_HH-MM-SS/` containing:
 ```
 run_dir/
-├── configs/          # copies of all 4 configs used
-├── samples/          # sample_XXXXXX.png — side-by-side noisy vs corrected
-├── validation_set.npy  # fixed validation set (raw, pre-processing)
-├── loss.csv          # per-iteration metrics
-├── training.log      # full logger output
-└── model_final.pt    # saved model weights
+├── configs/              # copies of all 4 configs used
+├── samples/              # sample_XXXXXX.png — side-by-side noisy vs corrected
+├── validation_set.npy    # fixed validation set (raw, pre-processing)
+├── loss.csv              # per-iteration metrics
+├── training.log          # full logger output
+├── evolution.gif         # animated sample progression
+└── model_final.pt        # saved model weights
 ```
 
 ---
 
-## Metrics logged (all post-correction, on training batch)
+## Metrics logged
+
+Eval runs at every `log_interval`, reporting **K=1 (deploy)** and **K=unroll_steps (train)** columns side by side.
 
 | Metric | Meaning | Target |
 |---|---|---|
-| `loss` | weighted sum of illegality + displacement terms | decreasing |
-| `mean_violation` | avg `relu(rd - dist)` per pair | 0 |
-| `illegal_pairs` | % of point pairs closer than `rd` | 0% |
-| `legal_clouds` | % of clouds with zero violations | 100% |
-| `mean_nn_dist` | mean nearest-neighbour distance | ≥ rd |
-| `displacement` | mean L2 displacement magnitude | low |
+| `loss` | hybrid loss (linear viol penalty + displacement reg) | decreasing |
+| `mean_violation` | avg `relu(rd − dist)` per pair | → 0 |
+| `illegal_pairs %` | % of point pairs closer than `rd` | → 0% |
+| `viol_per_cloud` | mean count of unique illegal pairs per cloud | → 0 |
+| `viol_reduction %` | `(viol_pre − viol_post) / viol_pre × 100` | → 100% |
+| `mean_nn_dist` | mean nearest-neighbour distance | ≥ rd, not >> rd |
+| `displacement` | mean L2 displacement (in rd units) | low |
+| `correction_eff` | violation removed ÷ displacement | high |
 
 ---
 
-## Config structure
+## Config reference
 
-**train_config**: `batch_size`, `num_iterations`, `initialization`, `device`, `optimizer`, `lr_scheduler`, `eval` (validation_size, num_visual_samples, log_interval, sample_interval)
+**train_config**: `batch_size`, `num_iterations`, `initialization`, `device`, `unroll_steps` (K), `optimizer`, `lr_scheduler`, `eval`
 
-**dataset_config**: `dim`, `points_per_cloud`, `rd`, `seed`, `noise_scale_min`, `noise_scale_max`
+**dataset_config**: `type` (packed | standard), `dim`, `rd`, `packedness` OR `points_per_cloud`, `seed`, `noise_scale_min`, `noise_scale_max`
 
-**loss_config**: `name` (classic_loss / rd_weighted_loss), `params` (lambda1, lambda2, ...)
+**loss_config**: `name: hybrid_loss`, `params: {lambda1, lambda1_quad, lambda2}`
+- Principled: `lambda1 = 1/rd`, `lambda1_quad = 0`, `lambda2 = lambda1 / (N−1) / 10`
 
-**model_config**: `hidden_dim`, `num_attention_modules`, `batch_norm` or `norm`, `activation`, optionally `max_displacement`
+**model_config**: `architecture`, `model_file`, `hidden_dim`, `norm`, `activation`, `max_displacement` (model9 only)
+
+---
+
+## Model lineage
+
+| Model | Architecture | Key change | Status |
+|---|---|---|---|
+| model6 | uniform-push edge net | baseline | comparison only |
+| model7 | violation-weighted agg | surgical corrections | superseded |
+| model8 | model7 + GELU | activation swap | superseded |
+| model9 | model8 + deeper MLP + tanh clamp | 3-layer edge MLP, bounded output | **CURRENT** |
+
+---
+
+## Experiment history
+
+| Experiment | Config | Result |
+|---|---|---|
+| Sparse sparse (N=50, p≈0.11) | dataset_3 + loss_5 + train_2 | model9: 73.9% viol reduction ×1 |
+| Packed (N≈231, p=0.5, rd=0.05) | dataset_packed + loss_packed + train_packed | model9: 78.7% viol reduction ×1, 96% ×3 |
+| Model comparison | analysis/measure_comparison.py | model9 best efficiency (0.0288); model6 best raw clearance |
 
 ---
 
 ## Current state
 
-- Trainer is working and smoke-tested on CPU
-- model1 is used in the trainer — model2 and model3 exist but are NOT wired up yet
-- The model import in `trainer.py` is hardcoded to `models.fixed_rd.model1`
-- NumPy 2.x / torch compiled-with-NumPy-1.x warning appears on startup — non-fatal, just a warning
-
----
-
-## Next steps (in order)
-
-1. **Switch trainer to model2** — change import in `trainer.py`, run a proper training on GPU
-2. **Switch trainer to model3** — change import, add `max_displacement` to model3 smoke config
-3. **Evaluate** — compare loss curves and sample images across model1/2/3 runs
-4. See `PLANS.md` for further architecture improvements beyond model3
+- **model9** is active (violation-weighted, 3-layer edge MLP, tanh-clamped output)
+- Packed regime benchmarked at packedness=0.5 (N≈231)
+- **Running:** packedness sweep 0.75 → 0.90 to find the capacity limit of model9
+- Next after sweep: width/depth capacity grid at the breaking-point packedness
 
 ---
 
 ## Key design decisions
 
-- Data is generated **online** (each batch is a fresh sample) — no pre-built dataset file
-- Validation set is generated once at run start and saved as `.npy` — always the same clouds
-- First 6 clouds of the validation set are used for visualisation images
-- `DataProcessor.make_invariant` centers and normalises the cloud — do NOT also do this in the model forward pass (model1 has redundant centroid subtraction; model2/3 removed it)
-- Loss operates on the **processed** (invariant) space, not the original coordinates
-- Device is set in `train_config` (e.g. `device: cpu` / `device: cuda` / `device: mps`)
+- Data generated **online** (each batch is a fresh sample) — no dataset file
+- `PackedPoissonDiskDataset` parameterised by `packedness` (fraction of triangular-lattice max), rd-independent
+- Validation set generated once at run start, saved as `.npy` — fixed across training
+- `DataProcessor.make_invariant` centers and normalises — do NOT repeat in the model
+- Loss operates in **processed (invariant) space**, not original coordinates
+- Intended deployment: **single-pass (K=1)** — unrolling is a training trick only
+- `lambda2 = lambda1 / (N−1) / 10`: scales with N so violation penalty always dominates displacement reg by 10×
+
+---
+
+## Next steps
+
+1. ✅ model7 — violation-weighted edge network
+2. ✅ Iterative unrolling (K=3 training, K=1 eval)
+3. ✅ model9 — deeper MLP + output clamping
+4. ✅ Packed regime (N≈231, packedness=0.5)
+5. ✅ Model comparison (model6 vs 7 vs 8 vs 9, sparse + packed)
+6. ▶ **Packedness sweep** — 0.75 → 0.90 to find where model9 breaks
+7. **Width/depth grid** — hidden_dim ∈ {128, 256, 512} × depth ∈ {3, 4} at the hard packedness
+8. **Periodic boundary conditions** — toroidal domain (MIC wrapping)

@@ -1,0 +1,709 @@
+2026-05-26 12:55:36 +00:00:00 --:--:-- [INFO] Run directory: training_artifacts\train_run_2026-05-26_12-55-36
+2026-05-26 12:55:36 +00:00:00 --:--:-- [INFO] Configs copied to run directory
+2026-05-26 12:55:36 +00:00:00 --:--:-- [INFO] Using device: cuda
+2026-05-26 12:55:36 +00:00:00 --:--:-- [INFO] Generating validation set (256 clouds)...
+2026-05-26 12:55:38 +00:00:01 --:--:-- [INFO] Validation set saved
+2026-05-26 12:55:38 +00:00:01 --:--:-- [INFO] Model built: 34,690 parameters
+2026-05-26 12:55:38 +00:00:02 --:--:-- [INFO] Starting training for 10000 iterations
+2026-05-26 12:56:02 +00:00:25 -00:38:28 [INFO] iter=   100  0.233s/iter  lr=1.00e-03  loss=0.012272
+  mean_violation   = 0.000128 -> 0.000001   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.02%   [0% = perfect]
+  legal_clouds     = 0.00% -> 81.25%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.066380   (median: 0.051675 -> 0.064740)   [>= rd=0.05]
+  displacement     = 0.115703 (2.314x rd)   (median: 0.117153 = 2.343x rd)
+  correction_eff   = 0.0011  (2.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:56:26 +00:00:49 -00:39:24 [INFO] iter=   200  0.241s/iter  lr=9.99e-04  loss=0.007891
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.066823   (median: 0.051675 -> 0.065283)   [>= rd=0.05]
+  displacement     = 0.076548 (1.531x rd)   (median: 0.077128 = 1.543x rd)
+  correction_eff   = 0.0017  (4.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:56:50 +00:01:14 -00:39:08 [INFO] iter=   300  0.242s/iter  lr=9.98e-04  loss=0.006036
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.01%   [0% = perfect]
+  legal_clouds     = 0.00% -> 93.75%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.065581   (median: 0.051675 -> 0.064410)   [>= rd=0.05]
+  displacement     = 0.058432 (1.169x rd)   (median: 0.057335 = 1.147x rd)
+  correction_eff   = 0.0022  (5.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:57:14 +00:01:37 -00:37:58 [INFO] iter=   400  0.237s/iter  lr=9.96e-04  loss=0.005091
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.065109   (median: 0.051675 -> 0.063814)   [>= rd=0.05]
+  displacement     = 0.048890 (0.978x rd)   (median: 0.047644 = 0.953x rd)
+  correction_eff   = 0.0026  (6.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:57:38 +00:02:01 -00:37:35 [INFO] iter=   500  0.237s/iter  lr=9.94e-04  loss=0.004594
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.064729   (median: 0.051675 -> 0.063850)   [>= rd=0.05]
+  displacement     = 0.043927 (0.879x rd)   (median: 0.042957 = 0.859x rd)
+  correction_eff   = 0.0029  (7.2% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:58:03 +00:02:26 -00:39:29 [INFO] iter=   600  0.252s/iter  lr=9.91e-04  loss=0.004208
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.064537   (median: 0.051675 -> 0.063524)   [>= rd=0.05]
+  displacement     = 0.040057 (0.801x rd)   (median: 0.039116 = 0.782x rd)
+  correction_eff   = 0.0032  (7.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:58:26 +00:02:50 -00:36:20 [INFO] iter=   700  0.235s/iter  lr=9.88e-04  loss=0.004055
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.064178   (median: 0.051675 -> 0.063057)   [>= rd=0.05]
+  displacement     = 0.038381 (0.768x rd)   (median: 0.037227 = 0.745x rd)
+  correction_eff   = 0.0033  (8.2% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:58:50 +00:03:14 -00:36:57 [INFO] iter=   800  0.241s/iter  lr=9.84e-04  loss=0.004940
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.065589   (median: 0.051675 -> 0.064177)   [>= rd=0.05]
+  displacement     = 0.047577 (0.952x rd)   (median: 0.046065 = 0.921x rd)
+  correction_eff   = 0.0027  (6.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:59:14 +00:03:38 -00:36:26 [INFO] iter=   900  0.240s/iter  lr=9.80e-04  loss=0.004737
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062874   (median: 0.051675 -> 0.061786)   [>= rd=0.05]
+  displacement     = 0.044943 (0.899x rd)   (median: 0.044709 = 0.894x rd)
+  correction_eff   = 0.0029  (7.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 12:59:38 +00:04:02 -00:36:05 [INFO] iter=  1000  0.241s/iter  lr=9.76e-04  loss=0.003769
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063250   (median: 0.051675 -> 0.062178)   [>= rd=0.05]
+  displacement     = 0.035330 (0.707x rd)   (median: 0.034773 = 0.695x rd)
+  correction_eff   = 0.0036  (8.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:00:04 +00:04:28 -00:38:05 [INFO] iter=  1100  0.257s/iter  lr=9.70e-04  loss=0.002870
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063354   (median: 0.051675 -> 0.062183)   [>= rd=0.05]
+  displacement     = 0.026295 (0.526x rd)   (median: 0.025497 = 0.510x rd)
+  correction_eff   = 0.0049  (11.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:00:28 +00:04:52 -00:35:25 [INFO] iter=  1200  0.242s/iter  lr=9.65e-04  loss=0.003317
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062613   (median: 0.051675 -> 0.061551)   [>= rd=0.05]
+  displacement     = 0.030538 (0.611x rd)   (median: 0.029968 = 0.599x rd)
+  correction_eff   = 0.0042  (10.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:00:52 +00:05:16 -00:34:59 [INFO] iter=  1300  0.241s/iter  lr=9.59e-04  loss=0.002676
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063133   (median: 0.051675 -> 0.062061)   [>= rd=0.05]
+  displacement     = 0.023945 (0.479x rd)   (median: 0.023487 = 0.470x rd)
+  correction_eff   = 0.0054  (13.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:01:16 +00:05:40 -00:34:26 [INFO] iter=  1400  0.240s/iter  lr=9.52e-04  loss=0.002102
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063611   (median: 0.051675 -> 0.062531)   [>= rd=0.05]
+  displacement     = 0.018462 (0.369x rd)   (median: 0.017679 = 0.354x rd)
+  correction_eff   = 0.0069  (17.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:01:41 +00:06:04 -00:34:09 [INFO] iter=  1500  0.241s/iter  lr=9.46e-04  loss=0.002782
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062907   (median: 0.051675 -> 0.061722)   [>= rd=0.05]
+  displacement     = 0.025112 (0.502x rd)   (median: 0.024720 = 0.494x rd)
+  correction_eff   = 0.0051  (12.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:02:05 +00:06:29 -00:34:53 [INFO] iter=  1600  0.249s/iter  lr=9.38e-04  loss=0.003097
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063684   (median: 0.051675 -> 0.062721)   [>= rd=0.05]
+  displacement     = 0.028296 (0.566x rd)   (median: 0.027848 = 0.557x rd)
+  correction_eff   = 0.0045  (11.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:02:30 +00:06:53 -00:33:23 [INFO] iter=  1700  0.241s/iter  lr=9.30e-04  loss=0.004442
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063929   (median: 0.051675 -> 0.063001)   [>= rd=0.05]
+  displacement     = 0.042123 (0.842x rd)   (median: 0.042346 = 0.847x rd)
+  correction_eff   = 0.0030  (7.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:02:54 +00:07:17 -00:32:51 [INFO] iter=  1800  0.240s/iter  lr=9.22e-04  loss=0.004289
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.064735   (median: 0.051675 -> 0.063634)   [>= rd=0.05]
+  displacement     = 0.040519 (0.810x rd)   (median: 0.040934 = 0.819x rd)
+  correction_eff   = 0.0032  (7.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:03:18 +00:07:41 -00:32:14 [INFO] iter=  1900  0.239s/iter  lr=9.14e-04  loss=0.003916
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.064609   (median: 0.051675 -> 0.063430)   [>= rd=0.05]
+  displacement     = 0.036721 (0.734x rd)   (median: 0.036885 = 0.738x rd)
+  correction_eff   = 0.0035  (8.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:03:41 +00:08:05 -00:31:50 [INFO] iter=  2000  0.239s/iter  lr=9.05e-04  loss=0.003371
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063839   (median: 0.051675 -> 0.062851)   [>= rd=0.05]
+  displacement     = 0.031010 (0.620x rd)   (median: 0.030621 = 0.612x rd)
+  correction_eff   = 0.0041  (10.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:04:07 +00:08:30 -00:33:08 [INFO] iter=  2100  0.252s/iter  lr=8.95e-04  loss=0.003083
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063978   (median: 0.051675 -> 0.063081)   [>= rd=0.05]
+  displacement     = 0.028229 (0.565x rd)   (median: 0.027808 = 0.556x rd)
+  correction_eff   = 0.0045  (11.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:04:31 +00:08:54 -00:31:22 [INFO] iter=  2200  0.241s/iter  lr=8.85e-04  loss=0.002927
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063738   (median: 0.051675 -> 0.062786)   [>= rd=0.05]
+  displacement     = 0.026571 (0.531x rd)   (median: 0.026157 = 0.523x rd)
+  correction_eff   = 0.0048  (11.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:04:55 +00:09:18 -00:30:54 [INFO] iter=  2300  0.241s/iter  lr=8.75e-04  loss=0.002722
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063491   (median: 0.051675 -> 0.062507)   [>= rd=0.05]
+  displacement     = 0.024431 (0.489x rd)   (median: 0.023841 = 0.477x rd)
+  correction_eff   = 0.0052  (12.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:05:19 +00:09:42 -00:30:26 [INFO] iter=  2400  0.240s/iter  lr=8.65e-04  loss=0.002702
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063361   (median: 0.051675 -> 0.062265)   [>= rd=0.05]
+  displacement     = 0.024214 (0.484x rd)   (median: 0.023699 = 0.474x rd)
+  correction_eff   = 0.0053  (13.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:05:43 +00:10:06 -00:30:08 [INFO] iter=  2500  0.241s/iter  lr=8.54e-04  loss=0.002614
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063257   (median: 0.051675 -> 0.062216)   [>= rd=0.05]
+  displacement     = 0.023281 (0.466x rd)   (median: 0.022734 = 0.455x rd)
+  correction_eff   = 0.0055  (13.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:06:08 +00:10:31 -00:30:44 [INFO] iter=  2600  0.249s/iter  lr=8.42e-04  loss=0.002629
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063200   (median: 0.051675 -> 0.062189)   [>= rd=0.05]
+  displacement     = 0.023389 (0.468x rd)   (median: 0.022703 = 0.454x rd)
+  correction_eff   = 0.0055  (13.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:06:32 +00:10:55 -00:29:12 [INFO] iter=  2700  0.240s/iter  lr=8.31e-04  loss=0.002441
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.063057   (median: 0.051675 -> 0.062028)   [>= rd=0.05]
+  displacement     = 0.021475 (0.429x rd)   (median: 0.020658 = 0.413x rd)
+  correction_eff   = 0.0060  (14.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:06:56 +00:11:19 -00:28:51 [INFO] iter=  2800  0.240s/iter  lr=8.19e-04  loss=0.002437
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062904   (median: 0.051675 -> 0.061848)   [>= rd=0.05]
+  displacement     = 0.021366 (0.427x rd)   (median: 0.020496 = 0.410x rd)
+  correction_eff   = 0.0060  (14.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:07:20 +00:11:43 -00:28:24 [INFO] iter=  2900  0.240s/iter  lr=8.07e-04  loss=0.002397
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062748   (median: 0.051675 -> 0.061787)   [>= rd=0.05]
+  displacement     = 0.020882 (0.418x rd)   (median: 0.020012 = 0.400x rd)
+  correction_eff   = 0.0061  (15.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:07:44 +00:12:07 -00:28:05 [INFO] iter=  3000  0.241s/iter  lr=7.94e-04  loss=0.002221
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062926   (median: 0.051675 -> 0.061817)   [>= rd=0.05]
+  displacement     = 0.019177 (0.384x rd)   (median: 0.018613 = 0.372x rd)
+  correction_eff   = 0.0067  (16.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:08:09 +00:12:32 -00:28:48 [INFO] iter=  3100  0.251s/iter  lr=7.81e-04  loss=0.002259
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.01%   [0% = perfect]
+  legal_clouds     = 0.00% -> 93.75%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062748   (median: 0.051675 -> 0.061715)   [>= rd=0.05]
+  displacement     = 0.019504 (0.390x rd)   (median: 0.018920 = 0.378x rd)
+  correction_eff   = 0.0066  (16.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:08:33 +00:12:56 -00:27:11 [INFO] iter=  3200  0.240s/iter  lr=7.68e-04  loss=0.002174
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.01%   [0% = perfect]
+  legal_clouds     = 0.00% -> 93.75%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062645   (median: 0.051675 -> 0.061678)   [>= rd=0.05]
+  displacement     = 0.018621 (0.372x rd)   (median: 0.017976 = 0.360x rd)
+  correction_eff   = 0.0069  (16.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:08:57 +00:13:20 -00:26:44 [INFO] iter=  3300  0.239s/iter  lr=7.55e-04  loss=0.002095
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062574   (median: 0.051675 -> 0.061611)   [>= rd=0.05]
+  displacement     = 0.017819 (0.356x rd)   (median: 0.017181 = 0.344x rd)
+  correction_eff   = 0.0072  (17.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:09:21 +00:13:44 -00:26:17 [INFO] iter=  3400  0.239s/iter  lr=7.41e-04  loss=0.002035
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062453   (median: 0.051675 -> 0.061435)   [>= rd=0.05]
+  displacement     = 0.017183 (0.344x rd)   (median: 0.016584 = 0.332x rd)
+  correction_eff   = 0.0075  (18.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:09:45 +00:14:08 -00:25:56 [INFO] iter=  3500  0.240s/iter  lr=7.27e-04  loss=0.001990
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062404   (median: 0.051675 -> 0.061375)   [>= rd=0.05]
+  displacement     = 0.016729 (0.335x rd)   (median: 0.016111 = 0.322x rd)
+  correction_eff   = 0.0077  (18.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:10:10 +00:14:33 -00:26:42 [INFO] iter=  3600  0.250s/iter  lr=7.13e-04  loss=0.001946
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062346   (median: 0.051675 -> 0.061348)   [>= rd=0.05]
+  displacement     = 0.016302 (0.326x rd)   (median: 0.015658 = 0.313x rd)
+  correction_eff   = 0.0079  (19.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:10:34 +00:14:57 -00:25:19 [INFO] iter=  3700  0.241s/iter  lr=6.99e-04  loss=0.001926
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062241   (median: 0.051675 -> 0.061247)   [>= rd=0.05]
+  displacement     = 0.016067 (0.321x rd)   (median: 0.015372 = 0.307x rd)
+  correction_eff   = 0.0080  (19.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:10:58 +00:15:21 -00:24:46 [INFO] iter=  3800  0.240s/iter  lr=6.84e-04  loss=0.001955
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062177   (median: 0.051675 -> 0.061127)   [>= rd=0.05]
+  displacement     = 0.016304 (0.326x rd)   (median: 0.015551 = 0.311x rd)
+  correction_eff   = 0.0079  (19.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:11:22 +00:15:45 -00:24:24 [INFO] iter=  3900  0.240s/iter  lr=6.70e-04  loss=0.001664
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.01%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062023   (median: 0.051675 -> 0.060913)   [>= rd=0.05]
+  displacement     = 0.013534 (0.271x rd)   (median: 0.012421 = 0.248x rd)
+  correction_eff   = 0.0095  (23.2% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:11:46 +00:16:09 -00:24:04 [INFO] iter=  4000  0.241s/iter  lr=6.55e-04  loss=0.001670
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062100   (median: 0.051675 -> 0.061012)   [>= rd=0.05]
+  displacement     = 0.013624 (0.272x rd)   (median: 0.012474 = 0.249x rd)
+  correction_eff   = 0.0094  (23.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:12:11 +00:16:35 -00:24:42 [INFO] iter=  4100  0.251s/iter  lr=6.40e-04  loss=0.001943
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062068   (median: 0.051675 -> 0.061021)   [>= rd=0.05]
+  displacement     = 0.016103 (0.322x rd)   (median: 0.015226 = 0.305x rd)
+  correction_eff   = 0.0080  (19.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:12:36 +00:16:59 -00:23:28 [INFO] iter=  4200  0.243s/iter  lr=6.25e-04  loss=0.001880
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061936   (median: 0.051675 -> 0.060855)   [>= rd=0.05]
+  displacement     = 0.015442 (0.309x rd)   (median: 0.014621 = 0.292x rd)
+  correction_eff   = 0.0083  (20.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:13:00 +00:17:23 -00:22:55 [INFO] iter=  4300  0.241s/iter  lr=6.09e-04  loss=0.001865
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062087   (median: 0.051675 -> 0.061078)   [>= rd=0.05]
+  displacement     = 0.015428 (0.309x rd)   (median: 0.014700 = 0.294x rd)
+  correction_eff   = 0.0083  (20.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:13:24 +00:17:47 -00:22:29 [INFO] iter=  4400  0.241s/iter  lr=5.94e-04  loss=0.001800
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061954   (median: 0.051675 -> 0.060969)   [>= rd=0.05]
+  displacement     = 0.014756 (0.295x rd)   (median: 0.013935 = 0.279x rd)
+  correction_eff   = 0.0087  (21.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:13:48 +00:18:11 -00:22:03 [INFO] iter=  4500  0.241s/iter  lr=5.79e-04  loss=0.001761
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061892   (median: 0.051675 -> 0.060910)   [>= rd=0.05]
+  displacement     = 0.014362 (0.287x rd)   (median: 0.013505 = 0.270x rd)
+  correction_eff   = 0.0089  (21.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:14:14 +00:18:37 -00:23:33 [INFO] iter=  4600  0.262s/iter  lr=5.63e-04  loss=0.001720
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061917   (median: 0.051675 -> 0.060881)   [>= rd=0.05]
+  displacement     = 0.014062 (0.281x rd)   (median: 0.013118 = 0.262x rd)
+  correction_eff   = 0.0091  (22.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:14:38 +00:19:01 -00:21:17 [INFO] iter=  4700  0.241s/iter  lr=5.48e-04  loss=0.001764
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061721   (median: 0.051675 -> 0.060759)   [>= rd=0.05]
+  displacement     = 0.014364 (0.287x rd)   (median: 0.013568 = 0.271x rd)
+  correction_eff   = 0.0089  (21.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:15:02 +00:19:25 -00:20:43 [INFO] iter=  4800  0.239s/iter  lr=5.32e-04  loss=0.001718
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061913   (median: 0.051675 -> 0.060837)   [>= rd=0.05]
+  displacement     = 0.014041 (0.281x rd)   (median: 0.012917 = 0.258x rd)
+  correction_eff   = 0.0091  (22.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:15:26 +00:19:49 -00:20:19 [INFO] iter=  4900  0.239s/iter  lr=5.16e-04  loss=0.001708
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061794   (median: 0.051675 -> 0.060797)   [>= rd=0.05]
+  displacement     = 0.013971 (0.279x rd)   (median: 0.012874 = 0.257x rd)
+  correction_eff   = 0.0092  (22.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:15:50 +00:20:13 -00:19:59 [INFO] iter=  5000  0.240s/iter  lr=5.01e-04  loss=0.001667
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061658   (median: 0.051675 -> 0.060631)   [>= rd=0.05]
+  displacement     = 0.013603 (0.272x rd)   (median: 0.012497 = 0.250x rd)
+  correction_eff   = 0.0094  (23.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:16:15 +00:20:39 -00:20:47 [INFO] iter=  5100  0.255s/iter  lr=4.85e-04  loss=0.001637
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061631   (median: 0.051675 -> 0.060595)   [>= rd=0.05]
+  displacement     = 0.012991 (0.260x rd)   (median: 0.011979 = 0.240x rd)
+  correction_eff   = 0.0099  (24.2% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:16:40 +00:21:03 -00:19:22 [INFO] iter=  5200  0.242s/iter  lr=4.69e-04  loss=0.001467
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.062093   (median: 0.051675 -> 0.060959)   [>= rd=0.05]
+  displacement     = 0.011761 (0.235x rd)   (median: 0.010544 = 0.211x rd)
+  correction_eff   = 0.0109  (26.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:17:04 +00:21:27 -00:18:50 [INFO] iter=  5300  0.241s/iter  lr=4.53e-04  loss=0.001635
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061582   (median: 0.051675 -> 0.060541)   [>= rd=0.05]
+  displacement     = 0.013158 (0.263x rd)   (median: 0.012001 = 0.240x rd)
+  correction_eff   = 0.0097  (23.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:17:28 +00:21:51 -00:18:25 [INFO] iter=  5400  0.240s/iter  lr=4.38e-04  loss=0.001590
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061597   (median: 0.051675 -> 0.060505)   [>= rd=0.05]
+  displacement     = 0.012719 (0.254x rd)   (median: 0.011519 = 0.230x rd)
+  correction_eff   = 0.0101  (24.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:17:52 +00:22:15 -00:18:06 [INFO] iter=  5500  0.242s/iter  lr=4.22e-04  loss=0.001531
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061493   (median: 0.051675 -> 0.060361)   [>= rd=0.05]
+  displacement     = 0.012213 (0.244x rd)   (median: 0.010983 = 0.220x rd)
+  correction_eff   = 0.0105  (25.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:18:17 +00:22:40 -00:18:08 [INFO] iter=  5600  0.247s/iter  lr=4.07e-04  loss=0.001563
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061441   (median: 0.051675 -> 0.060302)   [>= rd=0.05]
+  displacement     = 0.012253 (0.245x rd)   (median: 0.011162 = 0.223x rd)
+  correction_eff   = 0.0105  (25.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:18:41 +00:23:04 -00:17:10 [INFO] iter=  5700  0.240s/iter  lr=3.92e-04  loss=0.001551
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061369   (median: 0.051675 -> 0.060228)   [>= rd=0.05]
+  displacement     = 0.012157 (0.243x rd)   (median: 0.011076 = 0.222x rd)
+  correction_eff   = 0.0105  (25.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:19:04 +00:23:28 -00:16:43 [INFO] iter=  5800  0.239s/iter  lr=3.76e-04  loss=0.001492
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061267   (median: 0.051675 -> 0.060130)   [>= rd=0.05]
+  displacement     = 0.011485 (0.230x rd)   (median: 0.010362 = 0.207x rd)
+  correction_eff   = 0.0112  (27.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:19:28 +00:23:52 -00:16:20 [INFO] iter=  5900  0.239s/iter  lr=3.61e-04  loss=0.001498
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061336   (median: 0.051675 -> 0.060169)   [>= rd=0.05]
+  displacement     = 0.011662 (0.233x rd)   (median: 0.010610 = 0.212x rd)
+  correction_eff   = 0.0110  (26.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:19:52 +00:24:16 -00:15:59 [INFO] iter=  6000  0.240s/iter  lr=3.46e-04  loss=0.001467
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061301   (median: 0.051675 -> 0.060173)   [>= rd=0.05]
+  displacement     = 0.011335 (0.227x rd)   (median: 0.010058 = 0.201x rd)
+  correction_eff   = 0.0113  (27.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:20:17 +00:24:41 -00:16:19 [INFO] iter=  6100  0.251s/iter  lr=3.31e-04  loss=0.001453
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061232   (median: 0.051675 -> 0.060106)   [>= rd=0.05]
+  displacement     = 0.011240 (0.225x rd)   (median: 0.010155 = 0.203x rd)
+  correction_eff   = 0.0114  (27.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:20:41 +00:25:05 -00:15:12 [INFO] iter=  6200  0.240s/iter  lr=3.17e-04  loss=0.001518
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061312   (median: 0.051675 -> 0.060108)   [>= rd=0.05]
+  displacement     = 0.011705 (0.234x rd)   (median: 0.010490 = 0.210x rd)
+  correction_eff   = 0.0110  (26.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:21:05 +00:25:29 -00:14:46 [INFO] iter=  6300  0.240s/iter  lr=3.02e-04  loss=0.001323
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061260   (median: 0.051675 -> 0.060030)   [>= rd=0.05]
+  displacement     = 0.009989 (0.200x rd)   (median: 0.008486 = 0.170x rd)
+  correction_eff   = 0.0128  (31.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:21:29 +00:25:53 -00:14:21 [INFO] iter=  6400  0.239s/iter  lr=2.88e-04  loss=0.001446
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061008   (median: 0.051675 -> 0.059780)   [>= rd=0.05]
+  displacement     = 0.010944 (0.219x rd)   (median: 0.009767 = 0.195x rd)
+  correction_eff   = 0.0117  (28.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:21:53 +00:26:17 -00:14:00 [INFO] iter=  6500  0.240s/iter  lr=2.74e-04  loss=0.001408
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061039   (median: 0.051675 -> 0.059798)   [>= rd=0.05]
+  displacement     = 0.010534 (0.211x rd)   (median: 0.009166 = 0.183x rd)
+  correction_eff   = 0.0122  (29.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:22:18 +00:26:42 -00:14:08 [INFO] iter=  6600  0.250s/iter  lr=2.60e-04  loss=0.001319
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.061238   (median: 0.051675 -> 0.059998)   [>= rd=0.05]
+  displacement     = 0.009897 (0.198x rd)   (median: 0.008437 = 0.169x rd)
+  correction_eff   = 0.0130  (31.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:22:42 +00:27:06 -00:13:12 [INFO] iter=  6700  0.240s/iter  lr=2.46e-04  loss=0.001415
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060792   (median: 0.051675 -> 0.059543)   [>= rd=0.05]
+  displacement     = 0.010631 (0.213x rd)   (median: 0.009362 = 0.187x rd)
+  correction_eff   = 0.0121  (29.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:23:06 +00:27:30 -00:12:44 [INFO] iter=  6800  0.239s/iter  lr=2.33e-04  loss=0.001338
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060909   (median: 0.051675 -> 0.059614)   [>= rd=0.05]
+  displacement     = 0.009922 (0.198x rd)   (median: 0.008512 = 0.170x rd)
+  correction_eff   = 0.0129  (31.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:23:30 +00:27:54 -00:12:20 [INFO] iter=  6900  0.239s/iter  lr=2.20e-04  loss=0.001290
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060895   (median: 0.051675 -> 0.059630)   [>= rd=0.05]
+  displacement     = 0.009496 (0.190x rd)   (median: 0.007940 = 0.159x rd)
+  correction_eff   = 0.0135  (33.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:23:54 +00:28:18 -00:11:59 [INFO] iter=  7000  0.240s/iter  lr=2.07e-04  loss=0.001258
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060783   (median: 0.051675 -> 0.059514)   [>= rd=0.05]
+  displacement     = 0.009124 (0.182x rd)   (median: 0.007610 = 0.152x rd)
+  correction_eff   = 0.0141  (34.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:24:19 +00:28:43 -00:12:10 [INFO] iter=  7100  0.252s/iter  lr=1.94e-04  loss=0.001283
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060788   (median: 0.051675 -> 0.059474)   [>= rd=0.05]
+  displacement     = 0.009360 (0.187x rd)   (median: 0.007854 = 0.157x rd)
+  correction_eff   = 0.0137  (33.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:24:43 +00:29:07 -00:11:10 [INFO] iter=  7200  0.240s/iter  lr=1.82e-04  loss=0.001241
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060752   (median: 0.051675 -> 0.059434)   [>= rd=0.05]
+  displacement     = 0.008941 (0.179x rd)   (median: 0.007362 = 0.147x rd)
+  correction_eff   = 0.0143  (35.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:25:07 +00:29:31 -00:10:45 [INFO] iter=  7300  0.239s/iter  lr=1.70e-04  loss=0.001231
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060696   (median: 0.051675 -> 0.059341)   [>= rd=0.05]
+  displacement     = 0.008820 (0.176x rd)   (median: 0.007272 = 0.145x rd)
+  correction_eff   = 0.0145  (35.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:25:31 +00:29:55 -00:10:23 [INFO] iter=  7400  0.240s/iter  lr=1.59e-04  loss=0.001223
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060669   (median: 0.051675 -> 0.059194)   [>= rd=0.05]
+  displacement     = 0.008737 (0.175x rd)   (median: 0.007100 = 0.142x rd)
+  correction_eff   = 0.0147  (36.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:25:55 +00:30:19 -00:10:07 [INFO] iter=  7500  0.243s/iter  lr=1.47e-04  loss=0.001210
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060620   (median: 0.051675 -> 0.059153)   [>= rd=0.05]
+  displacement     = 0.008595 (0.172x rd)   (median: 0.007044 = 0.141x rd)
+  correction_eff   = 0.0149  (36.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:26:20 +00:30:44 -00:10:01 [INFO] iter=  7600  0.251s/iter  lr=1.36e-04  loss=0.001198
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060590   (median: 0.051675 -> 0.059120)   [>= rd=0.05]
+  displacement     = 0.008458 (0.169x rd)   (median: 0.006829 = 0.137x rd)
+  correction_eff   = 0.0152  (37.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:26:44 +00:31:07 -00:09:02 [INFO] iter=  7700  0.236s/iter  lr=1.26e-04  loss=0.001190
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060567   (median: 0.051675 -> 0.059062)   [>= rd=0.05]
+  displacement     = 0.008383 (0.168x rd)   (median: 0.006706 = 0.134x rd)
+  correction_eff   = 0.0153  (37.5% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:27:08 +00:31:32 -00:08:53 [INFO] iter=  7800  0.242s/iter  lr=1.16e-04  loss=0.001187
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060509   (median: 0.051675 -> 0.059016)   [>= rd=0.05]
+  displacement     = 0.008316 (0.166x rd)   (median: 0.006657 = 0.133x rd)
+  correction_eff   = 0.0154  (37.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:27:33 +00:31:56 -00:08:32 [INFO] iter=  7900  0.244s/iter  lr=1.06e-04  loss=0.001185
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060480   (median: 0.051675 -> 0.058974)   [>= rd=0.05]
+  displacement     = 0.008285 (0.166x rd)   (median: 0.006603 = 0.132x rd)
+  correction_eff   = 0.0155  (37.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:27:57 +00:32:21 -00:08:11 [INFO] iter=  8000  0.246s/iter  lr=9.64e-05  loss=0.001184
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060434   (median: 0.051675 -> 0.058924)   [>= rd=0.05]
+  displacement     = 0.008249 (0.165x rd)   (median: 0.006594 = 0.132x rd)
+  correction_eff   = 0.0155  (38.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:28:22 +00:32:46 -00:07:59 [INFO] iter=  8100  0.252s/iter  lr=8.74e-05  loss=0.001180
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060441   (median: 0.051675 -> 0.058949)   [>= rd=0.05]
+  displacement     = 0.008239 (0.165x rd)   (median: 0.006565 = 0.131x rd)
+  correction_eff   = 0.0156  (38.1% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:28:47 +00:33:11 -00:07:22 [INFO] iter=  8200  0.246s/iter  lr=7.88e-05  loss=0.001178
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 96.88%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060376   (median: 0.051675 -> 0.058871)   [>= rd=0.05]
+  displacement     = 0.008187 (0.164x rd)   (median: 0.006519 = 0.130x rd)
+  correction_eff   = 0.0157  (38.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:29:12 +00:33:35 -00:06:58 [INFO] iter=  8300  0.246s/iter  lr=7.06e-05  loss=0.001175
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060405   (median: 0.051675 -> 0.058920)   [>= rd=0.05]
+  displacement     = 0.008193 (0.164x rd)   (median: 0.006473 = 0.129x rd)
+  correction_eff   = 0.0156  (38.3% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:29:36 +00:33:59 -00:06:28 [INFO] iter=  8400  0.243s/iter  lr=6.28e-05  loss=0.001173
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060390   (median: 0.051675 -> 0.058882)   [>= rd=0.05]
+  displacement     = 0.008175 (0.164x rd)   (median: 0.006465 = 0.129x rd)
+  correction_eff   = 0.0157  (38.4% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:29:59 +00:34:23 -00:05:51 [INFO] iter=  8500  0.234s/iter  lr=5.54e-05  loss=0.001171
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060361   (median: 0.051675 -> 0.058870)   [>= rd=0.05]
+  displacement     = 0.008147 (0.163x rd)   (median: 0.006426 = 0.129x rd)
+  correction_eff   = 0.0157  (38.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:30:25 +00:34:48 -00:05:54 [INFO] iter=  8600  0.253s/iter  lr=4.85e-05  loss=0.001170
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060364   (median: 0.051675 -> 0.058847)   [>= rd=0.05]
+  displacement     = 0.008142 (0.163x rd)   (median: 0.006407 = 0.128x rd)
+  correction_eff   = 0.0157  (38.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:30:49 +00:35:12 -00:05:14 [INFO] iter=  8700  0.242s/iter  lr=4.21e-05  loss=0.001169
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060352   (median: 0.051675 -> 0.058839)   [>= rd=0.05]
+  displacement     = 0.008128 (0.163x rd)   (median: 0.006427 = 0.129x rd)
+  correction_eff   = 0.0158  (38.6% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:31:13 +00:35:36 -00:04:48 [INFO] iter=  8800  0.241s/iter  lr=3.61e-05  loss=0.001167
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060344   (median: 0.051675 -> 0.058846)   [>= rd=0.05]
+  displacement     = 0.008113 (0.162x rd)   (median: 0.006363 = 0.127x rd)
+  correction_eff   = 0.0158  (38.7% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:31:37 +00:36:01 -00:04:27 [INFO] iter=  8900  0.244s/iter  lr=3.05e-05  loss=0.001167
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060321   (median: 0.051675 -> 0.058798)   [>= rd=0.05]
+  displacement     = 0.008092 (0.162x rd)   (median: 0.006300 = 0.126x rd)
+  correction_eff   = 0.0158  (38.8% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:32:02 +00:36:25 -00:04:03 [INFO] iter=  9000  0.244s/iter  lr=2.54e-05  loss=0.001166
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060317   (median: 0.051675 -> 0.058777)   [>= rd=0.05]
+  displacement     = 0.008082 (0.162x rd)   (median: 0.006292 = 0.126x rd)
+  correction_eff   = 0.0159  (38.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:32:27 +00:36:51 -00:03:49 [INFO] iter=  9100  0.255s/iter  lr=2.08e-05  loss=0.001165
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060310   (median: 0.051675 -> 0.058770)   [>= rd=0.05]
+  displacement     = 0.008078 (0.162x rd)   (median: 0.006318 = 0.126x rd)
+  correction_eff   = 0.0159  (38.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:32:52 +00:37:15 -00:03:14 [INFO] iter=  9200  0.243s/iter  lr=1.67e-05  loss=0.001165
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060306   (median: 0.051675 -> 0.058752)   [>= rd=0.05]
+  displacement     = 0.008071 (0.161x rd)   (median: 0.006292 = 0.126x rd)
+  correction_eff   = 0.0159  (38.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:33:15 +00:37:38 -00:02:42 [INFO] iter=  9300  0.232s/iter  lr=1.30e-05  loss=0.001164
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060306   (median: 0.051675 -> 0.058745)   [>= rd=0.05]
+  displacement     = 0.008067 (0.161x rd)   (median: 0.006258 = 0.125x rd)
+  correction_eff   = 0.0159  (38.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:33:39 +00:38:03 -00:02:26 [INFO] iter=  9400  0.244s/iter  lr=9.85e-06  loss=0.001164
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060301   (median: 0.051675 -> 0.058744)   [>= rd=0.05]
+  displacement     = 0.008064 (0.161x rd)   (median: 0.006305 = 0.126x rd)
+  correction_eff   = 0.0159  (38.9% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:34:04 +00:38:27 -00:02:03 [INFO] iter=  9500  0.246s/iter  lr=7.15e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060301   (median: 0.051675 -> 0.058743)   [>= rd=0.05]
+  displacement     = 0.008062 (0.161x rd)   (median: 0.006285 = 0.126x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:34:29 +00:38:52 -00:01:39 [INFO] iter=  9600  0.249s/iter  lr=4.94e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060298   (median: 0.051675 -> 0.058742)   [>= rd=0.05]
+  displacement     = 0.008059 (0.161x rd)   (median: 0.006277 = 0.126x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:34:53 +00:39:16 -00:01:11 [INFO] iter=  9700  0.240s/iter  lr=3.22e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060297   (median: 0.051675 -> 0.058745)   [>= rd=0.05]
+  displacement     = 0.008058 (0.161x rd)   (median: 0.006272 = 0.125x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:35:17 +00:39:41 -00:00:49 [INFO] iter=  9800  0.246s/iter  lr=1.99e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060296   (median: 0.051675 -> 0.058745)   [>= rd=0.05]
+  displacement     = 0.008057 (0.161x rd)   (median: 0.006269 = 0.125x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:35:41 +00:40:05 -00:00:24 [INFO] iter=  9900  0.240s/iter  lr=1.25e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060297   (median: 0.051675 -> 0.058748)   [>= rd=0.05]
+  displacement     = 0.008057 (0.161x rd)   (median: 0.006268 = 0.125x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:36:05 +00:40:29 -00:00:00 [INFO] iter= 10000  0.241s/iter  lr=1.00e-06  loss=0.001163
+  mean_violation   = 0.000128 -> 0.000000   (median: 0.000000 -> 0.000000)   [0 = perfect]
+  illegal_pairs    = 1.08% -> 0.00%   [0% = perfect]
+  legal_clouds     = 0.00% -> 100.00%   [100% = perfect]
+  mean_nn_dist     = 0.050980 -> 0.060297   (median: 0.051675 -> 0.058749)   [>= rd=0.05]
+  displacement     = 0.008056 (0.161x rd)   (median: 0.006268 = 0.125x rd)
+  correction_eff   = 0.0159  (39.0% of ceil=0.0408)   [dviol/disp, noise-invariant]
+2026-05-26 13:36:07 +00:40:30 -00:00:00 [INFO] Training complete. Model saved to training_artifacts\train_run_2026-05-26_12-55-36\model_final.pt
+2026-05-26 13:36:08 +00:40:31 -00:00:00 [INFO] Evolution GIF saved to training_artifacts\train_run_2026-05-26_12-55-36\evolution.gif

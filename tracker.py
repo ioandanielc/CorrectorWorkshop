@@ -166,8 +166,8 @@ if run_dir is None:
 df      = load_csv(str(run_dir / "loss.csv"))
 configs = load_configs(run_dir)
 
-# Detect whether this run has the new before/after columns
-HAS_PRE = "illegal_pair_pct_pre" in df.columns
+# Detect whether this run has the new dual-column format
+HAS_PRE = "illegal_pair_pct_k1" in df.columns
 
 # Derive total iterations from whichever train config is present
 total_iters = 10_000
@@ -208,27 +208,27 @@ st.markdown("<div class='section-label'>Current metrics</div>", unsafe_allow_htm
 
 if HAS_PRE:
     cards = [
-        ("Loss",           None,
-         f"{last['loss']:.5f}",                                         "#60a5fa"),
-        ("Illegal pairs",  f"{last['illegal_pair_pct_pre']:.2f}%",
-         f"{last['illegal_pair_pct']:.2f}%",                            "#f87171"),
-        ("Legal clouds",   f"{last['legal_cloud_pct_pre']:.1f}%",
-         f"{last['legal_cloud_pct']:.1f}%",                             "#4ade80"),
-        ("Displacement",   None,
-         f"{last['displacement_rel_rd']:.3f}x rd",                      "#fb923c"),
-        ("Mean NN dist",   f"{last['mean_nn_dist_pre']:.4f}",
-         f"{last['mean_nn_dist']:.4f}",                                 "#14b8a6"),
-        ("Mean violation", f"{last['mean_violation_pre']:.6f}",
-         f"{last['mean_violation']:.6f}",                               "#f472b6"),
+        ("Loss",            None,
+         f"{last['loss']:.5f}",                                              "#60a5fa"),
+        ("Illegal pairs",   f"{last['illegal_pair_pct_pre']:.2f}%",
+         f"{last['illegal_pair_pct_k1']:.2f}%",                             "#f87171"),
+        ("Viol/cloud",      f"{last['mean_viol_per_cloud_pre']:.2f}",
+         f"{last['mean_viol_per_cloud_k1']:.2f}",                           "#4ade80"),
+        ("Viol reduction",  None,
+         f"{last['viol_reduction_pct_k1']:.1f}%",                           "#4ade80"),
+        ("Displacement",    None,
+         f"{last['displacement_rel_rd_k1']:.3f}x rd",                       "#fb923c"),
+        ("Mean NN dist",    f"{last['mean_nn_dist_pre']:.4f}",
+         f"{last['mean_nn_dist_k1']:.4f}",                                  "#14b8a6"),
     ]
 else:
     cards = [
         ("Loss",           None, f"{last['loss']:.5f}",                    "#60a5fa"),
         ("Illegal pairs",  None, f"{last['illegal_pair_pct']:.2f}%",       "#f87171"),
-        ("Legal clouds",   None, f"{last['legal_cloud_pct']:.1f}%",        "#4ade80"),
-        ("Displacement",   None, f"{last['displacement_rel_rd']:.3f}x rd", "#fb923c"),
-        ("Mean NN dist",   None, f"{last['mean_nn_dist']:.4f}",            "#14b8a6"),
-        ("Mean violation", None, f"{last['mean_violation']:.6f}",          "#f472b6"),
+        ("Viol/cloud",     None, f"{last.get('mean_viol_per_cloud_k1', 0):.2f}", "#4ade80"),
+        ("Viol reduction", None, f"{last.get('viol_reduction_pct_k1', 0):.1f}%", "#4ade80"),
+        ("Displacement",   None, f"{last.get('displacement_rel_rd_k1', last.get('displacement_rel_rd', 0)):.3f}x rd", "#fb923c"),
+        ("Mean NN dist",   None, f"{last.get('mean_nn_dist_k1', last.get('mean_nn_dist', 0)):.4f}", "#14b8a6"),
     ]
 
 for col, (label, pre, value, color) in zip(st.columns(6), cards):
@@ -261,9 +261,10 @@ with chart_col:
             name="before", opacity=0.35,
             line=dict(color="#f87171", width=1.2, dash="dot"),
         ))
+    col_ill = "illegal_pair_pct_k1" if HAS_PRE else "illegal_pair_pct"
     fig.add_trace(go.Scatter(
-        x=df["iteration"], y=df["illegal_pair_pct"], mode="lines",
-        name="after", line=dict(color="#f87171", width=2),
+        x=df["iteration"], y=df[col_ill], mode="lines",
+        name="after (K=1)", line=dict(color="#f87171", width=2),
         fill="tozeroy", fillcolor="rgba(248,113,113,0.07)",
     ))
     fig.update_layout(**dark_layout(
@@ -273,28 +274,35 @@ with chart_col:
     ))
     st.plotly_chart(fig, use_container_width=True)
 
-    # 2b. Legal clouds %
+    # 2b. Violations per cloud + reduction rate
     fig = go.Figure()
-    if HAS_PRE:
+    if HAS_PRE and "mean_viol_per_cloud_pre" in df.columns:
         fig.add_trace(go.Scatter(
-            x=df["iteration"], y=df["legal_cloud_pct_pre"], mode="lines",
-            name="before", opacity=0.35,
+            x=df["iteration"], y=df["mean_viol_per_cloud_pre"], mode="lines",
+            name="viol/cloud (before)", opacity=0.35,
             line=dict(color="#4ade80", width=1.2, dash="dot"),
         ))
-    fig.add_trace(go.Scatter(
-        x=df["iteration"], y=df["legal_cloud_pct"], mode="lines",
-        name="after", line=dict(color="#4ade80", width=2),
-        fill="tozeroy", fillcolor="rgba(74,222,128,0.07)",
-    ))
+        fig.add_trace(go.Scatter(
+            x=df["iteration"], y=df["mean_viol_per_cloud_k1"], mode="lines",
+            name="viol/cloud (K=1)", line=dict(color="#4ade80", width=2),
+            fill="tozeroy", fillcolor="rgba(74,222,128,0.07)",
+        ))
+        fig.add_trace(go.Scatter(
+            x=df["iteration"], y=df["viol_reduction_pct_k1"], mode="lines",
+            name="reduction % (K=1)", line=dict(color="#a3e635", width=1.5, dash="dash"),
+            yaxis="y2",
+        ))
     fig.update_layout(**dark_layout(
-        title="Legal Clouds %  (dotted = before · target: 100%)",
+        title="Violations per cloud  &  Reduction %  (dashed, right axis)",
         height=180,
         yaxis=dict(gridcolor="#1a2233", color="#4ade80", title=None, rangemode="tozero"),
+        yaxis2=dict(overlaying="y", side="right", color="#a3e635",
+                    gridcolor="rgba(0,0,0,0)", title=None, range=[0, 100]),
     ))
     st.plotly_chart(fig, use_container_width=True)
 
     # 3. Mean violation pre→post  (only when new format)
-    if HAS_PRE:
+    if HAS_PRE and "mean_violation_k1" in df.columns:
         fig = go.Figure()
         fig.add_trace(go.Scatter(
             x=df["iteration"], y=df["mean_violation_pre"], mode="lines",
@@ -302,14 +310,14 @@ with chart_col:
             line=dict(color="#f472b6", width=1.2, dash="dot"),
         ))
         fig.add_trace(go.Scatter(
-            x=df["iteration"], y=df["mean_violation"], mode="lines",
-            name="mean violation (after)", line=dict(color="#f472b6", width=2),
+            x=df["iteration"], y=df["mean_violation_k1"], mode="lines",
+            name="mean violation (K=1)", line=dict(color="#f472b6", width=2),
             fill="tozeroy", fillcolor="rgba(244,114,182,0.06)",
         ))
-        if "median_violation" in df.columns:
+        if "median_violation_k1" in df.columns:
             fig.add_trace(go.Scatter(
-                x=df["iteration"], y=df["median_violation"], mode="lines",
-                name="median violation (after)", opacity=0.6,
+                x=df["iteration"], y=df["median_violation_k1"], mode="lines",
+                name="median violation (K=1)", opacity=0.6,
                 line=dict(color="#f472b6", width=1.2, dash="dash"),
             ))
         fig.update_layout(**dark_layout(
@@ -320,17 +328,20 @@ with chart_col:
 
     # 4. Displacement & NN dist
     fig = go.Figure()
+    col_disp     = "displacement_rel_rd_k1"     if HAS_PRE else "displacement_rel_rd"
+    col_disp_med = "displacement_rel_rd_median_k1" if HAS_PRE else "displacement_rel_rd_median"
+    col_nn       = "mean_nn_dist_k1"             if HAS_PRE else "mean_nn_dist"
     fig.add_trace(go.Scatter(
-        x=df["iteration"], y=df["displacement_rel_rd"], mode="lines",
+        x=df["iteration"], y=df[col_disp], mode="lines",
         name="displacement (x rd)", line=dict(color="#fb923c", width=2),
     ))
-    if HAS_PRE and "displacement_rel_rd_median" in df.columns:
+    if col_disp_med in df.columns:
         fig.add_trace(go.Scatter(
-            x=df["iteration"], y=df["displacement_rel_rd_median"], mode="lines",
+            x=df["iteration"], y=df[col_disp_med], mode="lines",
             name="displacement median (x rd)", opacity=0.5,
             line=dict(color="#fb923c", width=1.2, dash="dash"),
         ))
-    if HAS_PRE:
+    if HAS_PRE and "mean_nn_dist_pre" in df.columns:
         fig.add_trace(go.Scatter(
             x=df["iteration"], y=df["mean_nn_dist_pre"], mode="lines",
             name="mean NN dist (before)", opacity=0.35,
@@ -338,7 +349,7 @@ with chart_col:
             yaxis="y2",
         ))
     fig.add_trace(go.Scatter(
-        x=df["iteration"], y=df["mean_nn_dist"], mode="lines",
+        x=df["iteration"], y=df[col_nn], mode="lines",
         name="mean NN dist (after)", line=dict(color="#14b8a6", width=2),
         yaxis="y2",
     ))

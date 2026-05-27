@@ -1,0 +1,24 @@
+name: hybrid_loss
+
+params:
+  # ── Principled calibration ────────────────────────────────────────────────
+  #
+  # lambda1: normalised so that lambda1 * rd = 1.0 at rd=0.05.
+  #   Gives a gradient of ~1 per pair per unit of relative violation depth.
+  #   (Previous heuristic values: 30 → 100 → 50.)
+  lambda1: 20
+
+  # lambda1_quad: disabled. At the principled lambda1_quad = lambda1 / (2*rd) = 200
+  # the quadratic would balance the linear at d = rd/2, but in practice violation
+  # depths rarely exceed rd/4 so the quadratic added <10% to the gradient and
+  # complicated interpretation. Setting to 0 makes the loss equivalent to
+  # classic_loss with principled scaling.
+  lambda1_quad: 0
+
+  # lambda2: derived from the break-even condition.
+  #   For the model to prefer fixing a single violation over doing nothing:
+  #     lambda2 < lambda1 / (N - 1)  =  20 / 49  ≈  0.408
+  #   We set lambda2 = 0.1 * (lambda1 / (N-1)) ≈ 0.04,
+  #   giving the model a 10x preference for fixing violations over minimising
+  #   displacement. At N=50, rd=0.05.
+  lambda2: 0.04

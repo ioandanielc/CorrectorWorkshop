@@ -1,7 +1,89 @@
+import re
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from PIL import Image
 from scipy.spatial import cKDTree
+
+
+def make_sample_gif(
+    run_dir: str | Path,
+    output_path: str | Path | None = None,
+    fps: int = 8,
+    every_n: int = 1,
+    max_width: int = 1200,
+) -> Path:
+    """Stitch the sample_XXXXXX.png frames from a training run into an animated GIF.
+
+    Args:
+        run_dir:     Path to a training run directory (contains samples/).
+        output_path: Where to write the GIF. Defaults to run_dir/evolution.gif.
+        fps:         Playback speed in frames per second.
+        every_n:     Keep only every N-th frame (useful for long runs with many samples).
+        max_width:   Resize frames to at most this width to keep file size reasonable.
+
+    Returns:
+        Path to the written GIF.
+    """
+    run_dir = Path(run_dir)
+    samples_dir = run_dir / "samples"
+    if not samples_dir.exists():
+        raise FileNotFoundError(f"No samples/ directory found in {run_dir}")
+
+    # Sort frames by iteration number embedded in filename (sample_XXXXXX.png)
+    frames_paths = sorted(
+        samples_dir.glob("sample_*.png"),
+        key=lambda p: int(re.search(r"(\d+)", p.stem).group(1)),
+    )
+    if not frames_paths:
+        raise FileNotFoundError(f"No sample_*.png files found in {samples_dir}")
+
+    frames_paths = frames_paths[::every_n]
+
+    frames = []
+    for path in frames_paths:
+        img = Image.open(path).convert("RGB")
+        # Downscale if wider than max_width, preserving aspect ratio
+        if img.width > max_width:
+            scale = max_width / img.width
+            img = img.resize(
+                (max_width, int(img.height * scale)),
+                Image.LANCZOS,
+            )
+        # Burn the iteration number into the top-left corner
+        iter_num = int(re.search(r"(\d+)", path.stem).group(1))
+        _burn_label(img, f"iter {iter_num:>6d}")
+        frames.append(img)
+
+    if output_path is None:
+        output_path = run_dir / "evolution.gif"
+    output_path = Path(output_path)
+
+    duration_ms = int(1000 / fps)
+    frames[0].save(
+        output_path,
+        format="GIF",
+        save_all=True,
+        append_images=frames[1:],
+        duration=duration_ms,
+        loop=0,          # loop forever
+        optimize=True,
+    )
+    print(f"GIF saved -> {output_path}  ({len(frames)} frames, {fps} fps)")
+    return output_path
+
+
+def _burn_label(img: Image.Image, text: str) -> None:
+    """Draw a small text label in the top-left corner of a PIL image, in-place."""
+    from PIL import ImageDraw, ImageFont
+    draw = ImageDraw.Draw(img)
+    # Tight dark background box, then white text — works on any background
+    font = ImageFont.load_default()
+    bbox = draw.textbbox((4, 4), text, font=font)
+    draw.rectangle([bbox[0] - 2, bbox[1] - 2, bbox[2] + 2, bbox[3] + 2], fill=(20, 20, 20))
+    draw.text((4, 4), text, fill=(240, 240, 240), font=font)
 
 
 def plot_poisson_disk(cloud, rd):

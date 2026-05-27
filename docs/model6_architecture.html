@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model 6 — Violation-Aware Edge Network</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f1117;
+    color: #e2e8f0;
+    font-family: 'Inter', sans-serif;
+    padding: 48px 56px;
+    min-height: 100vh;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: #f8fafc; }
+  h2 {
+    font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: #475569;
+    margin-bottom: 20px; margin-top: 52px;
+    padding-bottom: 10px; border-bottom: 1px solid #1e2a3a;
+  }
+  h3 { font-size: 14px; font-weight: 600; color: #94a3b8; margin-bottom: 10px; }
+  p  { font-size: 13.5px; color: #94a3b8; line-height: 1.75; }
+
+  .subtitle {
+    font-size: 14px; color: #64748b;
+    margin-top: 8px; margin-bottom: 10px;
+  }
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500; margin-right: 6px; margin-top: 4px;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: #1e2433; padding: 2px 6px; border-radius: 4px; color: #94a3b8;
+  }
+
+  /* ── Intro blurb ─────────────────────────────────────────────── */
+  .intro {
+    background: #141821; border: 1px solid #1e2a3a; border-radius: 14px;
+    padding: 24px 28px; margin-top: 28px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .intro p { font-size: 13.5px; }
+
+  /* ── Main pipeline diagram ───────────────────────────────────── */
+  .diagram-wrap {
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 16px; padding: 36px 24px 28px; overflow-x: auto;
+  }
+
+  /* ── Stage explanation strip ─────────────────────────────────── */
+  .stages {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;
+    margin-top: 0;
+  }
+  .stage {
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 12px; padding: 18px 16px;
+  }
+  .stage .num {
+    font-size: 10px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 8px;
+  }
+  .stage h4 { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px; }
+  .stage p  { font-size: 12px; color: #64748b; line-height: 1.65; }
+
+  /* ── Detail cards ────────────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .card {
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 12px; padding: 24px;
+  }
+  .card h3 {
+    font-size: 12px; font-weight: 600; color: #64748b;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #1e2a3a;
+  }
+  .card p { font-size: 12.5px; color: #64748b; line-height: 1.65; margin-top: 14px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; font-size: 13px; border-bottom: 1px solid #1a2030;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .label { color: #64748b; }
+  .row .value { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #e2e8f0; }
+  .row .value.green  { color: #4ade80; }
+  .row .value.blue   { color: #60a5fa; }
+  .row .value.orange { color: #fb923c; }
+  .row .value.red    { color: #f87171; }
+
+  .feature-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; font-size: 13px; border-bottom: 1px solid #1a2030;
+  }
+  .feature-row:last-of-type { border-bottom: none; }
+  .feat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .feat-name { color: #e2e8f0; font-weight: 500; min-width: 130px; }
+  .feat-formula { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; }
+  .feat-dim {
+    margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    color: #94a3b8; background: #1e2433; padding: 2px 8px; border-radius: 4px;
+  }
+
+  .mlp-layer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 10px; border-radius: 8px; margin-bottom: 5px; font-size: 12px;
+  }
+  .mlp-layer .ltype { font-weight: 600; min-width: 90px; }
+  .mlp-layer .ldim  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #94a3b8; }
+  .mlp-sep { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+             color: #475569; margin: 12px 0 8px; }
+
+  /* ── Roadmap ─────────────────────────────────────────────────── */
+  .roadmap { display: flex; flex-direction: column; gap: 12px; }
+  .rm-item {
+    display: grid; grid-template-columns: 180px 1fr;
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 12px; overflow: hidden;
+  }
+  .rm-item.current { border-color: #4ade8060; }
+  .rm-left {
+    padding: 18px 20px;
+    border-right: 1px solid #1e2a3a;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .rm-tag {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; margin-bottom: 6px;
+  }
+  .rm-title { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .rm-right { padding: 18px 24px; }
+  .rm-right p { font-size: 13px; color: #64748b; line-height: 1.7; }
+  .rm-change {
+    display: inline-block; margin-top: 10px; margin-right: 8px; margin-bottom: 2px;
+    font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    background: #1e2433; border: 1px solid #2d3748;
+    padding: 3px 8px; border-radius: 5px; color: #94a3b8;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════════════════════════════════════════════ -->
+<h1>Model 6 &mdash; Violation-Aware Edge Network</h1>
+<p class="subtitle">Poisson Disk Corrector &nbsp;&bull;&nbsp; Current production model</p>
+<div>
+  <span class="pill" style="background:#1c3a1c; color:#4ade80">34,690 params</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Translation invariant</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Rotation invariant</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Permutation invariant</span>
+  <span class="pill" style="background:#2d1010; color:#f87171">rd-aware</span>
+</div>
+
+<!-- ═══════════ INTRO ════════════════════════════════════════════════════ -->
+<div class="intro">
+  <div>
+    <h3>What it does</h3>
+    <p>
+      Given a noisy 2-D point cloud that violates the <strong style="color:#e2e8f0">Poisson disk constraint</strong>
+      (all point pairs must be at least <code>rd = 0.05</code> apart), the model predicts a
+      per-point displacement vector that moves each point just enough to restore legality —
+      while keeping displacements as small as possible.
+    </p>
+    <p style="margin-top:12px;">
+      The input is a batch of N-point clouds <code>(B, N, 2)</code>.
+      The output is a matching set of displacement vectors <code>(B, N, 2)</code>
+      which are added back to the noisy input to produce the corrected cloud.
+    </p>
+  </div>
+  <div>
+    <h3>Why an edge network?</h3>
+    <p>
+      The Poisson disk constraint is fundamentally <strong style="color:#e2e8f0">pairwise</strong> —
+      only the distance between point <em>i</em> and point <em>j</em> determines whether a violation
+      exists. Earlier models (1–5) used global self-attention over raw coordinates, which had to
+      <em>learn</em> to compute distances from scratch.
+    </p>
+    <p style="margin-top:12px;">
+      Model 6 instead builds explicit <strong style="color:#e2e8f0">edge features</strong> for every
+      ordered pair (i→j) — including a direct violation signal <code>relu(rd&nbsp;−&nbsp;dist)</code>
+      that is non-zero only where the constraint is broken. This gives the network exact physical
+      feedback with no learned approximation.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════ PIPELINE ═════════════════════════════════════════════════ -->
+<h2>Forward Pass</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1340 340" width="100%" style="display:block; min-width:900px;"
+     xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#475569"/>
+    </marker>
+    <marker id="arr-green" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#4ade80"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#60a5fa"/>
+    </marker>
+  </defs>
+
+  <!-- 1. Input Point Cloud -->
+  <rect x="10" y="130" width="130" height="80" rx="10" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="75" y="159" text-anchor="middle" fill="#93c5fd" font-family="Inter" font-size="13" font-weight="600">Point Cloud</text>
+  <text x="75" y="177" text-anchor="middle" fill="#60a5fa" font-family="JetBrains Mono" font-size="11">(B, N, 2)</text>
+  <text x="75" y="197" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">noisy input</text>
+
+  <!-- 2. Pairwise Edge Features -->
+  <rect x="190" y="108" width="165" height="124" rx="10" fill="#2d1b69" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="272" y="133" text-anchor="middle" fill="#c4b5fd" font-family="Inter" font-size="12" font-weight="600">Pairwise Edge</text>
+  <text x="272" y="149" text-anchor="middle" fill="#c4b5fd" font-family="Inter" font-size="12" font-weight="600">Features</text>
+  <text x="272" y="169" text-anchor="middle" fill="#8b5cf6" font-family="JetBrains Mono" font-size="10">(B, N, N, 4)</text>
+  <rect x="204" y="179" width="54" height="16" rx="4" fill="#1e1040"/>
+  <text x="231" y="191" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9">xi − xj</text>
+  <rect x="264" y="179" width="34" height="16" rx="4" fill="#1e1040"/>
+  <text x="281" y="191" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9">dist</text>
+  <rect x="304" y="179" width="42" height="16" rx="4" fill="#3d1010"/>
+  <text x="325" y="191" text-anchor="middle" fill="#f87171" font-family="JetBrains Mono" font-size="9">viol.</text>
+  <text x="272" y="218" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">2 + 1 + 1 channels</text>
+
+  <!-- rd input arrow from top -->
+  <line x1="272" y1="58" x2="272" y2="106" stroke="#f87171" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <rect x="244" y="36" width="57" height="22" rx="6" fill="#2d1010" stroke="#f87171" stroke-width="1"/>
+  <text x="272" y="51" text-anchor="middle" fill="#f87171" font-family="JetBrains Mono" font-size="11" font-weight="500">rd = 0.05</text>
+  <text x="272" y="72" text-anchor="middle" fill="#64748b" font-family="Inter" font-size="9">violation threshold</text>
+
+  <!-- 3. Edge MLP -->
+  <rect x="407" y="108" width="165" height="124" rx="10" fill="#1c2d1a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="490" y="136" text-anchor="middle" fill="#86efac" font-family="Inter" font-size="13" font-weight="600">Edge MLP</text>
+  <text x="490" y="154" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="10">(B, N, N, 128)</text>
+  <rect x="420" y="164" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="490" y="176" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(4 → 128) + LN + ReLU</text>
+  <rect x="420" y="184" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="490" y="196" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128 → 128) + LN + ReLU</text>
+  <text x="490" y="222" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">shared across all N² pairs</text>
+
+  <!-- 4. Mask + Aggregate -->
+  <rect x="624" y="120" width="148" height="100" rx="10" fill="#1a2d2d" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="698" y="148" text-anchor="middle" fill="#5eead4" font-family="Inter" font-size="13" font-weight="600">Mask &amp; Sum</text>
+  <text x="698" y="166" text-anchor="middle" fill="#14b8a6" font-family="JetBrains Mono" font-size="10">(B, N, 128)</text>
+  <rect x="636" y="176" width="124" height="16" rx="4" fill="#0f1f1f"/>
+  <text x="698" y="188" text-anchor="middle" fill="#5eead4" font-family="JetBrains Mono" font-size="9">zero self-edges (i = j)</text>
+  <rect x="636" y="196" width="124" height="14" rx="4" fill="#0f1f1f"/>
+  <text x="698" y="207" text-anchor="middle" fill="#5eead4" font-family="JetBrains Mono" font-size="9">Σⱼ edge_emb[i,j]</text>
+
+  <!-- 5. Output MLP -->
+  <rect x="826" y="108" width="165" height="124" rx="10" fill="#1c2d1a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="908" y="136" text-anchor="middle" fill="#86efac" font-family="Inter" font-size="13" font-weight="600">Output MLP</text>
+  <text x="908" y="154" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="10">(B, N, 128)</text>
+  <rect x="838" y="164" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="908" y="176" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128 → 128) + LN + ReLU</text>
+  <rect x="838" y="184" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="908" y="196" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128 → 2)</text>
+  <text x="908" y="222" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">one MLP per point (shared)</text>
+
+  <!-- 6. Displacement output -->
+  <rect x="1050" y="130" width="130" height="80" rx="10" fill="#1f2d1a" stroke="#84cc16" stroke-width="1.5"/>
+  <text x="1115" y="159" text-anchor="middle" fill="#bef264" font-family="Inter" font-size="13" font-weight="600">Displacement</text>
+  <text x="1115" y="177" text-anchor="middle" fill="#84cc16" font-family="JetBrains Mono" font-size="11">(B, N, 2)</text>
+  <text x="1115" y="197" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">per-point Δx</text>
+
+  <!-- + circle -->
+  <circle cx="1230" cy="240" r="18" fill="#1a2433" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="1230" y="246" text-anchor="middle" fill="#60a5fa" font-family="Inter" font-size="20" font-weight="300">+</text>
+
+  <!-- skip connection -->
+  <path d="M 75 210 Q 75 285 1212 258" fill="none" stroke="#3b82f6" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arr-blue)"/>
+  <text x="560" y="305" text-anchor="middle" fill="#3b82f6" font-family="Inter" font-size="10">input skip — added to displacement to produce corrected cloud</text>
+
+  <!-- Displacement → + -->
+  <line x1="1180" y1="180" x2="1213" y2="222" stroke="#84cc16" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Corrected cloud -->
+  <rect x="1268" y="210" width="64" height="60" rx="8" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1300" y="237" text-anchor="middle" fill="#93c5fd" font-family="Inter" font-size="10" font-weight="600">Corrected</text>
+  <text x="1300" y="252" text-anchor="middle" fill="#60a5fa" font-family="JetBrains Mono" font-size="9">(B, N, 2)</text>
+  <line x1="1248" y1="240" x2="1266" y2="240" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+
+  <!-- flow arrows -->
+  <line x1="140" y1="170" x2="188" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="355" y1="170" x2="405" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="572" y1="170" x2="622" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="772" y1="170" x2="824" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="991" y1="170" x2="1048" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- tensor labels -->
+  <text x="164" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,2)</text>
+  <text x="380" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,N,4)</text>
+  <text x="597" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,N,128)</text>
+  <text x="798" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,128)</text>
+  <text x="1020" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,128)</text>
+</svg>
+</div>
+
+<!-- ═══════════ STAGE EXPLANATIONS ════════════════════════════════════════ -->
+<h2>Stage by Stage</h2>
+<div class="stages">
+
+  <div class="stage">
+    <div class="num" style="color:#60a5fa">① Input</div>
+    <h4>Noisy Point Cloud</h4>
+    <p>
+      A batch of <code>B</code> clouds, each with <code>N=50</code> points in 2-D.
+      The cloud has been centered (centroid subtracted) by the DataProcessor
+      before entering the model. Points violate the Poisson disk constraint —
+      some pairs are closer than <code>rd = 0.05</code>.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#a78bfa">② Edge Features</div>
+    <h4>Pairwise Geometry</h4>
+    <p>
+      For every ordered pair (i→j) we compute three quantities:
+      <strong style="color:#e2e8f0">relative position</strong> <code>xi − xj</code> (2 values),
+      <strong style="color:#e2e8f0">distance</strong> <code>‖xi − xj‖</code> (1 value), and
+      <strong style="color:#f87171">violation depth</strong> <code>relu(rd − dist)</code> (1 value).
+      This last term is zero for legal pairs and positive only where the constraint is broken —
+      it is the exact physical signal the model needs.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#4ade80">③ Edge MLP</div>
+    <h4>Embedding Each Pair</h4>
+    <p>
+      A small MLP (weights shared across all N² pairs) maps the 4-D edge feature
+      into a 128-D embedding. This learns what it means for a pair to be "barely violating",
+      "severely violating", or "safely spaced". LayerNorm is applied per-layer to
+      stabilise training across the large range of violation depths.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#14b8a6">④ Aggregate</div>
+    <h4>Collect Neighbour Context</h4>
+    <p>
+      Self-edges (i = j) are zeroed first — they have dist=0 and violation=rd,
+      which is spurious. Then all neighbour embeddings are <strong style="color:#e2e8f0">summed over j</strong>,
+      giving each point a 128-D context vector that encodes its full local violation landscape.
+      <em style="color:#475569">Current limitation: sum weights all neighbours equally —
+      addressed in model 7.</em>
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#84cc16">⑤ Output MLP</div>
+    <h4>Predict Displacement</h4>
+    <p>
+      A second MLP maps each point's 128-D context vector to a 2-D displacement.
+      The displacement is added to the original (noisy) point position via the
+      skip connection. There is no output clamping — the model is free to predict
+      any magnitude, relying on the λ₂ displacement regularisation term in the loss
+      to keep corrections small.
+    </p>
+  </div>
+
+</div>
+
+<!-- ═══════════ DETAIL CARDS ═════════════════════════════════════════════ -->
+<h2>Details</h2>
+<div class="cards">
+
+  <!-- Edge Features -->
+  <div class="card">
+    <h3>Edge Features &nbsp;<code>(B, N, N, 4)</code></h3>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#a78bfa"></div>
+      <div class="feat-name">Relative position</div>
+      <div class="feat-formula">x<sub>i</sub> &minus; x<sub>j</sub></div>
+      <div class="feat-dim">2 dims</div>
+    </div>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#60a5fa"></div>
+      <div class="feat-name">Distance</div>
+      <div class="feat-formula">‖x<sub>i</sub> &minus; x<sub>j</sub>‖</div>
+      <div class="feat-dim">1 dim</div>
+    </div>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#f87171"></div>
+      <div class="feat-name">Violation depth</div>
+      <div class="feat-formula">relu(rd &minus; dist)</div>
+      <div class="feat-dim">1 dim</div>
+    </div>
+    <p>
+      Using <em>relative</em> position (not absolute) makes the representation
+      <strong style="color:#94a3b8">translationally invariant</strong> — the model
+      sees the same features regardless of where the cloud sits in space.
+      Including distance as a scalar (in addition to the vector) gives
+      <strong style="color:#94a3b8">rotational invariance</strong>.
+      Self-edges are zeroed before aggregation to avoid the spurious signal
+      a point would send to itself (dist=0 → violation=rd).
+    </p>
+  </div>
+
+  <!-- MLPs -->
+  <div class="card">
+    <h3>MLP Architectures</h3>
+    <div class="mlp-sep">Edge MLP &nbsp;— runs on all N² directed pairs</div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">Linear</span>
+      <span class="ldim">4 → 128</span>
+    </div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">LayerNorm</span>
+      <span class="ldim">+ ReLU</span>
+    </div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">Linear</span>
+      <span class="ldim">128 → 128</span>
+    </div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">LayerNorm</span>
+      <span class="ldim">+ ReLU</span>
+    </div>
+    <div class="mlp-sep">Output MLP &nbsp;— runs per point after aggregation</div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">Linear</span>
+      <span class="ldim">128 → 128</span>
+    </div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">LayerNorm</span>
+      <span class="ldim">+ ReLU</span>
+    </div>
+    <div class="mlp-layer" style="background:#142010">
+      <span class="ltype" style="color:#86efac">Linear</span>
+      <span class="ldim">128 → 2</span>
+    </div>
+    <p>LayerNorm chosen over BatchNorm: operates on the feature dimension only,
+    so it works correctly with variable batch sizes and on a single sample at inference.</p>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <h3>Properties &amp; Stats</h3>
+    <div class="row"><span class="label">Parameters</span><span class="value green">34,690</span></div>
+    <div class="row"><span class="label">Edge MLP params</span><span class="value blue">33,920</span></div>
+    <div class="row"><span class="label">Output MLP params</span><span class="value blue">770 (+ bias)</span></div>
+    <div class="row"><span class="label">Complexity</span><span class="value orange">O(N²) edges</span></div>
+    <div class="row"><span class="label">Hidden dim</span><span class="value blue">128</span></div>
+    <div class="row"><span class="label">Normalization</span><span class="value blue">LayerNorm</span></div>
+    <div class="row"><span class="label">Activation</span><span class="value blue">ReLU</span></div>
+    <div class="row"><span class="label">rd dependency</span><span class="value orange">explicit input ✓</span></div>
+    <div class="row"><span class="label">Translation inv.</span><span class="value green">architectural ✓</span></div>
+    <div class="row"><span class="label">Rotation inv.</span><span class="value green">architectural ✓</span></div>
+    <div class="row"><span class="label">Permutation inv.</span><span class="value green">via Σ aggregation ✓</span></div>
+    <div class="row"><span class="label">Single-pass</span><span class="value red">yes — limitation</span></div>
+  </div>
+
+</div>
+
+<!-- ═══════════ ROADMAP ═══════════════════════════════════════════════════ -->
+<h2>What Comes Next</h2>
+<div class="roadmap">
+
+  <div class="rm-item current">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#4ade80">Step 1 &nbsp;▶ Running</div>
+      <div class="rm-title">Variable Noise</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Train with noise σ sampled uniformly from <code>[0.0, 0.03]</code> per cloud instead of fixed σ=0.01.
+        Forces the model to learn <em>conditional</em> correction magnitude — small push for small violations,
+        larger push for severe ones — and explicitly teaches the zero-violation "do nothing" case.
+        No architecture change; dataset config only.
+      </p>
+      <span class="rm-change">dataset_config_3.yaml</span>
+      <span class="rm-change">noise_scale_min: 0.0</span>
+      <span class="rm-change">noise_scale_max: 0.03</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#a78bfa">Step 2 &nbsp;· Model 7</div>
+      <div class="rm-title">Violation-Weighted Aggregation</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Replace the uniform <code>Σⱼ edge_emb[i,j]</code> with a violation-weighted sum:
+        each neighbour's message is scaled by its violation depth before aggregation.
+        Non-violating neighbours (depth=0) contribute nothing; severely violating ones dominate.
+        This means the model's output for point <em>i</em> is driven exclusively by
+        the pairs that actually need fixing.
+      </p>
+      <span class="rm-change">models/fixed_rd/model7.py</span>
+      <span class="rm-change">weights = viol / (viol.sum() + ε)</span>
+      <span class="rm-change">agg = (edge_emb × weights).sum(j)</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#fb923c">Step 3 &nbsp;· Trainer</div>
+      <div class="rm-title">Iterative Unrolling</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Unroll K=2–3 forward passes per training step: apply the predicted displacement,
+        recompute edge features on the corrected cloud, run the model again, accumulate loss
+        across all steps. This teaches the model to produce corrections that compose well —
+        each pass resolves the worst remaining violations, leaving fewer for the next.
+        Critical prerequisite before tackling packed scenarios (step 5) where single-pass
+        correction hits a combinatorial ceiling.
+      </p>
+      <span class="rm-change">training/trainer.py</span>
+      <span class="rm-change">unroll_steps: 3</span>
+      <span class="rm-change">loss = Σₖ loss(corrected_k)</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#60a5fa">Step 4 &nbsp;· Data</div>
+      <div class="rm-title">Larger Point Clouds</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Scale from N=50 to N=100 then N=200, keeping rd=0.05 and the same unit box.
+        Tests whether the O(N²) edge network stays tractable at larger N and whether
+        the per-pair features learned at N=50 transfer to richer clouds.
+        At N=100 compute is ~4× per iteration; at N=200 it is ~16×, so training duration
+        will need to be adjusted accordingly.
+      </p>
+      <span class="rm-change">dataset_config_4.yaml (N=100)</span>
+      <span class="rm-change">dataset_config_5.yaml (N=200)</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#f87171">Step 5 &nbsp;· Data</div>
+      <div class="rm-title">Packed Scenarios</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Push packing density to 50–70% of the triangular lattice maximum
+        (~N=200–300 at rd=0.05, versus ~11% density today).
+        At high density, a single displaced point may violate 4–6 neighbours simultaneously;
+        fixing it pushes it into others, creating conflict chains.
+        This is the hardest non-periodic regime and the main motivation for
+        iterative unrolling (step 3). No new architecture needed — same model, different data.
+      </p>
+      <span class="rm-change">N ≈ 200–300 at rd=0.05</span>
+      <span class="rm-change">~50–70% of max packing</span>
+      <span class="rm-change">requires step 3 first</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#5eead4">Step 6 &nbsp;· Model 8</div>
+      <div class="rm-title">Periodic Boundary Conditions</div>
+    </div>
+    <div class="rm-right">
+      <p>
+        Move to a toroidal domain (the box wraps — left edge meets right, top meets bottom).
+        Boundary effects disappear: every point is equivalent, and the max packing density
+        is the same everywhere. Two changes to the model: (1) replace
+        <code>rel_pos = xi − xj</code> with the <strong style="color:#e2e8f0">minimum image convention</strong>
+        <code>rel_pos = rel_pos − round(rel_pos)</code> so pairs across the boundary
+        are computed correctly; (2) wrap corrected coordinates back into the box
+        with <code>x_corrected = (x + Δx) % 1.0</code>.
+        The DataProcessor centering step is dropped — meaningless on a torus,
+        and model 7/8 are already translationally invariant by construction.
+        Requires a custom PBC-aware Poisson disk generator (scipy only supports walled boxes).
+      </p>
+      <span class="rm-change">models/fixed_rd/model8.py</span>
+      <span class="rm-change">MIC: rel_pos -= round(rel_pos)</span>
+      <span class="rm-change">data_generator.py (PBC sampler)</span>
+      <span class="rm-change">drop DataProcessor.make_invariant</span>
+    </div>
+  </div>
+
+</div>
+
+<p style="margin-top:40px; font-size:12px; color:#1e2a3a; text-align:center;">
+  CorrectorWorkshop &nbsp;&bull;&nbsp; model6.py &nbsp;&bull;&nbsp; 2026-05-26
+</p>
+
+</body>
+</html>

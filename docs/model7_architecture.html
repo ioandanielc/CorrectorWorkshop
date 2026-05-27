@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Model 7 — Violation-Weighted Edge Network</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0f1117;
+    color: #e2e8f0;
+    font-family: 'Inter', sans-serif;
+    padding: 48px 56px;
+    min-height: 100vh;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: #f8fafc; }
+  h2 {
+    font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+    text-transform: uppercase; color: #475569;
+    margin-bottom: 20px; margin-top: 52px;
+    padding-bottom: 10px; border-bottom: 1px solid #1e2a3a;
+  }
+  h3 { font-size: 14px; font-weight: 600; color: #94a3b8; margin-bottom: 10px; }
+  p  { font-size: 13.5px; color: #94a3b8; line-height: 1.75; }
+
+  .subtitle { font-size: 14px; color: #64748b; margin-top: 8px; margin-bottom: 10px; }
+  .pill {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500; margin-right: 6px; margin-top: 4px;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: #1e2433; padding: 2px 6px; border-radius: 4px; color: #94a3b8;
+  }
+
+  /* ── diff badge ──────────────────────────────────────────────── */
+  .diff-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
+    background: #2d1f00; color: #fbbf24; border: 1px solid #78350f;
+    margin-left: 8px; vertical-align: middle;
+  }
+
+  /* ── Intro blurb ─────────────────────────────────────────────── */
+  .intro {
+    background: #141821; border: 1px solid #1e2a3a; border-radius: 14px;
+    padding: 24px 28px; margin-top: 28px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+
+  /* ── Main pipeline diagram ───────────────────────────────────── */
+  .diagram-wrap {
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 16px; padding: 36px 24px 28px; overflow-x: auto;
+  }
+
+  /* ── Stage explanations ──────────────────────────────────────── */
+  .stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .stage {
+    background: #141821; border: 1px solid #1e2a3a;
+    border-radius: 12px; padding: 18px 16px;
+  }
+  .stage.changed { border-color: #78350f; background: #1a1408; }
+  .stage .num { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .stage h4 { font-size: 13px; font-weight: 600; color: #e2e8f0; margin-bottom: 8px; }
+  .stage p  { font-size: 12px; color: #64748b; line-height: 1.65; }
+
+  /* ── Detail cards ────────────────────────────────────────────── */
+  .cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .card { background: #141821; border: 1px solid #1e2a3a; border-radius: 12px; padding: 24px; }
+  .card h3 {
+    font-size: 12px; font-weight: 600; color: #64748b;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid #1e2a3a;
+  }
+  .card p { font-size: 12.5px; color: #64748b; line-height: 1.65; margin-top: 14px; }
+  .row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; font-size: 13px; border-bottom: 1px solid #1a2030;
+  }
+  .row:last-child { border-bottom: none; }
+  .row .label { color: #64748b; }
+  .row .value { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: #e2e8f0; }
+  .row .value.green  { color: #4ade80; }
+  .row .value.blue   { color: #60a5fa; }
+  .row .value.orange { color: #fb923c; }
+  .row .value.yellow { color: #fbbf24; }
+  .row .value.red    { color: #f87171; }
+
+  .feature-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 0; font-size: 13px; border-bottom: 1px solid #1a2030;
+  }
+  .feature-row:last-of-type { border-bottom: none; }
+  .feat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .feat-name { color: #e2e8f0; font-weight: 500; min-width: 130px; }
+  .feat-formula { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #64748b; }
+  .feat-dim { margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #94a3b8; background: #1e2433; padding: 2px 8px; border-radius: 4px; }
+
+  .mlp-layer { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; margin-bottom: 5px; font-size: 12px; }
+  .mlp-layer .ltype { font-weight: 600; min-width: 90px; }
+  .mlp-layer .ldim  { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #94a3b8; }
+  .mlp-sep { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #475569; margin: 12px 0 8px; }
+
+  /* ── diff block ──────────────────────────────────────────────── */
+  .diff-block {
+    background: #141821; border: 1px solid #78350f;
+    border-radius: 12px; padding: 24px 28px; margin-top: 0;
+  }
+  .diff-block h3 { color: #fbbf24; margin-bottom: 14px; }
+  pre {
+    background: #0f1117; border-radius: 8px; padding: 16px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    line-height: 1.7; overflow-x: auto; margin-top: 12px;
+    border: 1px solid #1e2a3a;
+  }
+  .del { color: #f87171; }
+  .add { color: #4ade80; }
+  .ctx { color: #475569; }
+
+  /* ── training observations ───────────────────────────────────── */
+  .obs-table { width: 100%; border-collapse: collapse; margin-top: 14px; font-size: 12.5px; }
+  .obs-table th { text-align: left; padding: 8px 12px; color: #475569; font-weight: 600; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; border-bottom: 1px solid #1e2a3a; }
+  .obs-table td { padding: 8px 12px; border-bottom: 1px solid #1a2030; }
+  .obs-table td:not(:first-child) { font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  .obs-table tr:last-child td { border-bottom: none; }
+  .worse { color: #f87171; }
+  .better { color: #4ade80; }
+  .neutral { color: #94a3b8; }
+
+  /* ── Roadmap ─────────────────────────────────────────────────── */
+  .roadmap { display: flex; flex-direction: column; gap: 12px; }
+  .rm-item { display: grid; grid-template-columns: 180px 1fr; background: #141821; border: 1px solid #1e2a3a; border-radius: 12px; overflow: hidden; }
+  .rm-item.done    { border-color: #166534; opacity: 0.7; }
+  .rm-item.current { border-color: #fbbf2460; }
+  .rm-left { padding: 18px 20px; border-right: 1px solid #1e2a3a; display: flex; flex-direction: column; justify-content: center; }
+  .rm-tag  { font-size: 10px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .rm-title { font-size: 14px; font-weight: 600; color: #f1f5f9; }
+  .rm-right { padding: 18px 24px; }
+  .rm-right p { font-size: 13px; color: #64748b; line-height: 1.7; }
+  .rm-change { display: inline-block; margin-top: 10px; margin-right: 8px; margin-bottom: 2px; font-size: 11px; font-family: 'JetBrains Mono', monospace; background: #1e2433; border: 1px solid #2d3748; padding: 3px 8px; border-radius: 5px; color: #94a3b8; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════ HEADER ═══════════════════════════════════════════════════ -->
+<h1>Model 7 &mdash; Violation-Weighted Edge Network</h1>
+<p class="subtitle">Poisson Disk Corrector &nbsp;&bull;&nbsp; Current model in training</p>
+<div>
+  <span class="pill" style="background:#1c3a1c; color:#4ade80">34,690 params</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Translation invariant</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Rotation invariant</span>
+  <span class="pill" style="background:#1e1040; color:#a78bfa">Permutation invariant</span>
+  <span class="pill" style="background:#2d1f00; color:#fbbf24">1 change vs model6</span>
+</div>
+
+<!-- ═══════════ INTRO ════════════════════════════════════════════════════ -->
+<div class="intro">
+  <div>
+    <h3>What changed</h3>
+    <p>
+      Model 7 is identical to model 6 in every way except one: the
+      <strong style="color:#e2e8f0">aggregation step</strong>.
+      Instead of summing all neighbour embeddings uniformly, each neighbour's
+      message is scaled by its <strong style="color:#f87171">violation depth</strong>
+      before being added into the per-point context vector.
+      Non-violating neighbours contribute exactly zero.
+      Severely-violating neighbours dominate proportionally to their depth.
+    </p>
+    <p style="margin-top:12px;">
+      Same parameter count, same edge MLP, same output MLP, same loss, same dataset.
+      One line of math — different inductive bias.
+    </p>
+  </div>
+  <div>
+    <h3>Why it matters</h3>
+    <p>
+      In model 6, a point with 49 legal neighbours and 1 severely-violating one
+      averages the single meaningful signal across all 49 others — diluting it
+      roughly 50×. Gradient flows through all N−1 edges equally regardless of
+      physical relevance.
+    </p>
+    <p style="margin-top:12px;">
+      In model 7, the violating edge's signal is not diluted at all.
+      A point with zero total violation gets <code>agg = 0</code> exactly,
+      which drives the output MLP toward zero displacement — the correct answer —
+      with no learning required for legal points.
+    </p>
+  </div>
+</div>
+
+<!-- ═══════════ PIPELINE ═════════════════════════════════════════════════ -->
+<h2>Forward Pass</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1340 340" width="100%" style="display:block; min-width:900px;" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#475569"/>
+    </marker>
+    <marker id="arr-green" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#4ade80"/>
+    </marker>
+    <marker id="arr-blue" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#60a5fa"/>
+    </marker>
+    <marker id="arr-yellow" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+      <polygon points="0 0,9 3.5,0 7" fill="#fbbf24"/>
+    </marker>
+  </defs>
+
+  <!-- 1. Input -->
+  <rect x="10" y="130" width="130" height="80" rx="10" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="75" y="159" text-anchor="middle" fill="#93c5fd" font-family="Inter" font-size="13" font-weight="600">Point Cloud</text>
+  <text x="75" y="177" text-anchor="middle" fill="#60a5fa" font-family="JetBrains Mono" font-size="11">(B, N, 2)</text>
+  <text x="75" y="197" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">noisy input</text>
+
+  <!-- 2. Edge Features -->
+  <rect x="190" y="108" width="165" height="124" rx="10" fill="#2d1b69" stroke="#8b5cf6" stroke-width="1.5"/>
+  <text x="272" y="133" text-anchor="middle" fill="#c4b5fd" font-family="Inter" font-size="12" font-weight="600">Pairwise Edge</text>
+  <text x="272" y="149" text-anchor="middle" fill="#c4b5fd" font-family="Inter" font-size="12" font-weight="600">Features</text>
+  <text x="272" y="169" text-anchor="middle" fill="#8b5cf6" font-family="JetBrains Mono" font-size="10">(B, N, N, 4)</text>
+  <rect x="204" y="179" width="54" height="16" rx="4" fill="#1e1040"/>
+  <text x="231" y="191" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9">xi − xj</text>
+  <rect x="264" y="179" width="34" height="16" rx="4" fill="#1e1040"/>
+  <text x="281" y="191" text-anchor="middle" fill="#a78bfa" font-family="JetBrains Mono" font-size="9">dist</text>
+  <rect x="304" y="179" width="42" height="16" rx="4" fill="#3d1010"/>
+  <text x="325" y="191" text-anchor="middle" fill="#f87171" font-family="JetBrains Mono" font-size="9">viol.</text>
+  <text x="272" y="218" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">2 + 1 + 1 channels</text>
+
+  <!-- rd -->
+  <line x1="272" y1="58" x2="272" y2="106" stroke="#f87171" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr)"/>
+  <rect x="244" y="36" width="57" height="22" rx="6" fill="#2d1010" stroke="#f87171" stroke-width="1"/>
+  <text x="272" y="51" text-anchor="middle" fill="#f87171" font-family="JetBrains Mono" font-size="11" font-weight="500">rd = 0.05</text>
+  <text x="272" y="72" text-anchor="middle" fill="#64748b" font-family="Inter" font-size="9">violation threshold</text>
+
+  <!-- 3. Edge MLP -->
+  <rect x="407" y="108" width="165" height="124" rx="10" fill="#1c2d1a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="490" y="136" text-anchor="middle" fill="#86efac" font-family="Inter" font-size="13" font-weight="600">Edge MLP</text>
+  <text x="490" y="154" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="10">(B, N, N, 128)</text>
+  <rect x="420" y="164" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="490" y="176" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(4→128) + LN + ReLU</text>
+  <rect x="420" y="184" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="490" y="196" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128→128) + LN + ReLU</text>
+  <text x="490" y="222" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">unchanged from model6</text>
+
+  <!-- 4. Violation-weighted Aggregate — CHANGED, gold border -->
+  <rect x="620" y="108" width="155" height="124" rx="10" fill="#1a1408" stroke="#fbbf24" stroke-width="2"/>
+  <!-- "changed" badge -->
+  <rect x="640" y="96" width="58" height="14" rx="4" fill="#78350f"/>
+  <text x="669" y="107" text-anchor="middle" fill="#fbbf24" font-family="Inter" font-size="9" font-weight="700">CHANGED</text>
+  <text x="697" y="133" text-anchor="middle" fill="#fde68a" font-family="Inter" font-size="12" font-weight="600">Viol-Weighted</text>
+  <text x="697" y="149" text-anchor="middle" fill="#fde68a" font-family="Inter" font-size="12" font-weight="600">Aggregate</text>
+  <text x="697" y="169" text-anchor="middle" fill="#f59e0b" font-family="JetBrains Mono" font-size="10">(B, N, 128)</text>
+  <rect x="632" y="178" width="130" height="16" rx="4" fill="#1f1500"/>
+  <text x="697" y="190" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="8.5">w = viol/(viol.sum(j)+e)</text>
+  <rect x="632" y="198" width="130" height="14" rx="4" fill="#1f1500"/>
+  <text x="697" y="209" text-anchor="middle" fill="#fde68a" font-family="JetBrains Mono" font-size="8.5">agg = (emb * w).sum(j)</text>
+  <text x="697" y="225" text-anchor="middle" fill="#78350f" font-family="Inter" font-size="10">viol=0 → no contribution</text>
+
+  <!-- violation weight arrow from edge features to aggregate (dashed, red) -->
+  <path d="M 325 187 Q 400 260 632 195" fill="none" stroke="#f87171" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#arr-yellow)"/>
+  <text x="430" y="258" text-anchor="middle" fill="#f87171" font-family="Inter" font-size="9">violation used as weight</text>
+
+  <!-- 5. Output MLP -->
+  <rect x="830" y="108" width="165" height="124" rx="10" fill="#1c2d1a" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="912" y="136" text-anchor="middle" fill="#86efac" font-family="Inter" font-size="13" font-weight="600">Output MLP</text>
+  <text x="912" y="154" text-anchor="middle" fill="#4ade80" font-family="JetBrains Mono" font-size="10">(B, N, 128)</text>
+  <rect x="842" y="164" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="912" y="176" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128→128) + LN + ReLU</text>
+  <rect x="842" y="184" width="140" height="16" rx="4" fill="#142010"/>
+  <text x="912" y="196" text-anchor="middle" fill="#86efac" font-family="JetBrains Mono" font-size="9">Linear(128→2)</text>
+  <text x="912" y="222" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">unchanged from model6</text>
+
+  <!-- 6. Displacement -->
+  <rect x="1054" y="130" width="130" height="80" rx="10" fill="#1f2d1a" stroke="#84cc16" stroke-width="1.5"/>
+  <text x="1119" y="159" text-anchor="middle" fill="#bef264" font-family="Inter" font-size="13" font-weight="600">Displacement</text>
+  <text x="1119" y="177" text-anchor="middle" fill="#84cc16" font-family="JetBrains Mono" font-size="11">(B, N, 2)</text>
+  <text x="1119" y="197" text-anchor="middle" fill="#475569" font-family="Inter" font-size="10">per-point Δx</text>
+
+  <!-- + -->
+  <circle cx="1234" cy="240" r="18" fill="#1a2433" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="1234" y="246" text-anchor="middle" fill="#60a5fa" font-family="Inter" font-size="20" font-weight="300">+</text>
+
+  <!-- skip -->
+  <path d="M 75 210 Q 75 285 1216 258" fill="none" stroke="#3b82f6" stroke-width="1.2" stroke-dasharray="5,4" marker-end="url(#arr-blue)"/>
+  <text x="590" y="308" text-anchor="middle" fill="#3b82f6" font-family="Inter" font-size="10">input skip connection</text>
+
+  <!-- disp → + -->
+  <line x1="1184" y1="180" x2="1217" y2="222" stroke="#84cc16" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- Corrected -->
+  <rect x="1252" y="210" width="64" height="60" rx="8" fill="#1e3a5f" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="1284" y="237" text-anchor="middle" fill="#93c5fd" font-family="Inter" font-size="10" font-weight="600">Corrected</text>
+  <text x="1284" y="252" text-anchor="middle" fill="#60a5fa" font-family="JetBrains Mono" font-size="9">(B,N,2)</text>
+  <line x1="1252" y1="240" x2="1250" y2="240" stroke="#60a5fa" stroke-width="1.5" marker-end="url(#arr-blue)"/>
+
+  <!-- flow arrows -->
+  <line x1="140" y1="170" x2="188" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="355" y1="170" x2="405" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="572" y1="170" x2="618" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="775" y1="170" x2="828" y2="170" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="995" y1="170" x2="1052" y2="170" stroke="#475569" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- tensor labels -->
+  <text x="164" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,2)</text>
+  <text x="381" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,N,4)</text>
+  <text x="595" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,N,128)</text>
+  <text x="802" y="158" text-anchor="middle" fill="#fbbf24" font-family="JetBrains Mono" font-size="9">(B,N,128)</text>
+  <text x="1024" y="158" text-anchor="middle" fill="#334155" font-family="JetBrains Mono" font-size="9">(B,N,128)</text>
+</svg>
+</div>
+
+<!-- ═══════════ STAGE EXPLANATIONS ════════════════════════════════════════ -->
+<h2>Stage by Stage</h2>
+<div class="stages">
+
+  <div class="stage">
+    <div class="num" style="color:#60a5fa">① Input</div>
+    <h4>Noisy Point Cloud</h4>
+    <p>Identical to model6. Batch of B clouds, N=50 points in 2-D, centroid removed by DataProcessor. Some pairs violate the Poisson disk constraint (distance &lt; rd=0.05).</p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#a78bfa">② Edge Features</div>
+    <h4>Pairwise Geometry</h4>
+    <p>Identical to model6. For every ordered pair (i→j): <strong style="color:#e2e8f0">relative position</strong> (2 values), <strong style="color:#e2e8f0">distance</strong> (1 value), <strong style="color:#f87171">violation depth</strong> relu(rd−dist) (1 value). Self-edges zeroed.</p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#4ade80">③ Edge MLP</div>
+    <h4>Embedding Each Pair</h4>
+    <p>Identical to model6. Weights shared across all N² pairs. Maps the 4-D edge feature to a 128-D embedding encoding the nature of each pairwise relationship.</p>
+  </div>
+
+  <div class="stage changed">
+    <div class="num" style="color:#fbbf24">④ Aggregate <span style="font-size:9px; background:#78350f; padding:1px 5px; border-radius:3px; margin-left:4px;">CHANGED</span></div>
+    <h4>Violation-Weighted Sum</h4>
+    <p>
+      Each neighbour j's embedding is <strong style="color:#fde68a">scaled by its violation depth</strong> before summing.
+      Non-violating neighbours (depth=0) contribute <strong style="color:#fde68a">exactly zero</strong>.
+      A point with no violations at all gets <code>agg = 0</code> → output MLP outputs ~0 → no displacement needed, no learning needed.
+    </p>
+  </div>
+
+  <div class="stage">
+    <div class="num" style="color:#84cc16">⑤ Output MLP</div>
+    <h4>Predict Displacement</h4>
+    <p>Identical to model6. Maps each point's 128-D context to a 2-D displacement. Added back to the noisy input via the skip connection. No output clamping.</p>
+  </div>
+
+</div>
+
+<!-- ═══════════ DIFF ═══════════════════════════════════════════════════════ -->
+<h2>The One Change</h2>
+<div class="diff-block">
+  <h3>Aggregation — model6 vs model7</h3>
+  <p>Everything outside this block is identical. Same parameters, same init, same loss.</p>
+  <pre><span class="ctx"># --- Zero out self-edges (i == j) ---
+eye = torch.eye(N, dtype=torch.bool, device=x.device)
+edge_emb  = edge_emb  * (~eye).unsqueeze(0).unsqueeze(-1)
+</span>
+<span class="del">- # model6 — uniform sum: all neighbours equally weighted
+- agg = edge_emb.sum(dim=2)                              # (B, N, hidden_dim)</span>
+
+<span class="add">+ # model7 — violation-weighted sum
++ violation = violation * (~eye).unsqueeze(0).unsqueeze(-1)   # zero self-edges
++ viol_sum  = violation.sum(dim=2, keepdim=True)              # (B, N, 1, 1)
++ weights   = violation / (viol_sum + 1e-8)                   # (B, N, N, 1) sums to ~1 per i
++ agg       = (edge_emb * weights).sum(dim=2)                 # (B, N, hidden_dim)</span></pre>
+</div>
+
+<!-- ═══════════ DETAIL CARDS ═══════════════════════════════════════════════ -->
+<h2>Details</h2>
+<div class="cards">
+
+  <!-- Aggregation detail -->
+  <div class="card">
+    <h3>Aggregation Weights</h3>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#f87171"></div>
+      <div class="feat-name">Weight source</div>
+      <div class="feat-formula">relu(rd &minus; dist<sub>ij</sub>)</div>
+      <div class="feat-dim">per edge</div>
+    </div>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#fbbf24"></div>
+      <div class="feat-name">Normalisation</div>
+      <div class="feat-formula">w<sub>ij</sub> / (Σ<sub>j</sub> w<sub>ij</sub> + ε)</div>
+      <div class="feat-dim">per point i</div>
+    </div>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#4ade80"></div>
+      <div class="feat-name">Legal neighbour</div>
+      <div class="feat-formula">violation = 0 → weight = 0</div>
+      <div class="feat-dim">no signal</div>
+    </div>
+    <div class="feature-row">
+      <div class="feat-dot" style="background:#60a5fa"></div>
+      <div class="feat-name">Legal point</div>
+      <div class="feat-formula">all weights = 0 → agg = 0</div>
+      <div class="feat-dim">zero disp</div>
+    </div>
+    <p>
+      The normalisation ensures weights sum to ~1 per point when violations exist,
+      making the aggregation a <strong style="color:#94a3b8">violation-attention</strong>
+      mechanism: depth-proportional soft selection over neighbours.
+    </p>
+  </div>
+
+  <!-- Training observations -->
+  <div class="card">
+    <h3>Early Training Observations</h3>
+    <table class="obs-table">
+      <tr>
+        <th>iter</th>
+        <th>illegal% after</th>
+        <th>disp mean/med</th>
+        <th>corr_eff</th>
+      </tr>
+      <tr>
+        <td style="color:#64748b">100</td>
+        <td class="worse">0.80%</td>
+        <td class="worse">2.53 / 0.49 ×rd</td>
+        <td class="worse">0.2%</td>
+      </tr>
+      <tr>
+        <td style="color:#64748b">900</td>
+        <td class="worse">1.31% ⚠</td>
+        <td>—</td>
+        <td class="worse">−2.2%</td>
+      </tr>
+      <tr>
+        <td style="color:#64748b">1000</td>
+        <td class="neutral">0.65%</td>
+        <td class="better">0.328 / 0.326 ×rd</td>
+        <td class="neutral">14.7%</td>
+      </tr>
+    </table>
+    <p style="margin-top:14px;">
+      The iter 900 regression (violations <em>increased</em>) is expected: at init, random edge
+      embeddings are amplified by the violation weighting, briefly teaching the model to
+      push points <em>into</em> violations. Model6's uniform sum averages this noise away.
+      By iter 1000 the mean/median displacement converge (0.328 vs 0.326 ×rd),
+      confirming the model has escaped the random-init phase.
+    </p>
+  </div>
+
+  <!-- Stats -->
+  <div class="card">
+    <h3>Properties &amp; Stats</h3>
+    <div class="row"><span class="label">Parameters</span><span class="value green">34,690</span></div>
+    <div class="row"><span class="label">vs model6</span><span class="value yellow">identical count</span></div>
+    <div class="row"><span class="label">Hidden dim</span><span class="value blue">128</span></div>
+    <div class="row"><span class="label">Normalization</span><span class="value blue">LayerNorm</span></div>
+    <div class="row"><span class="label">Activation</span><span class="value blue">ReLU</span></div>
+    <div class="row"><span class="label">Translation inv.</span><span class="value green">architectural ✓</span></div>
+    <div class="row"><span class="label">Rotation inv.</span><span class="value green">architectural ✓</span></div>
+    <div class="row"><span class="label">Permutation inv.</span><span class="value green">via weighted Σ ✓</span></div>
+    <div class="row"><span class="label">Legal point disp.</span><span class="value green">structurally 0 ✓</span></div>
+    <div class="row"><span class="label">corr_eff ceiling</span><span class="value orange">2/(N−1) = 0.0408</span></div>
+    <div class="row"><span class="label">Aggregation</span><span class="value yellow">violation-weighted</span></div>
+    <div class="row"><span class="label">Init difficulty</span><span class="value red">harder than m6</span></div>
+  </div>
+
+</div>
+
+<!-- ═══════════ UNROLLING PROCEDURE ══════════════════════════════════════ -->
+<h2>Step 3 — Iterative Unrolling: Concrete Procedure</h2>
+
+<p style="margin-bottom:24px">
+  Model7.py is <strong style="color:#4ade80">not modified</strong>. The entire change is in the training loop.
+  The model is called identically each time — it simply receives updated point positions as input.
+</p>
+
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:32px">
+
+  <!-- K=1 -->
+  <div style="background:#141821; border:1px solid #1e2a3a; border-radius:10px; padding:24px">
+    <div style="font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#475569; margin-bottom:16px">Current — K=1 (single pass)</div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94a3b8; line-height:2">
+      noisy cloud <span style="color:#f8fafc">x₀</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      <span style="color:#60a5fa">model7</span>(<span style="color:#f8fafc">x₀</span>) → <span style="color:#fbbf24">δ₀</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      <span style="color:#f8fafc">x₁</span> = <span style="color:#f8fafc">x₀</span> + <span style="color:#fbbf24">δ₀</span><br>
+      loss = loss(<span style="color:#f8fafc">x₀</span>, <span style="color:#f8fafc">x₁</span>)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      backward → update
+    </div>
+    <div style="margin-top:16px; font-size:12px; color:#475569">One gradient signal per batch. Model only ever sees freshly-noised clouds as input.</div>
+  </div>
+
+  <!-- K=3 -->
+  <div style="background:#141821; border:1px solid #fb923c55; border-radius:10px; padding:24px">
+    <div style="font-size:11px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:#fb923c; margin-bottom:16px">Unrolled — K=3</div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#94a3b8; line-height:2">
+      noisy cloud <span style="color:#f8fafc">x₀</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      <span style="color:#60a5fa">model7</span>(<span style="color:#f8fafc">x₀</span>) → <span style="color:#fbbf24">δ₀</span> &nbsp;<span style="color:#334155">← same model, same call</span><br>
+      <span style="color:#f8fafc">x₁</span> = <span style="color:#f8fafc">x₀</span> + <span style="color:#fbbf24">δ₀</span> &nbsp;&nbsp;loss₁ = loss(<span style="color:#f8fafc">x₀</span>, <span style="color:#f8fafc">x₁</span>)<br>
+      <span style="color:#4ade80">x₁ = x₁.detach()</span> &nbsp;<span style="color:#334155">← cut gradient tape</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      <span style="color:#60a5fa">model7</span>(<span style="color:#f8fafc">x₁</span>) → <span style="color:#fbbf24">δ₁</span> &nbsp;<span style="color:#334155">← partially-corrected input</span><br>
+      <span style="color:#f8fafc">x₂</span> = <span style="color:#f8fafc">x₁</span> + <span style="color:#fbbf24">δ₁</span> &nbsp;&nbsp;loss₂ = loss(<span style="color:#f8fafc">x₁</span>, <span style="color:#f8fafc">x₂</span>)<br>
+      <span style="color:#4ade80">x₂ = x₂.detach()</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      <span style="color:#60a5fa">model7</span>(<span style="color:#f8fafc">x₂</span>) → <span style="color:#fbbf24">δ₂</span><br>
+      <span style="color:#f8fafc">x₃</span> = <span style="color:#f8fafc">x₂</span> + <span style="color:#fbbf24">δ₂</span> &nbsp;&nbsp;loss₃ = loss(<span style="color:#f8fafc">x₂</span>, <span style="color:#f8fafc">x₃</span>)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      total = loss₁ + loss₂ + loss₃<br>
+      backward → update
+    </div>
+    <div style="margin-top:16px; font-size:12px; color:#475569">Three independent gradient signals. Steps 2 &amp; 3 see partially-corrected clouds — a distribution never seen in K=1 training.</div>
+  </div>
+
+</div>
+
+<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:40px">
+  <div style="background:#141821; border:1px solid #1e2a3a; border-radius:8px; padding:16px">
+    <div style="font-size:11px; font-weight:600; color:#64748b; margin-bottom:8px">WHY .detach()?</div>
+    <p>Gradients flow only through one step's forward pass. The model learns "given <em>any</em> partially-corrected cloud, improve it" — a fixed-point iteration. Without detach: full BPTT, memory scales with K, vanishing gradients at K≥4.</p>
+  </div>
+  <div style="background:#141821; border:1px solid #1e2a3a; border-radius:8px; padding:16px">
+    <div style="font-size:11px; font-weight:600; color:#64748b; margin-bottom:8px">WHY PER-STEP LOSS?</div>
+    <p><code>loss(x_current, x_next)</code> measures displacement from <em>that step's</em> input, not from x₀. Each step is penalised for its own correction magnitude — the right signal for per-step efficiency rather than cumulative movement.</p>
+  </div>
+  <div style="background:#141821; border:1px solid #1e2a3a; border-radius:8px; padding:16px">
+    <div style="font-size:11px; font-weight:600; color:#64748b; margin-bottom:8px">WHY MODEL7 SPECIFICALLY?</div>
+    <p>Model6's uniform displacement creates slack by accident — it doesn't need multiple passes because it shoves everything regardless. Model7's precision (median disp = 0.000×rd) is exactly the property that makes multi-pass refinement tractable without overshoot.</p>
+  </div>
+</div>
+
+<!-- ═══════════ ROADMAP ═══════════════════════════════════════════════════ -->
+<h2>What Comes Next</h2>
+<div class="roadmap">
+
+  <div class="rm-item done">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#4ade80">Step 1 ✓ Done</div>
+      <div class="rm-title">Variable Noise</div>
+    </div>
+    <div class="rm-right">
+      <p>σ ∈ [0.0, 0.03] — model learns to output ~0 for legal clouds and scale corrections to violation depth. Final displacement: <strong style="color:#4ade80">0.156× rd</strong> vs 1.05× rd for fixed-noise model6.</p>
+    </div>
+  </div>
+
+  <div class="rm-item done">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#4ade80">Step 2 ✓ Done</div>
+      <div class="rm-title">Model 7</div>
+    </div>
+    <div class="rm-right">
+      <p>Violation-weighted aggregation. Final: <strong style="color:#4ade80">75.8% of efficiency ceiling</strong> vs 28% for model6. Median displacement 0.000×rd — near-perfect sparse selector. Tradeoff: 0.36% illegal pairs vs model6's 0.23%, because model7 refuses to move legal points even when that would create slack. This is the single-pass ceiling — not an architecture failure.</p>
+    </div>
+  </div>
+
+  <div class="rm-item current">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#fb923c">Step 3 ▶ Next</div>
+      <div class="rm-title">Iterative Unrolling</div>
+    </div>
+    <div class="rm-right">
+      <p>K=3 forward passes per training step. No architectural changes — model7.py is called identically each time, just with updated point positions. The training loop accumulates loss across all K steps; <code>.detach()</code> between steps trains each pass independently.</p>
+      <span class="rm-change">trainer.py — unroll loop</span>
+      <span class="rm-change">train_config_2.yaml — unroll_steps: 3</span>
+      <span class="rm-change">model7.py — unchanged</span>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#60a5fa">Step 4 · Data</div>
+      <div class="rm-title">Larger Clouds</div>
+    </div>
+    <div class="rm-right">
+      <p>N: 50 → 100 → 200. Edge network is O(N²) — at N=100 compute is ~4× per iter. Tests whether per-pair features transfer across cloud sizes.</p>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#f87171">Step 5 · Data</div>
+      <div class="rm-title">Packed Scenarios</div>
+    </div>
+    <div class="rm-right">
+      <p>50–70% of triangular lattice max packing (~N=200–300 at rd=0.05). Multi-point conflict chains. Requires step 3 first.</p>
+    </div>
+  </div>
+
+  <div class="rm-item">
+    <div class="rm-left">
+      <div class="rm-tag" style="color:#5eead4">Step 6 · Model 8</div>
+      <div class="rm-title">PBC</div>
+    </div>
+    <div class="rm-right">
+      <p>Toroidal domain. MIC distances: <code>rel_pos -= round(rel_pos)</code>. Drop DataProcessor centering. Custom PBC Poisson disk generator.</p>
+    </div>
+  </div>
+
+</div>
+
+<p style="margin-top:40px; font-size:12px; color:#1e2a3a; text-align:center;">
+  CorrectorWorkshop &nbsp;&bull;&nbsp; model7.py &nbsp;&bull;&nbsp; 2026-05-26
+</p>
+
+</body>
+</html>

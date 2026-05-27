@@ -1,0 +1,909 @@
+2026-05-26 17:34:01 +00:00:00 --:--:-- [INFO] Run directory: training_artifacts\train_run_2026-05-26_17-34-01
+2026-05-26 17:34:01 +00:00:00 --:--:-- [INFO] Configs copied to run directory
+2026-05-26 17:34:01 +00:00:00 --:--:-- [INFO] Using device: cuda
+2026-05-26 17:34:01 +00:00:00 --:--:-- [INFO] Generating validation set (256 clouds)...
+2026-05-26 17:34:02 +00:00:01 --:--:-- [INFO] Validation set saved
+2026-05-26 17:34:02 +00:00:01 --:--:-- [INFO] Model built: 51,458 parameters
+2026-05-26 17:34:03 +00:00:02 --:--:-- [INFO] Starting training for 10000 iterations
+2026-05-26 17:34:28 +00:00:27 -00:41:07 [INFO] iter=   100  0.249s/iter  lr=1.00e-03  loss=0.008215
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000036              0.000007
+  illegal_pairs    = 1.08%      ->  0.58%                 0.19%
+  viol_per_cloud   = 13.19       ->  7.12                  2.34
+  viol_reduction   =                46.0%                    82.2%
+  mean_nn_dist     = 0.050980  ->  0.055345              0.056738
+  displacement     =                0.0576 (1.151x rd)   0.1760 (3.521x rd)
+  correction_eff   =                0.0016 (3.9% ceil)         0.0007 (1.7% ceil)
+2026-05-26 17:34:52 +00:00:51 -00:39:47 [INFO] iter=   200  0.244s/iter  lr=9.99e-04  loss=0.008078
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000035              0.000005
+  illegal_pairs    = 1.08%      ->  0.55%                 0.19%
+  viol_per_cloud   = 13.19       ->  6.72                  2.31
+  viol_reduction   =                49.1%                    82.5%
+  mean_nn_dist     = 0.050980  ->  0.055348              0.056814
+  displacement     =                0.0570 (1.140x rd)   0.1752 (3.504x rd)
+  correction_eff   =                0.0016 (4.0% ceil)         0.0007 (1.7% ceil)
+2026-05-26 17:35:18 +00:01:17 -00:42:03 [INFO] iter=   300  0.260s/iter  lr=9.98e-04  loss=0.006935
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000036              0.000013
+  illegal_pairs    = 1.08%      ->  0.58%                 0.29%
+  viol_per_cloud   = 13.19       ->  7.16                  3.53
+  viol_reduction   =                45.7%                    73.2%
+  mean_nn_dist     = 0.050980  ->  0.055552              0.056822
+  displacement     =                0.0450 (0.900x rd)   0.1327 (2.654x rd)
+  correction_eff   =                0.0020 (5.0% ceil)         0.0009 (2.1% ceil)
+2026-05-26 17:35:44 +00:01:43 -00:41:25 [INFO] iter=   400  0.259s/iter  lr=9.96e-04  loss=0.001506
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000028              0.000005
+  illegal_pairs    = 1.08%      ->  0.58%                 0.23%
+  viol_per_cloud   = 13.19       ->  7.12                  2.84
+  viol_reduction   =                46.0%                    78.4%
+  mean_nn_dist     = 0.050980  ->  0.055422              0.056469
+  displacement     =                0.0050 (0.099x rd)   0.0099 (0.198x rd)
+  correction_eff   =                0.0201 (49.3% ceil)         0.0125 (30.5% ceil)
+2026-05-26 17:36:10 +00:02:09 -00:41:14 [INFO] iter=   500  0.260s/iter  lr=9.94e-04  loss=0.001208
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000027              0.000004
+  illegal_pairs    = 1.08%      ->  0.56%                 0.21%
+  viol_per_cloud   = 13.19       ->  6.81                  2.62
+  viol_reduction   =                48.3%                    80.1%
+  mean_nn_dist     = 0.050980  ->  0.055524              0.056528
+  displacement     =                0.0040 (0.080x rd)   0.0063 (0.126x rd)
+  correction_eff   =                0.0253 (62.1% ceil)         0.0197 (48.3% ceil)
+2026-05-26 17:36:37 +00:02:36 -00:42:37 [INFO] iter=   600  0.272s/iter  lr=9.91e-04  loss=0.000979
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000024              0.000003
+  illegal_pairs    = 1.08%      ->  0.52%                 0.18%
+  viol_per_cloud   = 13.19       ->  6.38                  2.16
+  viol_reduction   =                51.7%                    83.6%
+  mean_nn_dist     = 0.050980  ->  0.055719              0.056753
+  displacement     =                0.0043 (0.085x rd)   0.0057 (0.115x rd)
+  correction_eff   =                0.0245 (59.9% ceil)         0.0218 (53.4% ceil)
+2026-05-26 17:37:03 +00:03:02 -00:40:10 [INFO] iter=   700  0.259s/iter  lr=9.88e-04  loss=0.000837
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000020              0.000003
+  illegal_pairs    = 1.08%      ->  0.51%                 0.20%
+  viol_per_cloud   = 13.19       ->  6.28                  2.50
+  viol_reduction   =                52.4%                    81.0%
+  mean_nn_dist     = 0.050980  ->  0.055624              0.056428
+  displacement     =                0.0034 (0.068x rd)   0.0040 (0.081x rd)
+  correction_eff   =                0.0316 (77.5% ceil)         0.0309 (75.8% ceil)
+2026-05-26 17:37:30 +00:03:29 -00:40:16 [INFO] iter=   800  0.263s/iter  lr=9.84e-04  loss=0.000767
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000019              0.000003
+  illegal_pairs    = 1.08%      ->  0.52%                 0.19%
+  viol_per_cloud   = 13.19       ->  6.41                  2.31
+  viol_reduction   =                51.4%                    82.5%
+  mean_nn_dist     = 0.050980  ->  0.055621              0.056394
+  displacement     =                0.0035 (0.071x rd)   0.0045 (0.090x rd)
+  correction_eff   =                0.0309 (75.6% ceil)         0.0278 (68.2% ceil)
+2026-05-26 17:37:56 +00:03:55 -00:39:23 [INFO] iter=   900  0.260s/iter  lr=9.80e-04  loss=0.000743
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000018              0.000003
+  illegal_pairs    = 1.08%      ->  0.46%                 0.18%
+  viol_per_cloud   = 13.19       ->  5.62                  2.19
+  viol_reduction   =                57.3%                    83.4%
+  mean_nn_dist     = 0.050980  ->  0.055809              0.056503
+  displacement     =                0.0038 (0.076x rd)   0.0048 (0.096x rd)
+  correction_eff   =                0.0290 (71.0% ceil)         0.0262 (64.1% ceil)
+2026-05-26 17:38:22 +00:04:21 -00:39:19 [INFO] iter=  1000  0.262s/iter  lr=9.76e-04  loss=0.000694
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000019              0.000003
+  illegal_pairs    = 1.08%      ->  0.59%                 0.22%
+  viol_per_cloud   = 13.19       ->  7.19                  2.69
+  viol_reduction   =                45.5%                    79.6%
+  mean_nn_dist     = 0.050980  ->  0.055651              0.056329
+  displacement     =                0.0038 (0.075x rd)   0.0048 (0.095x rd)
+  correction_eff   =                0.0291 (71.4% ceil)         0.0262 (64.2% ceil)
+2026-05-26 17:38:49 +00:04:48 -00:40:40 [INFO] iter=  1100  0.274s/iter  lr=9.70e-04  loss=0.000896
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000022              0.000004
+  illegal_pairs    = 1.08%      ->  0.66%                 0.23%
+  viol_per_cloud   = 13.19       ->  8.12                  2.88
+  viol_reduction   =                38.4%                    78.2%
+  mean_nn_dist     = 0.050980  ->  0.055476              0.056400
+  displacement     =                0.0035 (0.071x rd)   0.0050 (0.099x rd)
+  correction_eff   =                0.0302 (73.9% ceil)         0.0251 (61.4% ceil)
+2026-05-26 17:39:15 +00:05:14 -00:38:05 [INFO] iter=  1200  0.260s/iter  lr=9.65e-04  loss=0.000732
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000016              0.000002
+  illegal_pairs    = 1.08%      ->  0.43%                 0.13%
+  viol_per_cloud   = 13.19       ->  5.31                  1.56
+  viol_reduction   =                59.7%                    88.2%
+  mean_nn_dist     = 0.050980  ->  0.056155              0.056880
+  displacement     =                0.0041 (0.082x rd)   0.0050 (0.100x rd)
+  correction_eff   =                0.0273 (66.8% ceil)         0.0251 (61.5% ceil)
+2026-05-26 17:39:41 +00:05:40 -00:37:39 [INFO] iter=  1300  0.260s/iter  lr=9.59e-04  loss=0.000618
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000015              0.000002
+  illegal_pairs    = 1.08%      ->  0.41%                 0.12%
+  viol_per_cloud   = 13.19       ->  4.97                  1.50
+  viol_reduction   =                62.3%                    88.6%
+  mean_nn_dist     = 0.050980  ->  0.056126              0.056768
+  displacement     =                0.0038 (0.077x rd)   0.0044 (0.089x rd)
+  correction_eff   =                0.0297 (72.7% ceil)         0.0285 (69.7% ceil)
+2026-05-26 17:40:07 +00:06:06 -00:37:08 [INFO] iter=  1400  0.259s/iter  lr=9.52e-04  loss=0.000558
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000013              0.000002
+  illegal_pairs    = 1.08%      ->  0.60%                 0.20%
+  viol_per_cloud   = 13.19       ->  7.38                  2.44
+  viol_reduction   =                44.1%                    81.5%
+  mean_nn_dist     = 0.050980  ->  0.055766              0.056302
+  displacement     =                0.0036 (0.072x rd)   0.0044 (0.088x rd)
+  correction_eff   =                0.0321 (78.6% ceil)         0.0285 (69.8% ceil)
+2026-05-26 17:40:33 +00:06:32 -00:36:58 [INFO] iter=  1500  0.261s/iter  lr=9.46e-04  loss=0.000569
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000012              0.000002
+  illegal_pairs    = 1.08%      ->  0.55%                 0.16%
+  viol_per_cloud   = 13.19       ->  6.75                  1.94
+  viol_reduction   =                48.8%                    85.3%
+  mean_nn_dist     = 0.050980  ->  0.055849              0.056373
+  displacement     =                0.0035 (0.070x rd)   0.0041 (0.081x rd)
+  correction_eff   =                0.0329 (80.6% ceil)         0.0310 (75.9% ceil)
+2026-05-26 17:41:00 +00:06:59 -00:37:12 [INFO] iter=  1600  0.266s/iter  lr=9.38e-04  loss=0.000478
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000011              0.000001
+  illegal_pairs    = 1.08%      ->  0.39%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.78                  1.19
+  viol_reduction   =                63.7%                    91.0%
+  mean_nn_dist     = 0.050980  ->  0.056069              0.056559
+  displacement     =                0.0036 (0.072x rd)   0.0040 (0.080x rd)
+  correction_eff   =                0.0327 (80.1% ceil)         0.0318 (77.9% ceil)
+2026-05-26 17:41:26 +00:07:25 -00:36:17 [INFO] iter=  1700  0.262s/iter  lr=9.30e-04  loss=0.000548
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000012              0.000002
+  illegal_pairs    = 1.08%      ->  0.45%                 0.12%
+  viol_per_cloud   = 13.19       ->  5.47                  1.47
+  viol_reduction   =                58.5%                    88.9%
+  mean_nn_dist     = 0.050980  ->  0.056069              0.056602
+  displacement     =                0.0038 (0.077x rd)   0.0046 (0.092x rd)
+  correction_eff   =                0.0303 (74.2% ceil)         0.0275 (67.4% ceil)
+2026-05-26 17:41:52 +00:07:51 -00:35:45 [INFO] iter=  1800  0.262s/iter  lr=9.22e-04  loss=0.000451
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000011              0.000001
+  illegal_pairs    = 1.08%      ->  0.47%                 0.12%
+  viol_per_cloud   = 13.19       ->  5.81                  1.53
+  viol_reduction   =                55.9%                    88.4%
+  mean_nn_dist     = 0.050980  ->  0.055974              0.056450
+  displacement     =                0.0037 (0.074x rd)   0.0043 (0.087x rd)
+  correction_eff   =                0.0319 (78.1% ceil)         0.0293 (71.8% ceil)
+2026-05-26 17:42:18 +00:08:17 -00:35:11 [INFO] iter=  1900  0.261s/iter  lr=9.14e-04  loss=0.000546
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.08%
+  viol_per_cloud   = 13.19       ->  4.31                  1.00
+  viol_reduction   =                67.3%                    92.4%
+  mean_nn_dist     = 0.050980  ->  0.056125              0.056552
+  displacement     =                0.0041 (0.082x rd)   0.0055 (0.110x rd)
+  correction_eff   =                0.0289 (70.7% ceil)         0.0230 (56.4% ceil)
+2026-05-26 17:42:44 +00:08:43 -00:34:47 [INFO] iter=  2000  0.261s/iter  lr=9.05e-04  loss=0.000475
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000010              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.06%
+  viol_per_cloud   = 13.19       ->  4.06                  0.78
+  viol_reduction   =                69.2%                    94.1%
+  mean_nn_dist     = 0.050980  ->  0.056423              0.056951
+  displacement     =                0.0041 (0.082x rd)   0.0046 (0.092x rd)
+  correction_eff   =                0.0288 (70.6% ceil)         0.0275 (67.5% ceil)
+2026-05-26 17:43:11 +00:09:10 -00:34:52 [INFO] iter=  2100  0.265s/iter  lr=8.95e-04  loss=0.000405
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.44%                 0.10%
+  viol_per_cloud   = 13.19       ->  5.34                  1.22
+  viol_reduction   =                59.5%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056064              0.056497
+  displacement     =                0.0036 (0.072x rd)   0.0040 (0.079x rd)
+  correction_eff   =                0.0328 (80.5% ceil)         0.0321 (78.7% ceil)
+2026-05-26 17:43:37 +00:09:36 -00:33:59 [INFO] iter=  2200  0.262s/iter  lr=8.85e-04  loss=0.000441
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.44%                 0.12%
+  viol_per_cloud   = 13.19       ->  5.41                  1.50
+  viol_reduction   =                59.0%                    88.6%
+  mean_nn_dist     = 0.050980  ->  0.056109              0.056558
+  displacement     =                0.0037 (0.075x rd)   0.0041 (0.083x rd)
+  correction_eff   =                0.0318 (77.9% ceil)         0.0307 (75.2% ceil)
+2026-05-26 17:44:03 +00:10:02 -00:33:31 [INFO] iter=  2300  0.261s/iter  lr=8.75e-04  loss=0.000405
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.25                  1.22
+  viol_reduction   =                67.8%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056201              0.056593
+  displacement     =                0.0038 (0.076x rd)   0.0042 (0.084x rd)
+  correction_eff   =                0.0314 (77.0% ceil)         0.0305 (74.7% ceil)
+2026-05-26 17:44:29 +00:10:28 -00:32:58 [INFO] iter=  2400  0.260s/iter  lr=8.65e-04  loss=0.000395
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.36%                 0.08%
+  viol_per_cloud   = 13.19       ->  4.47                  1.03
+  viol_reduction   =                66.1%                    92.2%
+  mean_nn_dist     = 0.050980  ->  0.056123              0.056536
+  displacement     =                0.0037 (0.073x rd)   0.0039 (0.079x rd)
+  correction_eff   =                0.0325 (79.5% ceil)         0.0324 (79.5% ceil)
+2026-05-26 17:44:55 +00:10:54 -00:32:13 [INFO] iter=  2500  0.258s/iter  lr=8.54e-04  loss=0.000397
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.07%
+  viol_per_cloud   = 13.19       ->  3.88                  0.84
+  viol_reduction   =                70.6%                    93.6%
+  mean_nn_dist     = 0.050980  ->  0.056311              0.056710
+  displacement     =                0.0039 (0.079x rd)   0.0045 (0.089x rd)
+  correction_eff   =                0.0305 (74.6% ceil)         0.0286 (70.2% ceil)
+2026-05-26 17:45:21 +00:11:20 -00:32:48 [INFO] iter=  2600  0.266s/iter  lr=8.42e-04  loss=0.000424
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.25                  1.06
+  viol_reduction   =                67.8%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056248              0.056681
+  displacement     =                0.0041 (0.082x rd)   0.0049 (0.099x rd)
+  correction_eff   =                0.0292 (71.5% ceil)         0.0257 (63.1% ceil)
+2026-05-26 17:45:47 +00:11:46 -00:31:33 [INFO] iter=  2700  0.259s/iter  lr=8.31e-04  loss=0.000392
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.43%                 0.11%
+  viol_per_cloud   = 13.19       ->  5.25                  1.31
+  viol_reduction   =                60.2%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.055996              0.056373
+  displacement     =                0.0036 (0.072x rd)   0.0041 (0.082x rd)
+  correction_eff   =                0.0333 (81.5% ceil)         0.0312 (76.5% ceil)
+2026-05-26 17:46:13 +00:12:12 -00:31:14 [INFO] iter=  2800  0.260s/iter  lr=8.19e-04  loss=0.000363
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000009              0.000001
+  illegal_pairs    = 1.08%      ->  0.62%                 0.27%
+  viol_per_cloud   = 13.19       ->  7.56                  3.28
+  viol_reduction   =                42.7%                    75.1%
+  mean_nn_dist     = 0.050980  ->  0.055918              0.056302
+  displacement     =                0.0036 (0.071x rd)   0.0041 (0.081x rd)
+  correction_eff   =                0.0333 (81.6% ceil)         0.0312 (76.4% ceil)
+2026-05-26 17:46:40 +00:12:38 -00:30:49 [INFO] iter=  2900  0.261s/iter  lr=8.07e-04  loss=0.000362
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.08%
+  viol_per_cloud   = 13.19       ->  4.09                  0.97
+  viol_reduction   =                69.0%                    92.7%
+  mean_nn_dist     = 0.050980  ->  0.056134              0.056479
+  displacement     =                0.0037 (0.073x rd)   0.0040 (0.080x rd)
+  correction_eff   =                0.0330 (80.8% ceil)         0.0317 (77.6% ceil)
+2026-05-26 17:47:06 +00:13:04 -00:30:20 [INFO] iter=  3000  0.260s/iter  lr=7.94e-04  loss=0.000387
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.28%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.47                  0.97
+  viol_reduction   =                73.7%                    92.7%
+  mean_nn_dist     = 0.050980  ->  0.056199              0.056531
+  displacement     =                0.0037 (0.075x rd)   0.0041 (0.081x rd)
+  correction_eff   =                0.0323 (79.2% ceil)         0.0313 (76.7% ceil)
+2026-05-26 17:47:32 +00:13:31 -00:30:21 [INFO] iter=  3100  0.264s/iter  lr=7.81e-04  loss=0.000394
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.31                  1.19
+  viol_reduction   =                67.3%                    91.0%
+  mean_nn_dist     = 0.050980  ->  0.056120              0.056457
+  displacement     =                0.0037 (0.074x rd)   0.0040 (0.080x rd)
+  correction_eff   =                0.0327 (80.1% ceil)         0.0318 (77.8% ceil)
+2026-05-26 17:47:58 +00:13:57 -00:29:45 [INFO] iter=  3200  0.263s/iter  lr=7.68e-04  loss=0.000403
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.30%                 0.05%
+  viol_per_cloud   = 13.19       ->  3.66                  0.66
+  viol_reduction   =                72.3%                    95.0%
+  mean_nn_dist     = 0.050980  ->  0.056321              0.056721
+  displacement     =                0.0039 (0.079x rd)   0.0043 (0.087x rd)
+  correction_eff   =                0.0306 (75.0% ceil)         0.0294 (71.9% ceil)
+2026-05-26 17:48:24 +00:14:23 -00:29:00 [INFO] iter=  3300  0.260s/iter  lr=7.55e-04  loss=0.000377
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.37%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.59                  1.06
+  viol_reduction   =                65.2%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056145              0.056533
+  displacement     =                0.0038 (0.076x rd)   0.0042 (0.084x rd)
+  correction_eff   =                0.0319 (78.1% ceil)         0.0303 (74.2% ceil)
+2026-05-26 17:48:50 +00:14:49 -00:28:36 [INFO] iter=  3400  0.260s/iter  lr=7.41e-04  loss=0.000371
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.47%                 0.13%
+  viol_per_cloud   = 13.19       ->  5.72                  1.56
+  viol_reduction   =                56.6%                    88.2%
+  mean_nn_dist     = 0.050980  ->  0.056015              0.056341
+  displacement     =                0.0036 (0.071x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0338 (82.8% ceil)         0.0328 (80.4% ceil)
+2026-05-26 17:49:16 +00:15:15 -00:28:18 [INFO] iter=  3500  0.261s/iter  lr=7.27e-04  loss=0.000395
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.34%                 0.07%
+  viol_per_cloud   = 13.19       ->  4.16                  0.91
+  viol_reduction   =                68.5%                    93.1%
+  mean_nn_dist     = 0.050980  ->  0.056207              0.056568
+  displacement     =                0.0038 (0.075x rd)   0.0041 (0.082x rd)
+  correction_eff   =                0.0320 (78.4% ceil)         0.0310 (76.1% ceil)
+2026-05-26 17:49:43 +00:15:42 -00:28:07 [INFO] iter=  3600  0.264s/iter  lr=7.13e-04  loss=0.000354
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000008              0.000001
+  illegal_pairs    = 1.08%      ->  0.45%                 0.15%
+  viol_per_cloud   = 13.19       ->  5.50                  1.78
+  viol_reduction   =                58.3%                    86.5%
+  mean_nn_dist     = 0.050980  ->  0.056014              0.056327
+  displacement     =                0.0035 (0.070x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0343 (84.1% ceil)         0.0333 (81.6% ceil)
+2026-05-26 17:50:09 +00:16:08 -00:27:23 [INFO] iter=  3700  0.261s/iter  lr=6.99e-04  loss=0.000367
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.07%
+  viol_per_cloud   = 13.19       ->  3.78                  0.84
+  viol_reduction   =                71.3%                    93.6%
+  mean_nn_dist     = 0.050980  ->  0.056232              0.056553
+  displacement     =                0.0038 (0.076x rd)   0.0041 (0.083x rd)
+  correction_eff   =                0.0321 (78.7% ceil)         0.0308 (75.5% ceil)
+2026-05-26 17:50:35 +00:16:34 -00:26:48 [INFO] iter=  3800  0.260s/iter  lr=6.84e-04  loss=0.000372
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.34                  1.12
+  viol_reduction   =                67.1%                    91.5%
+  mean_nn_dist     = 0.050980  ->  0.056119              0.056427
+  displacement     =                0.0037 (0.073x rd)   0.0040 (0.079x rd)
+  correction_eff   =                0.0331 (81.1% ceil)         0.0322 (78.9% ceil)
+2026-05-26 17:51:01 +00:17:00 -00:26:29 [INFO] iter=  3900  0.261s/iter  lr=6.70e-04  loss=0.000382
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.06%
+  viol_per_cloud   = 13.19       ->  3.53                  0.72
+  viol_reduction   =                73.2%                    94.5%
+  mean_nn_dist     = 0.050980  ->  0.056298              0.056623
+  displacement     =                0.0039 (0.077x rd)   0.0042 (0.085x rd)
+  correction_eff   =                0.0314 (77.0% ceil)         0.0301 (73.8% ceil)
+2026-05-26 17:51:27 +00:17:26 -00:25:58 [INFO] iter=  4000  0.260s/iter  lr=6.55e-04  loss=0.000352
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.88                  1.06
+  viol_reduction   =                70.6%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056156              0.056432
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0335 (82.2% ceil)         0.0336 (82.4% ceil)
+2026-05-26 17:51:53 +00:17:52 -00:26:06 [INFO] iter=  4100  0.266s/iter  lr=6.40e-04  loss=0.000383
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.97                  1.06
+  viol_reduction   =                69.9%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056155              0.056478
+  displacement     =                0.0037 (0.075x rd)   0.0042 (0.084x rd)
+  correction_eff   =                0.0323 (79.2% ceil)         0.0304 (74.4% ceil)
+2026-05-26 17:52:19 +00:18:18 -00:25:15 [INFO] iter=  4200  0.261s/iter  lr=6.25e-04  loss=0.000389
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.75                  1.19
+  viol_reduction   =                71.6%                    91.0%
+  mean_nn_dist     = 0.050980  ->  0.056166              0.056479
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0329 (80.7% ceil)         0.0326 (79.8% ceil)
+2026-05-26 17:52:46 +00:18:45 -00:24:56 [INFO] iter=  4300  0.263s/iter  lr=6.09e-04  loss=0.000338
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.28                  1.22
+  viol_reduction   =                67.5%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056134              0.056410
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.077x rd)
+  correction_eff   =                0.0337 (82.6% ceil)         0.0333 (81.5% ceil)
+2026-05-26 17:53:12 +00:19:11 -00:24:18 [INFO] iter=  4400  0.260s/iter  lr=5.94e-04  loss=0.000345
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.84                  0.94
+  viol_reduction   =                70.9%                    92.9%
+  mean_nn_dist     = 0.050980  ->  0.056181              0.056469
+  displacement     =                0.0036 (0.073x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0336 (82.2% ceil)         0.0336 (82.3% ceil)
+2026-05-26 17:53:38 +00:19:37 -00:23:48 [INFO] iter=  4500  0.260s/iter  lr=5.79e-04  loss=0.000344
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.03                  1.06
+  viol_reduction   =                69.4%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056133              0.056433
+  displacement     =                0.0036 (0.072x rd)   0.0037 (0.075x rd)
+  correction_eff   =                0.0339 (83.1% ceil)         0.0340 (83.4% ceil)
+2026-05-26 17:54:04 +00:20:03 -00:23:35 [INFO] iter=  4600  0.262s/iter  lr=5.63e-04  loss=0.000348
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.37%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.50                  1.31
+  viol_reduction   =                65.9%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056132              0.056437
+  displacement     =                0.0036 (0.072x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0335 (82.1% ceil)         0.0328 (80.4% ceil)
+2026-05-26 17:54:30 +00:20:29 -00:22:48 [INFO] iter=  4700  0.258s/iter  lr=5.48e-04  loss=0.000329
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.34                  1.41
+  viol_reduction   =                67.1%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056118              0.056395
+  displacement     =                0.0036 (0.073x rd)   0.0040 (0.080x rd)
+  correction_eff   =                0.0333 (81.7% ceil)         0.0320 (78.5% ceil)
+2026-05-26 17:54:55 +00:20:54 -00:22:18 [INFO] iter=  4800  0.257s/iter  lr=5.32e-04  loss=0.000351
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.34%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.12                  1.12
+  viol_reduction   =                68.7%                    91.5%
+  mean_nn_dist     = 0.050980  ->  0.056129              0.056436
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0339 (83.1% ceil)         0.0336 (82.2% ceil)
+2026-05-26 17:55:21 +00:21:20 -00:21:59 [INFO] iter=  4900  0.259s/iter  lr=5.16e-04  loss=0.000343
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.03                  1.22
+  viol_reduction   =                69.4%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056172              0.056444
+  displacement     =                0.0036 (0.073x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0334 (81.9% ceil)         0.0335 (82.0% ceil)
+2026-05-26 17:55:47 +00:21:46 -00:21:37 [INFO] iter=  5000  0.259s/iter  lr=5.01e-04  loss=0.000346
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.75                  1.38
+  viol_reduction   =                71.6%                    89.6%
+  mean_nn_dist     = 0.050980  ->  0.056133              0.056404
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0338 (82.8% ceil)         0.0334 (81.8% ceil)
+2026-05-26 17:56:14 +00:22:13 -00:22:07 [INFO] iter=  5100  0.271s/iter  lr=4.85e-04  loss=0.000367
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000000
+  illegal_pairs    = 1.08%      ->  0.27%                 0.06%
+  viol_per_cloud   = 13.19       ->  3.25                  0.78
+  viol_reduction   =                75.4%                    94.1%
+  mean_nn_dist     = 0.050980  ->  0.056256              0.056537
+  displacement     =                0.0037 (0.075x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0327 (80.0% ceil)         0.0326 (79.8% ceil)
+2026-05-26 17:56:40 +00:22:39 -00:20:42 [INFO] iter=  5200  0.259s/iter  lr=4.69e-04  loss=0.000361
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.28%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.47                  1.00
+  viol_reduction   =                73.7%                    92.4%
+  mean_nn_dist     = 0.050980  ->  0.056203              0.056485
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0331 (81.0% ceil)         0.0326 (79.9% ceil)
+2026-05-26 17:57:06 +00:23:05 -00:20:12 [INFO] iter=  5300  0.258s/iter  lr=4.53e-04  loss=0.000337
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.75                  0.94
+  viol_reduction   =                71.6%                    92.9%
+  mean_nn_dist     = 0.050980  ->  0.056219              0.056524
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0330 (80.8% ceil)         0.0328 (80.4% ceil)
+2026-05-26 17:57:32 +00:23:31 -00:19:50 [INFO] iter=  5400  0.259s/iter  lr=4.38e-04  loss=0.000340
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.09%
+  viol_per_cloud   = 13.19       ->  4.00                  1.09
+  viol_reduction   =                69.7%                    91.7%
+  mean_nn_dist     = 0.050980  ->  0.056123              0.056415
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0335 (82.1% ceil)         0.0334 (81.8% ceil)
+2026-05-26 17:57:58 +00:23:57 -00:19:28 [INFO] iter=  5500  0.260s/iter  lr=4.22e-04  loss=0.000328
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.07%
+  viol_per_cloud   = 13.19       ->  3.53                  0.91
+  viol_reduction   =                73.2%                    93.1%
+  mean_nn_dist     = 0.050980  ->  0.056215              0.056486
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.077x rd)
+  correction_eff   =                0.0331 (81.1% ceil)         0.0330 (80.7% ceil)
+2026-05-26 17:58:24 +00:24:23 -00:19:22 [INFO] iter=  5600  0.264s/iter  lr=4.07e-04  loss=0.000335
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.37%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.50                  1.28
+  viol_reduction   =                65.9%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056101              0.056373
+  displacement     =                0.0036 (0.071x rd)   0.0038 (0.075x rd)
+  correction_eff   =                0.0341 (83.5% ceil)         0.0340 (83.3% ceil)
+2026-05-26 17:58:51 +00:24:50 -00:18:50 [INFO] iter=  5700  0.263s/iter  lr=3.92e-04  loss=0.000322
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.40%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.88                  1.19
+  viol_reduction   =                63.0%                    91.0%
+  mean_nn_dist     = 0.050980  ->  0.056077              0.056347
+  displacement     =                0.0036 (0.071x rd)   0.0038 (0.075x rd)
+  correction_eff   =                0.0343 (84.0% ceil)         0.0339 (83.0% ceil)
+2026-05-26 17:59:17 +00:25:16 -00:18:22 [INFO] iter=  5800  0.263s/iter  lr=3.76e-04  loss=0.000340
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.59                  1.19
+  viol_reduction   =                72.7%                    91.0%
+  mean_nn_dist     = 0.050980  ->  0.056186              0.056452
+  displacement     =                0.0037 (0.073x rd)   0.0039 (0.077x rd)
+  correction_eff   =                0.0333 (81.5% ceil)         0.0330 (80.9% ceil)
+2026-05-26 17:59:43 +00:25:42 -00:18:04 [INFO] iter=  5900  0.265s/iter  lr=3.61e-04  loss=0.000350
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.88                  1.09
+  viol_reduction   =                70.6%                    91.7%
+  mean_nn_dist     = 0.050980  ->  0.056237              0.056571
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.078x rd)
+  correction_eff   =                0.0328 (80.4% ceil)         0.0328 (80.4% ceil)
+2026-05-26 18:00:09 +00:26:08 -00:17:17 [INFO] iter=  6000  0.259s/iter  lr=3.46e-04  loss=0.000330
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.75                  1.06
+  viol_reduction   =                71.6%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056147              0.056404
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.077x rd)
+  correction_eff   =                0.0337 (82.6% ceil)         0.0332 (81.4% ceil)
+2026-05-26 18:00:35 +00:26:34 -00:16:59 [INFO] iter=  6100  0.261s/iter  lr=3.31e-04  loss=0.000327
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.56                  1.06
+  viol_reduction   =                73.0%                    91.9%
+  mean_nn_dist     = 0.050980  ->  0.056155              0.056404
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.075x rd)
+  correction_eff   =                0.0339 (83.1% ceil)         0.0338 (82.9% ceil)
+2026-05-26 18:01:01 +00:27:00 -00:16:14 [INFO] iter=  6200  0.256s/iter  lr=3.17e-04  loss=0.000333
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000007              0.000001
+  illegal_pairs    = 1.08%      ->  0.42%                 0.08%
+  viol_per_cloud   = 13.19       ->  5.09                  1.03
+  viol_reduction   =                61.4%                    92.2%
+  mean_nn_dist     = 0.050980  ->  0.056084              0.056405
+  displacement     =                0.0036 (0.071x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0340 (83.4% ceil)         0.0335 (82.1% ceil)
+2026-05-26 18:01:27 +00:27:26 -00:15:58 [INFO] iter=  6300  0.259s/iter  lr=3.02e-04  loss=0.000314
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.30%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.66                  1.25
+  viol_reduction   =                72.3%                    90.5%
+  mean_nn_dist     = 0.050980  ->  0.056137              0.056379
+  displacement     =                0.0036 (0.072x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0341 (83.6% ceil)         0.0338 (82.7% ceil)
+2026-05-26 18:01:53 +00:27:52 -00:15:25 [INFO] iter=  6400  0.257s/iter  lr=2.88e-04  loss=0.000320
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.27%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.31                  1.00
+  viol_reduction   =                74.9%                    92.4%
+  mean_nn_dist     = 0.050980  ->  0.056168              0.056408
+  displacement     =                0.0036 (0.073x rd)   0.0038 (0.077x rd)
+  correction_eff   =                0.0336 (82.4% ceil)         0.0333 (81.6% ceil)
+2026-05-26 18:02:19 +00:28:17 -00:15:07 [INFO] iter=  6500  0.259s/iter  lr=2.74e-04  loss=0.000313
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.34%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.22                  1.28
+  viol_reduction   =                68.0%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056098              0.056339
+  displacement     =                0.0036 (0.071x rd)   0.0037 (0.075x rd)
+  correction_eff   =                0.0344 (84.2% ceil)         0.0341 (83.6% ceil)
+2026-05-26 18:02:45 +00:28:44 -00:15:00 [INFO] iter=  6600  0.265s/iter  lr=2.60e-04  loss=0.000318
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.09%
+  viol_per_cloud   = 13.19       ->  3.56                  1.16
+  viol_reduction   =                73.0%                    91.2%
+  mean_nn_dist     = 0.050980  ->  0.056142              0.056375
+  displacement     =                0.0036 (0.072x rd)   0.0037 (0.075x rd)
+  correction_eff   =                0.0342 (83.8% ceil)         0.0341 (83.7% ceil)
+2026-05-26 18:03:11 +00:29:10 -00:14:21 [INFO] iter=  6700  0.261s/iter  lr=2.46e-04  loss=0.000310
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.41%                 0.11%
+  viol_per_cloud   = 13.19       ->  5.06                  1.38
+  viol_reduction   =                61.6%                    89.6%
+  mean_nn_dist     = 0.050980  ->  0.056067              0.056313
+  displacement     =                0.0035 (0.070x rd)   0.0037 (0.073x rd)
+  correction_eff   =                0.0350 (85.8% ceil)         0.0349 (85.5% ceil)
+2026-05-26 18:03:37 +00:29:36 -00:13:53 [INFO] iter=  6800  0.260s/iter  lr=2.33e-04  loss=0.000317
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.41%                 0.11%
+  viol_per_cloud   = 13.19       ->  5.03                  1.38
+  viol_reduction   =                61.8%                    89.6%
+  mean_nn_dist     = 0.050980  ->  0.056097              0.056338
+  displacement     =                0.0036 (0.071x rd)   0.0038 (0.076x rd)
+  correction_eff   =                0.0344 (84.3% ceil)         0.0337 (82.6% ceil)
+2026-05-26 18:04:03 +00:30:02 -00:13:31 [INFO] iter=  6900  0.262s/iter  lr=2.20e-04  loss=0.000312
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000000
+  illegal_pairs    = 1.08%      ->  0.27%                 0.06%
+  viol_per_cloud   = 13.19       ->  3.28                  0.72
+  viol_reduction   =                75.1%                    94.5%
+  mean_nn_dist     = 0.050980  ->  0.056294              0.056556
+  displacement     =                0.0037 (0.074x rd)   0.0039 (0.077x rd)
+  correction_eff   =                0.0329 (80.7% ceil)         0.0332 (81.3% ceil)
+2026-05-26 18:04:30 +00:30:28 -00:13:05 [INFO] iter=  7000  0.262s/iter  lr=2.07e-04  loss=0.000306
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.09                  1.41
+  viol_reduction   =                69.0%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056118              0.056339
+  displacement     =                0.0035 (0.071x rd)   0.0037 (0.073x rd)
+  correction_eff   =                0.0347 (85.1% ceil)         0.0348 (85.3% ceil)
+2026-05-26 18:04:56 +00:30:55 -00:12:43 [INFO] iter=  7100  0.263s/iter  lr=1.94e-04  loss=0.000307
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.00                  1.22
+  viol_reduction   =                69.7%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056133              0.056361
+  displacement     =                0.0035 (0.071x rd)   0.0037 (0.074x rd)
+  correction_eff   =                0.0346 (84.7% ceil)         0.0344 (84.2% ceil)
+2026-05-26 18:05:22 +00:31:21 -00:12:07 [INFO] iter=  7200  0.260s/iter  lr=1.82e-04  loss=0.000305
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.81                  1.22
+  viol_reduction   =                71.1%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056131              0.056348
+  displacement     =                0.0036 (0.071x rd)   0.0037 (0.074x rd)
+  correction_eff   =                0.0346 (84.7% ceil)         0.0345 (84.4% ceil)
+2026-05-26 18:05:48 +00:31:47 -00:11:42 [INFO] iter=  7300  0.260s/iter  lr=1.70e-04  loss=0.000306
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.34                  1.34
+  viol_reduction   =                67.1%                    89.8%
+  mean_nn_dist     = 0.050980  ->  0.056110              0.056330
+  displacement     =                0.0035 (0.071x rd)   0.0037 (0.074x rd)
+  correction_eff   =                0.0347 (85.1% ceil)         0.0346 (84.7% ceil)
+2026-05-26 18:06:14 +00:32:13 -00:11:16 [INFO] iter=  7400  0.260s/iter  lr=1.59e-04  loss=0.000301
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.36%                 0.10%
+  viol_per_cloud   = 13.19       ->  4.38                  1.25
+  viol_reduction   =                66.8%                    90.5%
+  mean_nn_dist     = 0.050980  ->  0.056120              0.056346
+  displacement     =                0.0035 (0.071x rd)   0.0037 (0.074x rd)
+  correction_eff   =                0.0348 (85.3% ceil)         0.0347 (85.0% ceil)
+2026-05-26 18:06:40 +00:32:39 -00:10:51 [INFO] iter=  7500  0.260s/iter  lr=1.47e-04  loss=0.000305
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000006              0.000001
+  illegal_pairs    = 1.08%      ->  0.46%                 0.13%
+  viol_per_cloud   = 13.19       ->  5.59                  1.56
+  viol_reduction   =                57.6%                    88.2%
+  mean_nn_dist     = 0.050980  ->  0.056064              0.056299
+  displacement     =                0.0035 (0.069x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0353 (86.6% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:07:06 +00:33:05 -00:10:32 [INFO] iter=  7600  0.263s/iter  lr=1.36e-04  loss=0.000302
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.39%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.78                  1.31
+  viol_reduction   =                63.7%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056109              0.056325
+  displacement     =                0.0035 (0.070x rd)   0.0037 (0.073x rd)
+  correction_eff   =                0.0349 (85.4% ceil)         0.0349 (85.5% ceil)
+2026-05-26 18:07:32 +00:33:31 -00:09:57 [INFO] iter=  7700  0.260s/iter  lr=1.26e-04  loss=0.000299
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.97                  1.28
+  viol_reduction   =                69.9%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056121              0.056329
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.5% ceil)         0.0350 (85.7% ceil)
+2026-05-26 18:07:58 +00:33:57 -00:09:32 [INFO] iter=  7800  0.260s/iter  lr=1.16e-04  loss=0.000300
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.44%                 0.12%
+  viol_per_cloud   = 13.19       ->  5.34                  1.44
+  viol_reduction   =                59.5%                    89.1%
+  mean_nn_dist     = 0.050980  ->  0.056085              0.056304
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0352 (86.3% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:08:24 +00:34:23 -00:09:07 [INFO] iter=  7900  0.261s/iter  lr=1.06e-04  loss=0.000297
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.28%                 0.08%
+  viol_per_cloud   = 13.19       ->  3.38                  1.00
+  viol_reduction   =                74.4%                    92.4%
+  mean_nn_dist     = 0.050980  ->  0.056153              0.056357
+  displacement     =                0.0036 (0.071x rd)   0.0037 (0.073x rd)
+  correction_eff   =                0.0346 (84.8% ceil)         0.0348 (85.3% ceil)
+2026-05-26 18:08:50 +00:34:49 -00:08:38 [INFO] iter=  8000  0.259s/iter  lr=9.64e-05  loss=0.000302
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.75                  1.28
+  viol_reduction   =                71.6%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056136              0.056338
+  displacement     =                0.0035 (0.071x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0348 (85.3% ceil)         0.0350 (85.7% ceil)
+2026-05-26 18:09:18 +00:35:17 -00:08:41 [INFO] iter=  8100  0.275s/iter  lr=8.74e-05  loss=0.000298
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.75                  1.31
+  viol_reduction   =                71.6%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056130              0.056330
+  displacement     =                0.0035 (0.071x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.5% ceil)         0.0350 (85.7% ceil)
+2026-05-26 18:09:44 +00:35:43 -00:07:53 [INFO] iter=  8200  0.263s/iter  lr=7.88e-05  loss=0.000295
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.34%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.12                  1.41
+  viol_reduction   =                68.7%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056124              0.056325
+  displacement     =                0.0035 (0.071x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.5% ceil)         0.0350 (85.7% ceil)
+2026-05-26 18:10:10 +00:36:09 -00:07:25 [INFO] iter=  8300  0.262s/iter  lr=7.06e-05  loss=0.000294
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.41%                 0.12%
+  viol_per_cloud   = 13.19       ->  5.00                  1.53
+  viol_reduction   =                62.1%                    88.4%
+  mean_nn_dist     = 0.050980  ->  0.056112              0.056318
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:10:37 +00:36:35 -00:07:00 [INFO] iter=  8400  0.263s/iter  lr=6.28e-05  loss=0.000294
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.94                  1.25
+  viol_reduction   =                70.1%                    90.5%
+  mean_nn_dist     = 0.050980  ->  0.056127              0.056319
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.6% ceil)         0.0350 (85.9% ceil)
+2026-05-26 18:11:02 +00:37:01 -00:06:29 [INFO] iter=  8500  0.259s/iter  lr=5.54e-05  loss=0.000293
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.50                  1.31
+  viol_reduction   =                73.5%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056131              0.056322
+  displacement     =                0.0035 (0.071x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.5% ceil)         0.0351 (85.9% ceil)
+2026-05-26 18:11:30 +00:37:29 -00:06:23 [INFO] iter=  8600  0.274s/iter  lr=4.85e-05  loss=0.000294
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.41%                 0.13%
+  viol_per_cloud   = 13.19       ->  5.03                  1.59
+  viol_reduction   =                61.8%                    87.9%
+  mean_nn_dist     = 0.050980  ->  0.056109              0.056309
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.1% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:11:56 +00:37:55 -00:05:39 [INFO] iter=  8700  0.261s/iter  lr=4.21e-05  loss=0.000293
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.06                  1.38
+  viol_reduction   =                69.2%                    89.6%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056318
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0350 (85.6% ceil)         0.0350 (85.8% ceil)
+2026-05-26 18:12:22 +00:38:21 -00:05:11 [INFO] iter=  8800  0.260s/iter  lr=3.61e-05  loss=0.000292
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.28%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.44                  1.28
+  viol_reduction   =                73.9%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056134              0.056329
+  displacement     =                0.0035 (0.071x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0349 (85.5% ceil)         0.0350 (85.8% ceil)
+2026-05-26 18:12:48 +00:38:47 -00:04:46 [INFO] iter=  8900  0.260s/iter  lr=3.05e-05  loss=0.000294
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.36%                 0.12%
+  viol_per_cloud   = 13.19       ->  4.41                  1.50
+  viol_reduction   =                66.6%                    88.6%
+  mean_nn_dist     = 0.050980  ->  0.056119              0.056315
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0350 (85.8% ceil)         0.0350 (85.8% ceil)
+2026-05-26 18:13:14 +00:39:13 -00:04:21 [INFO] iter=  9000  0.261s/iter  lr=2.54e-05  loss=0.000295
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.75                  1.22
+  viol_reduction   =                71.6%                    90.8%
+  mean_nn_dist     = 0.050980  ->  0.056124              0.056315
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0350 (85.8% ceil)         0.0352 (86.2% ceil)
+2026-05-26 18:13:41 +00:39:40 -00:03:59 [INFO] iter=  9100  0.266s/iter  lr=2.08e-05  loss=0.000292
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.30%                 0.12%
+  viol_per_cloud   = 13.19       ->  3.62                  1.47
+  viol_reduction   =                72.5%                    88.9%
+  mean_nn_dist     = 0.050980  ->  0.056125              0.056308
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0350 (85.8% ceil)         0.0352 (86.2% ceil)
+2026-05-26 18:14:07 +00:40:06 -00:03:28 [INFO] iter=  9200  0.260s/iter  lr=1.67e-05  loss=0.000293
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.97                  1.41
+  viol_reduction   =                69.9%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056123              0.056315
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.073x rd)
+  correction_eff   =                0.0350 (85.8% ceil)         0.0352 (86.2% ceil)
+2026-05-26 18:14:33 +00:40:31 -00:03:01 [INFO] iter=  9300  0.259s/iter  lr=1.30e-05  loss=0.000292
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.34%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.22                  1.41
+  viol_reduction   =                68.0%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056121              0.056313
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:14:59 +00:40:57 -00:02:35 [INFO] iter=  9400  0.260s/iter  lr=9.85e-06  loss=0.000291
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.10%
+  viol_per_cloud   = 13.19       ->  3.91                  1.28
+  viol_reduction   =                70.4%                    90.3%
+  mean_nn_dist     = 0.050980  ->  0.056123              0.056315
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:15:24 +00:41:23 -00:02:09 [INFO] iter=  9500  0.260s/iter  lr=7.15e-06  loss=0.000293
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.35%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.28                  1.38
+  viol_reduction   =                67.5%                    89.6%
+  mean_nn_dist     = 0.050980  ->  0.056121              0.056311
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:15:51 +00:41:50 -00:01:46 [INFO] iter=  9600  0.266s/iter  lr=4.94e-06  loss=0.000292
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.00                  1.31
+  viol_reduction   =                69.7%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056316
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:16:17 +00:42:16 -00:01:18 [INFO] iter=  9700  0.260s/iter  lr=3.22e-06  loss=0.000293
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.33%                 0.11%
+  viol_per_cloud   = 13.19       ->  4.06                  1.31
+  viol_reduction   =                69.2%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056312
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:16:43 +00:42:42 -00:00:51 [INFO] iter=  9800  0.259s/iter  lr=1.99e-06  loss=0.000291
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.29%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.56                  1.34
+  viol_reduction   =                73.0%                    89.8%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056309
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:17:09 +00:43:08 -00:00:26 [INFO] iter=  9900  0.261s/iter  lr=1.25e-06  loss=0.000291
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.31%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.84                  1.41
+  viol_reduction   =                70.9%                    89.3%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056310
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0353 (86.4% ceil)
+2026-05-26 18:17:35 +00:43:34 -00:00:00 [INFO] iter= 10000  0.259s/iter  lr=1.00e-06  loss=0.000292
+                                  K=1 (deploy)              K=3 (train)
+  mean_violation   = 0.000128  ->  0.000005              0.000001
+  illegal_pairs    = 1.08%      ->  0.32%                 0.11%
+  viol_per_cloud   = 13.19       ->  3.94                  1.31
+  viol_reduction   =                70.1%                    90.0%
+  mean_nn_dist     = 0.050980  ->  0.056122              0.056314
+  displacement     =                0.0035 (0.070x rd)   0.0036 (0.072x rd)
+  correction_eff   =                0.0351 (86.0% ceil)         0.0352 (86.3% ceil)
+2026-05-26 18:17:36 +00:43:35 -00:00:00 [INFO] Training complete. Model saved to training_artifacts\train_run_2026-05-26_17-34-01\model_final.pt
+2026-05-26 18:17:37 +00:43:36 -00:00:00 [INFO] Evolution GIF saved to training_artifacts\train_run_2026-05-26_17-34-01\evolution.gif

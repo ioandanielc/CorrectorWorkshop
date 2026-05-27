@@ -1,0 +1,7 @@
+architecture: violation_weighted_edge_network_v2
+model_file: models/fixed_rd/model9
+
+hidden_dim: 32
+norm: layer
+activation: GELU
+max_displacement: 0.06

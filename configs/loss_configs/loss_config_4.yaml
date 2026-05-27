@@ -1,0 +1,14 @@
+name: hybrid_loss
+
+params:
+  # Linear term — constant gradient signal regardless of violation depth.
+  # Reduced from 100 to 50 to soften the violation penalty.
+  lambda1: 50
+
+  # Quadratic bonus — adds 2 * lambda1_quad * depth extra gradient.
+  # At depth=0.001 (late training): adds 0.4 to the gradient — barely noticeable.
+  # At depth=0.030 (early training): adds 12 — moderately stronger than linear alone.
+  lambda1_quad: 200
+
+  # Displacement regularisation — same as before.
+  lambda2: 0.1
