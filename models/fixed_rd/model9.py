@@ -48,8 +48,9 @@ class CorrectorModel(nn.Module):
                 layers.append(activation_cls())
             return nn.Sequential(*layers)
 
-        # 3-layer edge MLP (was 2 in model7/8)
-        self.edge_mlp = make_mlp(edge_dim, self.hidden_dim, self.hidden_dim, self.hidden_dim)
+        # Configurable-depth edge MLP (default 3, was 2 in model7/8)
+        edge_depth = model_config.get('edge_depth', 3)
+        self.edge_mlp = make_mlp(edge_dim, *([self.hidden_dim] * edge_depth))
 
         # Output MLP: same depth, but final layer replaced by tanh-clamped output
         self.output_mlp = nn.Sequential(

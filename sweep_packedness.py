@@ -17,7 +17,7 @@ PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
 
 # ── sweep definition ────────────────────────────────────────────────────────
 RD           = 0.05
-PACKEDNESS   = [0.75, 0.90]
+PACKEDNESS   = [0.75, 0.90, 1.00]
 SQRT3        = math.sqrt(3)
 
 def n_target(p):   return round(p * 2.0 / (SQRT3 * RD**2))
@@ -65,7 +65,7 @@ def main():
 
         paths, N, vs = make_configs(p)
         print(f"\n{'='*58}")
-        print(f"[run]  packedness={p}  N≈{N}  batch=8  val={vs}")
+        print(f"[run]  packedness={p}  N~{N}  batch=8  val={vs}")
         print(f"{'='*58}")
 
         rc = subprocess.run([
