@@ -1,0 +1,11 @@
+GIF saved -> training_artifacts\train_run_2026-05-28_10-54-48\evolution.gif  (20 frames, 10 fps)
+[skip] hd128_d3
+[skip] hd256_d3
+[skip] hd512_d3
+
+==========================================================
+[run]  hd256_d4  (train=configs/sweep/train_p090_bs4.yaml)
+==========================================================
+[ok]   hd256_d4
+
+All variants complete.

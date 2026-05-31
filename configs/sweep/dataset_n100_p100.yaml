@@ -1,0 +1,7 @@
+dim: 2
+type: packed
+packedness: 1.00
+rd: 0.1075
+seed: 42
+noise_scale_min: 0.0
+noise_scale_max: 0.0430   # 0.4 * rd

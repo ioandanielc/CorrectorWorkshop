@@ -1,0 +1,5 @@
+name: hybrid_loss
+params:
+  lambda1: 20        # 1/rd = 1/0.05
+  lambda1_quad: 0
+  lambda2: 0.00870   # lambda1 / (N-1) / 10 = 20 / 230 / 10,  N~231

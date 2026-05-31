@@ -13,10 +13,12 @@ STATE  = ROOT / "capacity_state.json"
 PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
 
 VARIANTS = [
-    ("hd128_d3", "configs/model_configs/model_config_9_hd128_d3.yaml"),  # baseline
-    ("hd256_d3", "configs/model_configs/model_config_9_hd256_d3.yaml"),  # 2x width
-    ("hd512_d3", "configs/model_configs/model_config_9_hd512_d3.yaml"),  # 4x width
-    ("hd256_d4", "configs/model_configs/model_config_9_hd256_d4.yaml"),  # 2x width + deeper
+    # (name, model_cfg, train_cfg_override or None)
+    ("hd128_d3", "configs/model_configs/model_config_9_hd128_d3.yaml", None),   # baseline
+    ("hd256_d3", "configs/model_configs/model_config_9_hd256_d3.yaml", None),   # 2x width
+    ("hd512_d3", "configs/model_configs/model_config_9_hd512_d3.yaml", None),   # 4x width
+    ("hd256_d4", "configs/model_configs/model_config_9_hd256_d4.yaml",          # 2x width + deeper
+     "configs/sweep/train_p090_bs4.yaml"),                                       # bs=4: OOM at bs=8
 ]
 
 # p090 configs from packedness sweep
@@ -29,15 +31,16 @@ def save_state(s): STATE.write_text(json.dumps(s, indent=2))
 
 def main():
     state = load_state()
-    for name, model_cfg in VARIANTS:
-        if state.get(name) == "done":
+    for name, model_cfg, train_override in VARIANTS:
+        if state.get(name) in ("done", "skipped"):
             print(f"[skip] {name}"); continue
 
-        print(f"\n{'='*58}\n[run]  {name}\n{'='*58}")
+        train_cfg = train_override if train_override else TRAIN
+        print(f"\n{'='*58}\n[run]  {name}  (train={train_cfg})\n{'='*58}")
 
         rc = subprocess.run([
             PYTHON, "-m", "training.trainer",
-            "--train-config",   TRAIN,
+            "--train-config",   train_cfg,
             "--dataset-config", DATASET,
             "--loss-config",    LOSS,
             "--model-config",   model_cfg,

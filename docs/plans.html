@@ -224,7 +224,7 @@ h2::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 }
 .today-card .tc-detail span { color: var(--cyan); }
 
-/* ── COLLEAGUE ──────────────────────────────────────────────────────────── */
+/* ── Ata ──────────────────────────────────────────────────────────── */
 .collab-card {
   background: linear-gradient(135deg, rgba(167,139,250,.06) 0%, rgba(96,165,250,.04) 100%);
   border: 1px solid rgba(167,139,250,.3);
@@ -469,6 +469,22 @@ footer p { font-size: 13px; color: var(--muted); }
       </div>
     </div>
 
+    <!-- STEP 7 -->
+    <div class="step">
+      <div class="step-num"><div class="step-dot done">7</div></div>
+      <div class="step-body">
+        <div class="step-header">
+          <span class="step-title">Packedness sweep — p ∈ {0.75, 0.90}</span>
+          <span class="badge badge-done">Completed</span>
+        </div>
+        <div class="step-cols">
+          <div class="step-col"><div class="step-col-label problem">Finding</div><p>Sharp drop p=0.5→0.75 (K=1: 78.7%→<strong>54.8%</strong>), then <strong>plateau at p=0.90 (55.2%)</strong>. Correction efficiency stays high (~84% of ceiling) — the model is still precise, but the problem is harder. <strong>K=3 advantage keeps growing with density</strong>. Capacity is the bottleneck, not the architecture.</p></div>
+          <div class="step-col"><div class="step-col-label fix">Method</div><p>Trained model9 at p=0.75 (N≈346) and p=0.90 (N≈416), 10K iters each, K=3. lambda2 re-derived per N. p=0.90 selected as the hardest feasible density for the capacity grid — the regime where the model plateaus and needs more parameters.</p></div>
+          <div class="step-metric"><div class="m-val" style="color:var(--yellow)">55%</div><div class="m-lbl">K=1 plateau<br>p=0.75–0.90</div></div>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /timeline -->
 </section>
 
@@ -536,33 +552,45 @@ footer p { font-size: 13px; color: var(--muted); }
     </div>
 
     <div class="chart-card">
-      <h4>K=1 vs K=3 — packed p=0.5</h4>
-      <div class="chart-sub">violation reduction % — N≈231, 76.9 violations at input</div>
+      <h4>Violation reduction vs packedness</h4>
+      <div class="chart-sub">model9 K=1 and K=3 as density increases</div>
       <div class="bar-row">
-        <span class="bar-label" style="font-size:11px">Sparse K=1</span>
+        <span class="bar-label" style="font-size:10px">p=0.50 K=1</span>
         <div class="bar-track">
-          <div class="bar-fill" style="width:74%;background:linear-gradient(90deg,#60a5fa,#3b82f6)">73.9%</div>
+          <div class="bar-fill" style="width:78.7%;background:linear-gradient(90deg,#60a5fa,#3b82f6)">78.7%</div>
         </div>
       </div>
       <div class="bar-row">
-        <span class="bar-label" style="font-size:11px">Sparse K=3</span>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:96%;background:linear-gradient(90deg,#4ade80,#22c55e)">96.0%</div>
-        </div>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label" style="font-size:11px">Packed K=1</span>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:79%;background:linear-gradient(90deg,#fb923c,#f97316)">78.7%</div>
-        </div>
-      </div>
-      <div class="bar-row">
-        <span class="bar-label" style="font-size:11px">Packed K=3</span>
+        <span class="bar-label" style="font-size:10px">p=0.50 K=3</span>
         <div class="bar-track">
           <div class="bar-fill" style="width:96%;background:linear-gradient(90deg,#4ade80,#22c55e)">96.0%</div>
         </div>
       </div>
-      <div style="font-size:11px;color:#334155;margin-top:10px">K=3 gain is 2× larger in packed regime</div>
+      <div class="bar-row">
+        <span class="bar-label" style="font-size:10px">p=0.75 K=1</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:54.8%;background:linear-gradient(90deg,#fb923c,#f97316)">54.8%</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label" style="font-size:10px">p=0.75 K=3</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:82.2%;background:linear-gradient(90deg,#4ade80,#22c55e)">82.2%</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label" style="font-size:10px">p=0.90 K=1</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:55.2%;background:linear-gradient(90deg,#f87171,#ef4444)">55.2%</div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label" style="font-size:10px">p=0.90 K=3</span>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:79.1%;background:linear-gradient(90deg,#4ade80,#22c55e)">79.1%</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#334155;margin-top:10px">K=1 plateaus at p=0.75; K=3 advantage keeps growing</div>
     </div>
 
   </div>
@@ -587,11 +615,11 @@ footer p { font-size: 13px; color: var(--muted); }
       <div class="p-n">N≈231</div>
       <div class="p-sub">packedness = 0.50<br>Step 5 baseline</div>
     </div>
-    <div class="pack-card" style="border-color:rgba(251,191,36,.3)">
+    <div class="pack-card" style="border-color:rgba(74,222,128,.3)">
       <canvas id="c3" width="180" height="180"></canvas>
-      <div class="p-title" style="color:var(--yellow)">Dense</div>
-      <div class="p-n" style="color:var(--yellow)">N≈347–416</div>
-      <div class="p-sub">packedness 0.75–0.90<br>Step 7 sweep ← today</div>
+      <div class="p-title" style="color:var(--green)">Dense</div>
+      <div class="p-n" style="color:var(--green)">N≈347–416</div>
+      <div class="p-sub">packedness 0.75–0.90<br>Step 7 sweep · complete</div>
     </div>
     <div class="pack-card" style="border-color:rgba(248,113,113,.3)">
       <canvas id="c4" width="180" height="180"></canvas>
@@ -602,58 +630,85 @@ footer p { font-size: 13px; color: var(--muted); }
   </div>
 </section>
 
-<!-- ── TODAY ──────────────────────────────────────────────────────────────── -->
+<!-- ── RUNNING / NEXT ──────────────────────────────────────────────────────── -->
 <section>
-  <h2>Today's experiments</h2>
+  <h2>Running now &amp; next steps</h2>
   <div class="today-grid">
 
-    <div class="today-card run-card">
-      <div class="tc-num">Step 7 · Running</div>
-      <h4>Packedness sweep</h4>
-      <p>Find where model9 breaks by training at increasing density. The breaking point defines the target regime for the capacity test.</p>
+    <div class="today-card run-card" style="grid-column:span 3">
+      <div class="tc-num">Step 8 · Running now</div>
+      <h4>Width / depth capacity grid at p=0.90</h4>
+      <p>The plateau at p=0.75–0.90 (K=1: ~55%) likely reflects capacity: more violating neighbours per point → richer aggregated signal → needs more width to interpret. Test whether width or depth is the right scaling axis.</p>
       <div class="tc-detail">
-        packedness: <span>{0.75, 0.90, 1.00}</span><br>
-        N≈ <span>347, 416, 462</span><br>
-        batch: <span>8</span> · iters: <span>10,000</span> · K=<span>3</span>
-      </div>
-    </div>
-
-    <div class="today-card">
-      <div class="tc-num">Step 8 · Tonight</div>
-      <h4>Width / depth grid</h4>
-      <p>More violating neighbours per point at high packedness requires more capacity. Test whether width or depth is the right scaling axis.</p>
-      <div class="tc-detail">
-        hidden_dim: <span>{128, 256, 512}</span><br>
-        edge_depth: <span>{3, 4}</span><br>
-        at hardest packedness from Step 7
+        <span>hd128_d3</span> — baseline 51K params &nbsp;·&nbsp;
+        <span>hd256_d3</span> — 2× width ~200K &nbsp;·&nbsp;
+        <span>hd512_d3</span> — 4× width ~780K &nbsp;·&nbsp;
+        <span>hd256_d4</span> — 2× width + deeper ~265K<br>
+        packedness: <span>0.90</span> · N≈<span>416</span> · K=<span>3</span> · iters: <span>10,000</span> each
       </div>
     </div>
 
     <div class="today-card blue-card">
-      <div class="tc-num">Step 9</div>
+      <div class="tc-num">Step 9 · Next</div>
       <h4>Self-feature</h4>
-      <p>Near-boundary points have legal neighbours on one side only — asymmetric geometry the model cannot currently distinguish from interior points. Concatenate a learned embedding of x<sub>i</sub> to the aggregated representation before the output MLP.</p>
+      <p>No positional signal: near-boundary points have legal neighbours on one side only — asymmetric geometry the model cannot distinguish from interior. Concatenate a learned embedding of x<sub>i</sub> to the aggregated representation before the output MLP. If negligible, it's a boundary workaround; if not, a genuine gain.</p>
     </div>
 
     <div class="today-card blue-card">
-      <div class="tc-num">Step 10</div>
+      <div class="tc-num">Step 10 · Next</div>
       <h4>Final training run</h4>
-      <p>Train the winning configuration from Steps 8+9 at the hardest feasible packedness. This is the production model.</p>
+      <p>Train the winning configuration from Steps 8+9 at the hardest feasible packedness. This is the production model. Architecture decision locked; one full training run.</p>
     </div>
 
-    <div class="today-card pbc-card" style="grid-column:span 2">
-      <div class="tc-num">Step 11</div>
-      <h4>Periodic boundary conditions — toroidal domain</h4>
-      <p>Hard boundaries artificially disadvantage boundary points (fewer legal neighbours on one side). A toroidal domain makes every point geometrically equivalent — the correct setting for materials and MD applications.</p>
-      <p style="margin-top:10px">Implementation: one-line minimum image convention (MIC) wrapping in the model forward pass — <code style="font-family:JetBrains Mono;font-size:12px;color:#22d3ee">rel_pos -= round(rel_pos)</code> — plus modulo post-displacement and a custom toroidal Poisson disk sampler. MIC distance = exact geodesic on the flat torus. Architecturally identical to all prior models; retrain required.</p>
+    <div class="today-card pbc-card" style="grid-column:span 3">
+      <div class="tc-num">Step 11 · Next — scaling to N=2500</div>
+      <h4>Two inference approaches — run both, compare on real data</h4>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:14px">
+
+        <div style="background:rgba(34,211,238,.05);border:1px solid rgba(34,211,238,.2);border-radius:8px;padding:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--cyan);margin-bottom:8px">11a · Sparse radius graph + MIC</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.55"><strong style="color:var(--text)">No retraining.</strong> Cutoff 2×r<sub>d</sub> per point → 10–20 edges instead of 2499. Memory: 3.2 GB → ~13 MB per cloud.</p>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.55;margin-top:8px">MIC: <code style="font-family:JetBrains Mono;font-size:11px;color:#22d3ee">rel_pos -= round(rel_pos)</code> — cross-boundary violations look identical to interior ones. Exact, lossless. Post-correction modulo wraps back to [0,1]².</p>
+          <div style="margin-top:10px;font-size:11px;color:var(--dim)">one new file · <code style="font-family:JetBrains Mono;color:#a78bfa">scatter_add</code></div>
+        </div>
+
+        <div style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.2);border-radius:8px;padding:16px">
+          <div style="font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--yellow);margin-bottom:8px">11b · 5×5 domain tiling</div>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.55"><strong style="color:var(--text)">Domain decomposition.</strong> Partition [0,1]² into 25 cells → ~100 pts each → apply a model trained at N≈100 (packedness ≈ 0.22). 25 cells run in parallel.</p>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.55;margin-top:8px"><strong style="color:var(--text)">Cross-boundary fix:</strong> extend each cell outward by r<sub>d</sub> (overlap halo). Include ~10–20 neighbour points from adjacent cells; update only core points. Every violation seen by at least one cell.</p>
+          <p style="font-size:13px;color:#94a3b8;line-height:1.55;margin-top:8px"><strong style="color:var(--text)">Normalization:</strong> center-only per cell — no scale change — so r<sub>d</sub> stays at trained value. Re-scaling to [0,1]² would inflate r<sub>d</sub> to 0.25, physically impossible at N≈100.</p>
+          <div style="margin-top:10px;font-size:11px;color:var(--dim)">one new config (N=100) + one new inference file</div>
+        </div>
+
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px;text-align:center">
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Retraining</div>
+          <div style="font-size:13px"><span style="color:var(--green)">11a: none</span><br><span style="color:var(--yellow)">11b: N=100 config</span></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Boundary</div>
+          <div style="font-size:13px"><span style="color:var(--green)">11a: exact (MIC)</span><br><span style="color:var(--yellow)">11b: overlap halo</span></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Memory</div>
+          <div style="font-size:13px"><span style="color:var(--green)">11a: ~13 MB</span><br><span style="color:var(--green)">11b: tiny/cell</span></div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px">
+          <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px">Parallelism</div>
+          <div style="font-size:13px"><span style="color:var(--muted)">11a: single pass</span><br><span style="color:var(--green)">11b: 25× parallel</span></div>
+        </div>
+      </div>
     </div>
 
   </div>
 </section>
 
-<!-- ── COLLEAGUE ──────────────────────────────────────────────────────────── -->
+<!-- ── Ata ──────────────────────────────────────────────────────────── -->
 <section>
-  <h2>With colleague — real data benchmark</h2>
+  <h2>With Ata — real data benchmark</h2>
   <div class="collab-card">
     <h3>Step 12 — The decisive test</h3>
     <p>Synthetic experiments establish the trade-off: model6 wins on raw single-pass clearance, model9 wins on surgical precision and displacement conservation. On <strong>real packed data with no slack</strong>, model6's global push is expected to cascade new violations; model9's violation-weighted approach is the hypothesis to confirm. This is not a generalisation sanity check — it is the benchmark that actually matters.</p>
@@ -685,7 +740,7 @@ footer p { font-size: 13px; color: var(--muted); }
 
 <footer>
   <p>CorrectorWorkshop · Poisson Disk Corrector · Forward Ablation Study</p>
-  <p style="font-family:'JetBrains Mono',monospace;font-size:11px">model9 · hidden_dim=128 · 3-layer edge MLP · tanh clamp · K=3</p>
+  <p style="font-family:'JetBrains Mono',monospace;font-size:11px">model9 · capacity grid running · {hd128,256,512}_d3 · hd256_d4 · p=0.90 · K=3</p>
 </footer>
 
 <script>
