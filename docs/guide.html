@@ -999,6 +999,113 @@ produces inline figures for each step.
 
 </section>
 
+<!-- ══ SHIFTED GRID ══ -->
+<section>
+<h2>13 &nbsp; Shifted-Grid Strategy</h2>
+
+<p>
+The standard fixed-grid corrector has a structural limitation: particles within
+<code>ghost_width</code> of a tile boundary are <em>marginal</em> — their local
+neighbourhood is split across the boundary, giving the model asymmetric context.
+</p>
+
+<h3>The strategy</h3>
+<p>Apply two K=1 passes with <strong>different grid origins</strong>:</p>
+<ul>
+  <li><strong>Pass 1</strong> &mdash; standard grid, origin at (0, 0)</li>
+  <li><strong>Pass 2</strong> &mdash; shifted grid, origin at (&delta;, &delta;)
+      where &delta; = cell_size/2 = 1/(2G)</li>
+</ul>
+<p>
+The shift places Pass-2 boundaries at the <em>centres</em> of Pass-1 tiles.
+Any particle within <code>ghost_width</code> of a Pass-1 boundary is now
+&approx; cell_size/2 &minus; ghost_width &Gt; ghost_width from the nearest
+Pass-2 boundary &mdash; well inside a tile with a symmetric context.
+Mechanically, shifting the grid &equiv; shifting the particles before inference
+and unshifting afterwards; the existing corrector is reused without modification.
+</p>
+
+<div class="box blue">
+  <div class="box-title">Shift parameter for 6&times;6 grid, r_d_test=0.02</div>
+  <p>cell_size = 1/6 &asymp; 0.167 &nbsp;&rarr;&nbsp;
+  shift = cell_size/2 &asymp; 0.083 &asymp; <strong>4.15 &times; r_d</strong></p>
+  <p style="margin-top:8px">
+  The half-cell shift (shift_fraction=0.5) is optimal: it maximises the minimum
+  distance from any Pass-1 boundary for all previously-marginal particles.
+  The condition shift &gt; ghost_width = r_d is satisfied (&asymp; 4.15 &times; r_d &Gt; r_d).
+  </p>
+</div>
+
+<figure>
+<img src="images/shifted_grid_explainer.png"
+     alt="Shifted grid explainer" style="width:100%;max-width:900px;">
+<figcaption>
+  <strong>Figure.</strong>
+  <em>Left:</em> Pass-1 grid (blue lines). The yellow star is a marginal particle
+  in the red zone (&lt; ghost_width from the boundary); the model sees an asymmetric
+  neighbourhood.
+  <em>Right:</em> Pass-2 grid shifted by cell/2 (orange lines). The same particle
+  is now deep inside a tile with a symmetric, well-defined neighbourhood.
+</figcaption>
+</figure>
+
+<h3>Results</h3>
+<p>Percentage change in mean nn-distance vs TV baseline:</p>
+<table>
+<tr><th>t</th><th>K=1 standard</th><th><strong>Shifted K=1+K=1</strong></th>
+    <th>K=5 standard</th><th>Cost (model calls)</th></tr>
+<tr><td>300</td><td>&minus;0.6%</td><td><strong>+0.3%</strong></td>
+    <td>+13.6%</td><td rowspan="4" style="text-align:center">
+    1 &nbsp;/&nbsp; <strong>2</strong> &nbsp;/&nbsp; 5</td></tr>
+<tr><td>500</td><td>+0.9%</td><td><strong>+5.6%</strong></td><td>+15.6%</td></tr>
+<tr><td>700</td><td>&minus;0.3%</td><td><strong>+4.3%</strong></td><td>+10.9%</td></tr>
+<tr><td>1000</td><td>&minus;5.1%</td><td><strong>&minus;0.3%</strong></td><td>+7.0%</td></tr>
+</table>
+<p>
+With only 2 total model passes, the shifted strategy consistently outperforms K=1
+and stays ahead of TV from t&asymp;300. It bridges the gap to K=5 at moderate cost.
+For a strict 2-pass budget it is preferable to K=2 on the same grid (which repeats
+the same tile boundaries and gains nothing for marginal particles).
+</p>
+
+<h3>Comparison figures</h3>
+<figure>
+<img src="images/shifted_grid_comparison_t300.png" alt="Shifted grid comparison t=300"
+     style="width:100%;max-width:1200px;">
+<figcaption>
+  <strong>Figure (t=300).</strong>
+  Row 0: K=1 standard. Row 1: shifted K=1+K=1. Row 2: K=5 standard.
+  Columns: nonTV original | corrected | TV | nn-histogram | RDF.
+</figcaption>
+</figure>
+
+<figure>
+<img src="images/shifted_grid_comparison_t700.png" alt="Shifted grid comparison t=700"
+     style="width:100%;max-width:1200px;">
+<figcaption>
+  <strong>Figure (t=700).</strong>
+  At t=700 the shifted strategy achieves +4.3% vs TV with 2 model evaluations
+  (K=5 gives +10.9% with 5 evaluations).
+</figcaption>
+</figure>
+
+<h3>Usage</h3>
+<pre><code>from inference.pipeline import Corrector, CorrectorConfig
+
+cfg       = CorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
+corrector = Corrector(cfg)
+
+pts = np.load('inference/sph_data/positions_without.npy')[700]
+
+<span class="comment"># Standard K=5  (5 model calls)</span>
+result_k5      = corrector.apply(pts, k=5)
+
+<span class="comment"># Shifted K=1+K=1  (2 model calls, different grid origins)</span>
+result_shifted = corrector.apply_shifted_grid(pts, shift_fraction=0.5)
+</code></pre>
+
+</section>
+
 </div><!-- /wrap -->
 
 <footer>

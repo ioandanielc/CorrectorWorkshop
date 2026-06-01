@@ -136,6 +136,16 @@ inference/experiments/exp_YYYY-MM-DD_HH-MM-SS/
 
 ---
 
+## Two inference strategies
+
+| Strategy | Passes | Cost | vs TV at t=700 |
+|---|---|---|---|
+| `corrector.apply(pts, k=1)` | 1 | 1 model call | −0.3% |
+| `corrector.apply_shifted_grid(pts)` | 2 (different grids) | 2 model calls | **+4.3%** |
+| `corrector.apply(pts, k=5)` | 5 | 5 model calls | **+10.9%** |
+
+The **shifted-grid** strategy applies K=1 on the standard grid, then K=1 again on a grid shifted by `cell_size/2`. Particles that were near tile boundaries in Pass 1 are now well inside a tile in Pass 2 — giving the model symmetric local context for both passes. See Section 13 of `docs/guide.html`.
+
 ## Programmatic use
 
 ```python

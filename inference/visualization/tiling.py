@@ -1,11 +1,12 @@
 """
 visualization/tiling.py
 -----------------------
-Three functions for inspecting the spatial tiling decomposition.
+Four functions for inspecting the spatial tiling decomposition.
 
-  plot_tiling_overview  — full domain coloured by tile + one tile highlighted
-  plot_tile_detail      — zoom on one tile: core / adjacent ghost / PBC ghost
-  plot_violation_proof  — a PBC-violating pair and how the ghost buffer captures it
+  plot_tiling_overview       — full domain coloured by tile + one tile highlighted
+  plot_tile_detail           — zoom on one tile: core / adjacent ghost / PBC ghost
+  plot_violation_proof       — a PBC-violating pair and how the ghost buffer captures it
+  plot_shifted_grid_explainer — diagram explaining the two-pass shifted-grid strategy
 
 All functions accept save_path and show for flexible use in notebooks,
 scripts, and automated experiment runners.
@@ -339,4 +340,123 @@ def plot_violation_proof(
     else:
         plt.close(fig)
     print(f'p_{ii} in tile: {ii in oidx_v}  |  p_{jj} in ghost buffer: {j_vis}')
+    return fig
+
+
+# ── 4. Shifted-grid strategy explainer ───────────────────────────────────────
+def plot_shifted_grid_explainer(
+    grid_size:      int   = 3,
+    shift_fraction: float = 0.5,
+    domain:         float = 1.0,
+    figsize:        Tuple[float, float] = (13, 5.5),
+    save_path:      Optional[str] = None,
+    show:           bool = True,
+):
+    """
+    Two-panel diagram explaining the shifted-grid correction strategy.
+
+      Left  — Pass 1: standard grid.  A marginal particle (star) sits within
+               ghost_width of a tile boundary and receives an asymmetric context.
+      Right — Pass 2: grid shifted by cell_size/2.  The same particle is now
+               well inside a tile; its context is fully symmetric.
+
+    Parameters
+    ----------
+    grid_size      : number of tiles per dimension (shown in diagram)
+    shift_fraction : fraction of cell_size used as the shift (default 0.5)
+    """
+    c      = domain / grid_size
+    shift  = shift_fraction * c
+    gw     = 0.02           # representative ghost_width for illustration
+
+    # A marginal particle near a vertical boundary
+    bx     = c              # boundary at x = c
+    margin = gw * 0.6       # how close the particle is to the boundary
+    px, py = bx - margin, c * 1.3
+
+    fig, axes = plt.subplots(1, 2, figsize=figsize)
+    fig.patch.set_facecolor('#0f1117')
+
+    for ax_idx, ax in enumerate(axes):
+        ax.set_facecolor(BG_DARK)
+        ax.set_xlim(-0.01, domain + 0.01)
+        ax.set_ylim(-0.01, domain + 0.01)
+        ax.set_aspect('equal')
+        for sp in ax.spines.values(): sp.set_color('#1e2a3a')
+        ax.tick_params(colors='#475569')
+
+        # Draw Pass 1 grid (always shown for reference)
+        for k in range(grid_size + 1):
+            v = k * c
+            lw, ls, alpha = (1.8, '-', 0.9) if ax_idx == 0 else (0.8, '--', 0.35)
+            col = '#60a5fa' if ax_idx == 0 else '#334455'
+            ax.axhline(v, color=col, lw=lw, ls=ls, alpha=alpha)
+            ax.axvline(v, color=col, lw=lw, ls=ls, alpha=alpha)
+
+        if ax_idx == 1:
+            # Draw Pass 2 grid (shifted)
+            offsets = [(shift + k * c) % domain for k in range(grid_size)]
+            for v in offsets:
+                ax.axhline(v, color='#f5924e', lw=1.8, alpha=0.9)
+                ax.axvline(v, color='#f5924e', lw=1.8, alpha=0.9)
+
+        # Ghost buffer of the left tile (Pass 1) around x = c
+        if ax_idx == 0:
+            # Shade the marginal zone [c - gw, c) — particles here get
+            # asymmetric context in Pass 1
+            ax.axvspan(bx - gw, bx, color='#f87171', alpha=0.18,
+                       label='marginal zone  (within ghost buffer of boundary)')
+            ax.axvspan(bx, bx + gw, color='#f87171', alpha=0.10)
+
+        # The marginal particle
+        ax.scatter([px], [py], color='#facc15', s=200, zorder=6,
+                   marker='*', edgecolors='white', linewidths=0.5,
+                   label=f'marginal particle\n(dist to P1 boundary = {margin:.3f})')
+
+        if ax_idx == 1:
+            # Distance to nearest Pass-2 boundary
+            nearest_p2 = min(abs(px - v) for v in
+                             [(shift + k * c) % domain for k in range(grid_size)])
+            ax.annotate(
+                f'dist to P2 boundary\n= {nearest_p2:.3f} >> gw={gw}',
+                xy=(px, py), xytext=(px + 0.15, py - 0.06),
+                color='#4ade80', fontsize=8,
+                arrowprops=dict(arrowstyle='->', color='#4ade80', lw=1.2),
+            )
+            ax.scatter([px], [py], color='#4ade80', s=200, zorder=7,
+                       marker='*', edgecolors='white', linewidths=0.5,
+                       label=f'same particle — now inside\na Pass-2 tile (dist={nearest_p2:.3f})')
+
+        # Label the shift arrow in the right panel header
+        if ax_idx == 1:
+            ax.set_title(
+                f'Pass 2: grid shifted by cell/2 = {shift:.3f}\n'
+                f'(orange lines = new boundaries)',
+                color='#e2e8f0', pad=6)
+        else:
+            ax.set_title(
+                f'Pass 1: standard {grid_size}×{grid_size} grid\n'
+                f'(blue lines = tile boundaries)',
+                color='#e2e8f0', pad=6)
+
+        ax.legend(fontsize=8, loc='upper right',
+                  facecolor='#1e2a3a', labelcolor='#e2e8f0',
+                  edgecolor='#334455')
+
+    # Shift arrow between panels (figure-level annotation)
+    fig.text(0.50, 0.50, f'→  shift = {shift:.3f}  →',
+             ha='center', va='center', color='#facc15',
+             fontsize=11, fontweight='bold')
+
+    fig.suptitle(
+        'Shifted-grid strategy: Pass 1 (standard) + Pass 2 (grid offset by cell/2)\n'
+        'Every marginal particle is well inside at least one tile.',
+        color='#f0f6ff', fontsize=10, y=1.02)
+    plt.tight_layout()
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight')
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
     return fig

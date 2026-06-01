@@ -171,3 +171,41 @@ class Corrector:
             pts = (pts + displacements / counts[:, None]) % self.cfg.domain
 
         return pts
+
+    def apply_shifted_grid(
+        self,
+        points:         np.ndarray,
+        shift_fraction: float = 0.5,
+    ) -> np.ndarray:
+        """
+        Two-pass shifted-grid strategy:
+          Pass 1 — K=1 on the standard grid   (origin at 0, 0)
+          Pass 2 — K=1 on a shifted grid       (origin at shift, shift)
+
+        The shift equals shift_fraction × cell_size, defaulting to
+        cell_size/2 (half a cell).  This places Pass-2 tile boundaries
+        at the centres of Pass-1 tiles, so particles that were near a
+        Pass-1 boundary are now well inside a Pass-2 tile.
+
+        Mechanically, shifting the grid is equivalent to shifting the
+        particles before inference and unshifting afterwards — the
+        existing corrector is reused without modification.
+
+        Parameters
+        ----------
+        points         : (N, 2) positions in [0, domain)^2
+        shift_fraction : fraction of cell_size to shift (default 0.5)
+
+        Returns
+        -------
+        (N, 2) corrected positions after both passes
+        """
+        shift = shift_fraction * self.tiling.cell_size  # scalar offset in both axes
+
+        # Pass 1: standard K=1
+        after_p1 = self.apply(points, k=1)
+
+        # Pass 2: shift particles into the shifted-grid frame, correct, unshift
+        pts_in  = (after_p1 + shift) % self.cfg.domain
+        pts_out = self.apply(pts_in, k=1)
+        return (pts_out - shift) % self.cfg.domain

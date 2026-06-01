@@ -26,7 +26,7 @@ Usage
 """
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -168,4 +168,98 @@ def plot_comparison_frame(
     if show:
         plt.show()
     plt.close(fig)
+    return fig
+
+
+# ── Shifted-grid comparison ────────────────────────────────────────────────────
+def plot_shifted_grid_comparison(
+    pts_nonTV:  np.ndarray,
+    pts_tv:     np.ndarray,
+    corrector,                        # Corrector instance
+    timestep:   Optional[int] = None,
+    domain:     float = 1.0,
+    figsize:    Tuple[float, float] = (27, 8),
+    save_path:  Optional[str] = None,
+    show:       bool = True,
+):
+    """
+    Three-row comparison at a single timestep:
+      Row 0 — K=1 standard grid          (one pass, baseline)
+      Row 1 — shifted K=1+K=1            (two passes, different grids)
+      Row 2 — K=5 standard grid          (five passes, best single-strategy)
+
+    Columns: nonTV original | corrected | TV | nn-hist | RDF
+    """
+    step_str = f't = {timestep}' if timestep is not None else ''
+
+    print('  Applying correctors...')
+    k1         = corrector.apply(pts_nonTV, k=1)
+    shifted    = corrector.apply_shifted_grid(pts_nonTV, shift_fraction=0.5)
+    k5         = corrector.apply(pts_nonTV, k=5)
+
+    print('  Computing nn and RDFs...')
+    nn_raw    = min_nn_pbc(pts_nonTV, domain)
+    nn_tv     = min_nn_pbc(pts_tv,    domain)
+    nn_k1     = min_nn_pbc(k1,        domain)
+    nn_sh     = min_nn_pbc(shifted,   domain)
+    nn_k5     = min_nn_pbc(k5,        domain)
+
+    all_nn = np.concatenate([nn_raw, nn_tv, nn_k1, nn_sh, nn_k5])
+    vmin, vmax = np.percentile(all_nn, 1), np.percentile(all_nn, 99)
+    xlim = (max(0.0, all_nn.min()*0.97), all_nn.max()*1.03)
+
+    r_max = 0.02 * 4.0
+    r_orig, g_orig = compute_rdf(pts_nonTV, r_max, domain=domain)
+    r_tv,   g_tv   = compute_rdf(pts_tv,    r_max, domain=domain)
+    r_k1,   g_k1   = compute_rdf(k1,        r_max, domain=domain)
+    r_sh,   g_sh   = compute_rdf(shifted,   r_max, domain=domain)
+    r_k5,   g_k5   = compute_rdf(k5,        r_max, domain=domain)
+
+    rows = [
+        (k1,     nn_k1, r_k1, g_k1, 'K=1  standard grid'),
+        (shifted, nn_sh, r_sh, g_sh, 'K=1+K=1  shifted grid  (shift=cell/2)'),
+        (k5,     nn_k5, r_k5, g_k5, 'K=5  standard grid'),
+    ]
+
+    fig, axes = plt.subplots(3, 5, figsize=figsize,
+        gridspec_kw={'width_ratios':[1,1,1,1.4,1.4], 'hspace':0.44, 'wspace':0.30})
+    fig.subplots_adjust(left=0.04, right=0.99, top=0.92, bottom=0.08)
+
+    sc_last = None
+    for row_idx, (corr, nn_corr, r_m, g_m, label) in enumerate(rows):
+        ax_raw, ax_model, ax_tv, ax_hist, ax_rdf = axes[row_idx]
+        _draw_scatter(ax_raw,   pts_nonTV, nn_raw,  vmin, vmax,
+                      f'nonTV original   {step_str}')
+        sc_last = _draw_scatter(ax_model, corr, nn_corr, vmin, vmax,
+                      f'{label}   {step_str}')
+        _draw_scatter(ax_tv,    pts_tv,   nn_tv,  vmin, vmax,
+                      f'TV   {step_str}')
+        _draw_hist(ax_hist, nn_raw, nn_corr, nn_tv,
+                   f'nn-dist: {label}', shared_xlim=xlim)
+        _draw_rdf(ax_rdf, r_orig, g_orig, r_m, g_m, r_tv, g_tv,
+                  f'RDF: {label}')
+
+    cbar_ax = fig.add_axes([0.04, 0.01, 0.56, 0.018])
+    cbar = fig.colorbar(sc_last, cax=cbar_ax, orientation='horizontal')
+    cbar.set_label('min nearest-neighbour distance', fontsize=8)
+    cbar.ax.tick_params(labelsize=7)
+
+    shift = 0.5 * corrector.tiling.cell_size
+    fig.suptitle(
+        f'Shifted-grid strategy comparison   {step_str}'
+        f'   |   shift = cell/2 = {shift:.3f}   |   N=2500   |   {corrector.cfg.grid_size}x{corrector.cfg.grid_size} grid',
+        fontsize=10, y=0.975)
+
+    if save_path:
+        fig.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f'  Saved -> {save_path}')
+    if show:
+        plt.show()
+    plt.close(fig)
+
+    print(f'\nMean nn-distance at {step_str}:')
+    for label, nn in [('K=1 standard', nn_k1), ('K=1+K=1 shifted', nn_sh),
+                      ('K=5 standard', nn_k5), ('TV', nn_tv)]:
+        print(f'  {label:20s}  {nn.mean():.5f}  '
+              f'(+{(nn.mean()/nn_tv.mean()-1)*100:.1f}% vs TV)')
     return fig
