@@ -178,33 +178,39 @@ def plot_shifted_grid_comparison(
     corrector,                        # Corrector instance
     timestep:   Optional[int] = None,
     domain:     float = 1.0,
-    figsize:    Tuple[float, float] = (27, 8),
+    figsize:    Tuple[float, float] = (27, 11),
     save_path:  Optional[str] = None,
     show:       bool = True,
 ):
     """
-    Three-row comparison at a single timestep:
-      Row 0 — K=1 standard grid          (one pass, baseline)
-      Row 1 — shifted K=1+K=1            (two passes, different grids)
-      Row 2 — K=5 standard grid          (five passes, best single-strategy)
+    Four-row comparison at a single timestep:
+      Row 0 — K=1 standard grid          (1 pass, baseline)
+      Row 1 — K=2 standard grid          (2 passes, same cost as shifted)
+      Row 2 — shifted K=1+K=1            (2 passes, different grids)
+      Row 3 — K=5 standard grid          (5 passes, upper bound)
+
+    Rows 1 and 2 have the same total model-call cost — direct comparison of
+    K=2 standard vs shifted K=1+K=1.
 
     Columns: nonTV original | corrected | TV | nn-hist | RDF
     """
     step_str = f't = {timestep}' if timestep is not None else ''
 
     print('  Applying correctors...')
-    k1         = corrector.apply(pts_nonTV, k=1)
-    shifted    = corrector.apply_shifted_grid(pts_nonTV, shift_fraction=0.5)
-    k5         = corrector.apply(pts_nonTV, k=5)
+    k1      = corrector.apply(pts_nonTV, k=1)
+    k2      = corrector.apply(pts_nonTV, k=2)
+    shifted = corrector.apply_shifted_grid(pts_nonTV, shift_fraction=0.5)
+    k5      = corrector.apply(pts_nonTV, k=5)
 
     print('  Computing nn and RDFs...')
-    nn_raw    = min_nn_pbc(pts_nonTV, domain)
-    nn_tv     = min_nn_pbc(pts_tv,    domain)
-    nn_k1     = min_nn_pbc(k1,        domain)
-    nn_sh     = min_nn_pbc(shifted,   domain)
-    nn_k5     = min_nn_pbc(k5,        domain)
+    nn_raw = min_nn_pbc(pts_nonTV, domain)
+    nn_tv  = min_nn_pbc(pts_tv,    domain)
+    nn_k1  = min_nn_pbc(k1,        domain)
+    nn_k2  = min_nn_pbc(k2,        domain)
+    nn_sh  = min_nn_pbc(shifted,   domain)
+    nn_k5  = min_nn_pbc(k5,        domain)
 
-    all_nn = np.concatenate([nn_raw, nn_tv, nn_k1, nn_sh, nn_k5])
+    all_nn = np.concatenate([nn_raw, nn_tv, nn_k1, nn_k2, nn_sh, nn_k5])
     vmin, vmax = np.percentile(all_nn, 1), np.percentile(all_nn, 99)
     xlim = (max(0.0, all_nn.min()*0.97), all_nn.max()*1.03)
 
@@ -212,22 +218,25 @@ def plot_shifted_grid_comparison(
     r_orig, g_orig = compute_rdf(pts_nonTV, r_max, domain=domain)
     r_tv,   g_tv   = compute_rdf(pts_tv,    r_max, domain=domain)
     r_k1,   g_k1   = compute_rdf(k1,        r_max, domain=domain)
+    r_k2,   g_k2   = compute_rdf(k2,        r_max, domain=domain)
     r_sh,   g_sh   = compute_rdf(shifted,   r_max, domain=domain)
     r_k5,   g_k5   = compute_rdf(k5,        r_max, domain=domain)
 
     rows = [
-        (k1,     nn_k1, r_k1, g_k1, 'K=1  standard grid'),
-        (shifted, nn_sh, r_sh, g_sh, 'K=1+K=1  shifted grid  (shift=cell/2)'),
-        (k5,     nn_k5, r_k5, g_k5, 'K=5  standard grid'),
+        (k1,      nn_k1, r_k1, g_k1, 'K=1  standard  (1 call)'),
+        (k2,      nn_k2, r_k2, g_k2, 'K=2  standard  (2 calls)'),
+        (shifted, nn_sh,  r_sh, g_sh, 'K=1+K=1  shifted grid  (2 calls)'),
+        (k5,      nn_k5, r_k5, g_k5, 'K=5  standard  (5 calls)'),
     ]
 
-    fig, axes = plt.subplots(3, 5, figsize=figsize,
-        gridspec_kw={'width_ratios':[1,1,1,1.4,1.4], 'hspace':0.44, 'wspace':0.30})
-    fig.subplots_adjust(left=0.04, right=0.99, top=0.92, bottom=0.08)
+    fig, axes = plt.subplots(4, 5, figsize=figsize,
+        gridspec_kw={'width_ratios':[1,1,1,1.4,1.4], 'hspace':0.42, 'wspace':0.30})
+    fig.subplots_adjust(left=0.04, right=0.99, top=0.93, bottom=0.06)
 
     sc_last = None
     for row_idx, (corr, nn_corr, r_m, g_m, label) in enumerate(rows):
         ax_raw, ax_model, ax_tv, ax_hist, ax_rdf = axes[row_idx]
+
         _draw_scatter(ax_raw,   pts_nonTV, nn_raw,  vmin, vmax,
                       f'nonTV original   {step_str}')
         sc_last = _draw_scatter(ax_model, corr, nn_corr, vmin, vmax,
@@ -239,7 +248,7 @@ def plot_shifted_grid_comparison(
         _draw_rdf(ax_rdf, r_orig, g_orig, r_m, g_m, r_tv, g_tv,
                   f'RDF: {label}')
 
-    cbar_ax = fig.add_axes([0.04, 0.01, 0.56, 0.018])
+    cbar_ax = fig.add_axes([0.04, 0.01, 0.56, 0.015])
     cbar = fig.colorbar(sc_last, cax=cbar_ax, orientation='horizontal')
     cbar.set_label('min nearest-neighbour distance', fontsize=8)
     cbar.ax.tick_params(labelsize=7)
@@ -258,8 +267,13 @@ def plot_shifted_grid_comparison(
     plt.close(fig)
 
     print(f'\nMean nn-distance at {step_str}:')
-    for label, nn in [('K=1 standard', nn_k1), ('K=1+K=1 shifted', nn_sh),
-                      ('K=5 standard', nn_k5), ('TV', nn_tv)]:
-        print(f'  {label:20s}  {nn.mean():.5f}  '
-              f'(+{(nn.mean()/nn_tv.mean()-1)*100:.1f}% vs TV)')
+    for label, nn, cost in [
+        ('K=1 standard',       nn_k1, '1 call '),
+        ('K=2 standard',       nn_k2, '2 calls'),
+        ('K=1+K=1 shifted',    nn_sh,  '2 calls'),
+        ('K=5 standard',       nn_k5, '5 calls'),
+        ('TV',                 nn_tv,  '------'),
+    ]:
+        pct = (nn.mean()/nn_tv.mean()-1)*100
+        print(f'  [{cost}]  {label:22s}  {nn.mean():.5f}  ({pct:+.1f}% vs TV)')
     return fig

@@ -32,7 +32,7 @@ from data.data_processor import DataProcessor
 from utils.config import load_model_config
 
 # -- constants ----------------------------------------------------------------
-DEFAULT_CKPT = Path("training_artifacts/train_run_2026-05-28_14-53-45/model_final.pt")
+DEFAULT_CKPT = Path("weights/n100_p050.pt")
 DEFAULT_CFG  = Path("configs/model_configs/model_config_9_n100_p050.yaml")
 RD           = 0.076
 GHOST_WIDTH  = 2.0 * RD     # ghost buffer around each tile

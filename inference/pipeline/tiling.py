@@ -52,9 +52,12 @@ class TilingConfig:
 
     def ghost_width(self, rd_test: float) -> float:
         if self.ghost_factor < 1.0:
-            raise ValueError(
+            import warnings
+            warnings.warn(
                 f"ghost_factor={self.ghost_factor} < 1.0 violates the correctness "
-                "guarantee. Set ghost_factor >= 1.0."
+                "guarantee (ghost_width < rd_test). Some cross-boundary violations "
+                "may be invisible to the model. Use only for ablation experiments.",
+                UserWarning, stacklevel=2,
             )
         return self.ghost_factor * rd_test
 

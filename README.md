@@ -136,6 +136,18 @@ inference/experiments/exp_YYYY-MM-DD_HH-MM-SS/
 
 ---
 
+## Model weights
+
+Production checkpoints are in `weights/` and tracked in git (208 KB each).
+
+| File | Model config | N_train | r_d_train | Use with |
+|---|---|---|---|---|
+| `weights/n100_p050.pt` | `model_config_9_n100_p050.yaml` | ~100 | 0.076 | `inference/configs/grid_6x6.yaml` |
+| `weights/n50_sparse.pt` | `model_config_9.yaml` | 50 | 0.05 | `inference/configs/grid_10x10.yaml` |
+
+These are **different architectures** — do not mix checkpoints and model configs.
+The experiment configs already wire the correct pairs. After cloning, both work immediately with no path editing.
+
 ## Two inference strategies
 
 | Strategy | Passes | Cost | vs TV at t=700 |

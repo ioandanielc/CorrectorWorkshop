@@ -1,0 +1,23 @@
+# 6x6 grid with tight ghost buffer — ABLATION only
+#
+# ghost_factor = 0.5  →  ghost_width = 0.5 * rd_test = 0.01 < rd_test
+#
+# This VIOLATES the correctness guarantee (ghost_width >= rd is required to
+# guarantee all cross-boundary violations are visible). Some violations near
+# tile boundaries may be missed.
+#
+# Purpose: test whether a tighter ghost zone increases the relative advantage
+# of the shifted-grid strategy. With ghost_factor=0.5 the marginal fraction
+# drops from ~48% to ~24% of the tile area, so more particles are strictly
+# interior in each pass.
+#
+# At SPH conditions (N=2500, rd_test=0.02, domain=[0,1]^2):
+#   cell_size       = 0.167
+#   ghost_width     = 0.010  (0.5 * rd_test)
+#   core pts/tile   ~ 69
+#   ghost pts/tile  ~ 17  (vs 38 for ghost_factor=1.0)
+#   total pts/tile  ~ 86
+
+name:        "6x6_tight"
+grid_size:   6
+ghost_factor: 0.5   # WARNING: below correctness threshold of 1.0

@@ -3,7 +3,7 @@
 # Scale = rd_train / rd_test = 0.05 / 0.02 = 2.5
 
 model:
-  checkpoint: training_artifacts/train_run_2026-05-26_17-34-01/model_final.pt
+  checkpoint: weights/n50_sparse.pt
   config:     configs/model_configs/model_config_9.yaml
   rd_train:   0.05
 
