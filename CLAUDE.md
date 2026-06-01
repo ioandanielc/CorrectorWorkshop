@@ -1,10 +1,10 @@
-# CorrectorWorkshop — Claude Onboarding
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What this project is
 
-A PyTorch training framework for a **Poisson disk corrector model**: given a noisy point cloud that violates the Poisson disk constraint (minimum distance `rd` between all point pairs), the model predicts per-point displacement vectors to produce a valid cloud.
-
-The active model is **model9** (violation-weighted edge network, output-clamped). Training data is generated online using `scipy.stats.qmc.PoissonDisk`.
+A PyTorch framework for a **Poisson-disk corrector model**: given a 2D point cloud that violates the minimum-distance constraint `rd` between all pairs, model9 predicts per-point displacement vectors to produce a valid cloud. The trained model is then applied to real SPH simulation data to replace or supplement the Transport Velocity (TV) algorithm.
 
 ---
 
@@ -13,51 +13,37 @@ The active model is **model9** (violation-weighted edge network, output-clamped)
 ```
 CorrectorWorkshop/
 ├── data/
-│   ├── data_generator.py       # PoissonDiskDataset + PackedPoissonDiskDataset
-│   └── data_processor.py       # DataProcessor — make_invariant (centers + normalises)
-├── models/
-│   └── fixed_rd/
-│       ├── model9.py           # ViolationWeightedEdgeNetwork, 3-layer edge MLP, tanh clamp (CURRENT)
-│       ├── model10.py          # model9 + self-feature concat (experimental, not better than model9)
-│       └── archive/            # model1–5 (superseded), model6 (uniform-push), model7 (plain viol-weighted)
-├── inference/
-│   ├── sph_apply.py            # apply model to SPH trajectory (tiling + PBC ghost buffer)
-│   ├── sph_visualize.py        # visualise SPH data / corrector output
-│   └── sph_data/
-│       ├── positions.npy       # raw SPH trajectory (T=1002, N=2500, rd=0.02)
-│       └── positions_without.npy  # SPH trajectory without transport velocity
+│   ├── data_generator.py       # PoissonDiskDataset + PackedPoissonDiskDataset (online generation)
+│   └── data_processor.py       # DataProcessor.make_invariant (center + PCA-rotate, NO scaling)
+├── models/fixed_rd/
+│   ├── model9.py               # CURRENT — violation-weighted edge net, 3-layer MLP, tanh clamp
+│   ├── model10.py              # experimental (self-feature concat); not better than model9
+│   └── archive/                # model6–7 (superseded)
 ├── training/
-│   ├── trainer.py              # Main training loop (iterative unrolling, dual K=1/K=K eval)
-│   └── loss.py                 # hybrid_loss (linear viol penalty + displacement reg)
-├── utils/
-│   ├── config.py               # load_*_config helpers (yaml → dict)
-│   ├── logger.py               # setup_logger, create_run_dir
-│   └── visualizations.py       # plot_comparison, make_sample_gif
+│   ├── trainer.py              # training loop: online data, iterative unrolling K steps, dual eval
+│   └── loss.py                 # hybrid_loss: linear violation penalty + displacement regulariser
+├── inference/                  # SPH application — see section below
 ├── configs/
-│   ├── trainer_configs/        # train_config_2 (K=3), _3 (K=5), _packed (packed regime)
-│   ├── dataset_configs/        # dataset_config_3 (50pts sparse), dataset_config_packed (N≈231, p=0.5)
-│   ├── loss_configs/           # loss_config_5 (principled sparse), loss_config_packed (N≈231)
-│   ├── model_configs/          # model_config_9 (current) + capacity/n100 variants
-│   ├── smoke_test/             # fast CPU configs for quick testing
-│   ├── sweep/                  # auto-generated per-run configs
-│   └── archive/                # superseded configs
-├── analysis/                   # comparison outputs + scripts (comparison_report.md, *.png)
-├── docs/                       # architecture diagrams, PLANS.md, model_report.html
-├── logs/                       # stdout/stderr logs from background training runs
-├── training_artifacts/         # auto-created per run (see below)
-├── sweep_packedness.py         # sweeper — packedness in {0.75, 0.90}, restart-safe
-├── sweep_capacity.py           # capacity grid sweep (hidden_dim × edge_depth at p=0.90)
-├── sweep_n100.py               # N=100 deployment sweep (p=0.50/0.75/1.00)
-├── tracker.py                  # Streamlit live dashboard — run with: streamlit run tracker.py
-├── COMMANDS.md                 # reference commands for common tasks
-└── CLAUDE.md                   # this file
+│   ├── trainer_configs/        # train_config_2 (K=3), train_config_packed
+│   ├── dataset_configs/        # dataset_config_3 (N=50, sparse), dataset_config_packed (N≈231)
+│   ├── loss_configs/           # loss_config_5 (principled sparse), loss_config_packed
+│   ├── model_configs/          # model_config_9 base + named variants (see Production checkpoints)
+│   ├── smoke_test/             # fast CPU configs for quick sanity checks
+│   └── sweep/                  # per-run configs auto-generated by sweep scripts
+├── analysis/                   # comparison scripts + output figures
+├── docs/                       # model_report.html, PLANS.md, architecture diagrams
+├── training_artifacts/         # auto-created per training run (see Training artifacts)
+├── sweep_packedness.py         # packedness sweep 0.75→0.90 (restart-safe)
+├── sweep_capacity.py           # capacity grid: hidden_dim × edge_depth at p=0.90
+├── sweep_n100.py               # N=100 deployment sweep at 3 packedness levels
+└── tracker.py                  # Streamlit live dashboard: streamlit run tracker.py
 ```
 
 ---
 
-## Running
+## Training
 
-**Smoke test (fast, CPU-friendly):**
+**Smoke test (CPU, ~30 s):**
 ```
 .venv\Scripts\python.exe -m training.trainer ^
   --train-config   configs/smoke_test/train_config.yaml ^
@@ -66,7 +52,7 @@ CorrectorWorkshop/
   --model-config   configs/smoke_test/model_config_9.yaml
 ```
 
-**Packed regime (model9, K=3, packedness=0.5):**
+**Full packed run (GPU, N≈231, p=0.5):**
 ```
 .venv\Scripts\python.exe -m training.trainer ^
   --train-config   configs/trainer_configs/train_config_packed.yaml ^
@@ -75,108 +61,169 @@ CorrectorWorkshop/
   --model-config   configs/model_configs/model_config_9.yaml
 ```
 
-**Packedness sweep (0.75 → 0.90, restart-safe):**
-```
-.venv\Scripts\python.exe sweep_packedness.py
-```
-
----
-
-## Training artifacts
-
 Each run creates `training_artifacts/train_run_YYYY-MM-DD_HH-MM-SS/` containing:
-```
-run_dir/
-├── configs/              # copies of all 4 configs used
-├── samples/              # sample_XXXXXX.png — side-by-side noisy vs corrected
-├── validation_set.npy    # fixed validation set (raw, pre-processing)
-├── loss.csv              # per-iteration metrics
-├── training.log          # full logger output
-├── evolution.gif         # animated sample progression
-└── model_final.pt        # saved model weights
-```
+`configs/` (4 yaml copies), `model_final.pt`, `loss.csv`, `training.log`, `validation_set.npy`, `evolution.gif`.
 
 ---
 
-## Metrics logged
+## Production checkpoints
 
-Eval runs at every `log_interval`, reporting **K=1 (deploy)** and **K=unroll_steps (train)** columns side by side.
+Two deployable checkpoints exist:
 
-| Metric | Meaning | Target |
-|---|---|---|
-| `loss` | hybrid loss (linear viol penalty + displacement reg) | decreasing |
-| `mean_violation` | avg `relu(rd − dist)` per pair | → 0 |
-| `illegal_pairs %` | % of point pairs closer than `rd` | → 0% |
-| `viol_per_cloud` | mean count of unique illegal pairs per cloud | → 0 |
-| `viol_reduction %` | `(viol_pre − viol_post) / viol_pre × 100` | → 100% |
-| `mean_nn_dist` | mean nearest-neighbour distance | ≥ rd, not >> rd |
-| `displacement` | mean L2 displacement (in rd units) | low |
-| `correction_eff` | violation removed ÷ displacement | high |
+| Name | Run dir | N_train | rd_train | Notes |
+|---|---|---|---|---|
+| **n100_p050** | `train_run_2026-05-28_14-53-45` | ~100 | 0.076 | packed p=0.50, hd128_d3 — primary |
+| **n50_sparse** | `train_run_2026-05-26_17-34-01` | 50 | 0.05 | sparse p≈0.11 — for 10×10 tiling |
 
----
-
-## Config reference
-
-**train_config**: `batch_size`, `num_iterations`, `initialization`, `device`, `unroll_steps` (K), `optimizer`, `lr_scheduler`, `eval`
-
-**dataset_config**: `type` (packed | standard), `dim`, `rd`, `packedness` OR `points_per_cloud`, `seed`, `noise_scale_min`, `noise_scale_max`
-
-**loss_config**: `name: hybrid_loss`, `params: {lambda1, lambda1_quad, lambda2}`
-- Principled: `lambda1 = 1/rd`, `lambda1_quad = 0`, `lambda2 = lambda1 / (N−1) / 10`
-
-**model_config**: `architecture`, `model_file`, `hidden_dim`, `norm`, `activation`, `max_displacement` (model9 only)
-
----
-
-## Model lineage
-
-| Model | Architecture | Key change | Status |
-|---|---|---|---|
-| model6 | uniform-push edge net | baseline | comparison only |
-| model7 | violation-weighted agg | surgical corrections | superseded |
-| model8 | model7 + GELU | activation swap | superseded |
-| model9 | model8 + deeper MLP + tanh clamp | 3-layer edge MLP, bounded output | **CURRENT** |
-
----
-
-## Experiment history
-
-| Experiment | Config | Result |
-|---|---|---|
-| Sparse sparse (N=50, p≈0.11) | dataset_3 + loss_5 + train_2 | model9: 73.9% viol reduction ×1 |
-| Packed (N≈231, p=0.5, rd=0.05) | dataset_packed + loss_packed + train_packed | model9: 78.7% viol reduction ×1, 96% ×3 |
-| Model comparison | analysis/measure_comparison.py | model9 best efficiency (0.0288); model6 best raw clearance |
-
----
-
-## Current state
-
-- **model9** is active (violation-weighted, 3-layer edge MLP, tanh-clamped output)
-- Packed regime benchmarked at packedness=0.5 (N≈231)
-- **Running:** packedness sweep 0.75 → 0.90 to find the capacity limit of model9
-- Next after sweep: width/depth capacity grid at the breaking-point packedness
+Config: `configs/model_configs/model_config_9_n100_p050.yaml` (n100) or `model_config_9.yaml` (n50).
 
 ---
 
 ## Key design decisions
 
-- Data generated **online** (each batch is a fresh sample) — no dataset file
-- `PackedPoissonDiskDataset` parameterised by `packedness` (fraction of triangular-lattice max), rd-independent
-- Validation set generated once at run start, saved as `.npy` — fixed across training
-- `DataProcessor.make_invariant` centers and normalises — do NOT repeat in the model
-- Loss operates in **processed (invariant) space**, not original coordinates
-- Intended deployment: **single-pass (K=1)** — unrolling is a training trick only
-- `lambda2 = lambda1 / (N−1) / 10`: scales with N so violation penalty always dominates displacement reg by 10×
+**Training:**
+- Data generated **online** per batch — no dataset file on disk.
+- `make_invariant` = center (subtract mean) + PCA-rotate. Does NOT scale. Applied before every model call.
+- Loss operates in invariant space. `lambda2 = lambda1 / (N−1) / 10` keeps displacement reg a constant fraction of violation penalty regardless of N.
+- Training uses K-step unrolling (backprop through all K steps). Eval reports both K=1 and K=unroll_steps.
+
+**Inference on SPH data (`rd_test=0.02`, `N=2500`, `domain=[0,1]²`, PBC):**
+
+1. **Tiling**: split domain into a `G×G` grid so each tile has `N_tile ≈ N_train` points.
+   - 6×6 → ~107 pts/tile (69 core + 38 ghost) ≈ N_train=100 for n100 model.
+   - 10×10 → ~49 pts/tile ≈ N_train=50 for n50 model.
+
+2. **Ghost buffer**: each tile is extended by `ghost_width = rd_test` on all sides. All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: if `ghost_width ≥ rd`, every PBC-violating pair `(i,j)` is jointly visible in at least one tile's ghost buffer.
+
+3. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before `make_invariant`; divide displacements by `scale` after reverting. This maps violations from `rd_test`-scale to `rd_train`-scale so the model operates in its training distribution.
+
+4. **Iterative application**: apply K passes of the corrector. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory. K=5 achieves ~10–13% higher mean nn-distance than TV at t=700–1000.
 
 ---
 
-## Next steps
+## Inference pipeline (under construction)
 
-1. ✅ model7 — violation-weighted edge network
-2. ✅ Iterative unrolling (K=3 training, K=1 eval)
-3. ✅ model9 — deeper MLP + output clamping
-4. ✅ Packed regime (N≈231, packedness=0.5)
-5. ✅ Model comparison (model6 vs 7 vs 8 vs 9, sparse + packed)
-6. ▶ **Packedness sweep** — 0.75 → 0.90 to find where model9 breaks
-7. **Width/depth grid** — hidden_dim ∈ {128, 256, 512} × depth ∈ {3, 4} at the hard packedness
-8. **Periodic boundary conditions** — toroidal domain (MIC wrapping)
+The `inference/` directory is being refactored into:
+
+```
+inference/
+├── pipeline/
+│   ├── pbc.py          # pbc_dists, min_nn_pbc, compute_rdf, build_ghost_tile
+│   ├── tiling.py       # TilingConfig, make_tiles, apply_to_tiles
+│   └── corrector.py    # Corrector class — loads model, applies tiling+scaling+K passes
+├── visualization/
+│   └── comparison.py   # Standard 4-row × 5-col comparison figure
+├── configs/
+│   ├── grid_6x6.yaml   # experiment config for 6×6 / n100 model
+│   └── grid_10x10.yaml # experiment config for 10×10 / n50 model
+├── experiments/        # auto-created per inference run (mirrors training_artifacts)
+│   └── exp_YYYY-MM-DD_HH-MM-SS/
+│       ├── config.yaml
+│       ├── run.log
+│       ├── timeseries.png
+│       └── frames/     # sph_viz_t{t:04d}.png per sampled timestep
+├── sph_data/
+│   ├── positions.npy         # SPH with TV (T=1002, N=2500, 2D)
+│   └── positions_without.npy # SPH without TV
+├── run_experiment.py   # main entry point: run_experiment.py configs/grid_6x6.yaml
+└── pbc_toy.py          # standalone ghost-buffer proof (synthetic, no real data needed)
+```
+
+**Run an experiment (target CLI):**
+```
+.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml
+.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_10x10.yaml
+.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml --timestep 300
+```
+
+**Current working scripts (pre-refactor):**
+```
+# Single-timestep frame
+.venv\Scripts\python.exe inference/sph_viz.py --timestep 300 --grid 6
+
+# All frames at stride=100
+.venv\Scripts\python.exe inference/sph_viz.py --stride 100 --grid 6
+
+# 10×10 experiment (N=50 model)
+.venv\Scripts\python.exe inference/sph_viz.py --stride 100 --grid 10
+
+# Trajectory time-series (mean nn + CV over all timesteps)
+.venv\Scripts\python.exe inference/sph_timeseries.py --stride 50
+```
+
+---
+
+## Experiment config schema (target)
+
+```yaml
+model:
+  checkpoint: training_artifacts/train_run_2026-05-28_14-53-45/model_final.pt
+  config:     configs/model_configs/model_config_9_n100_p050.yaml
+  rd_train:   0.076
+
+data:
+  without_tv: inference/sph_data/positions_without.npy
+  with_tv:    inference/sph_data/positions.npy
+  rd_test:    0.02
+
+tiling:
+  grid_size:    6
+  ghost_factor: 1.0   # ghost_width = ghost_factor × rd_test
+
+experiment:
+  stride:   100         # visualise every N timesteps
+  k_values: [1, 2, 3, 5]
+  device:   cpu
+```
+
+---
+
+## Visualization (standard comparison figure)
+
+4 rows (K=1, K=2, K=3, K=5) × 5 columns:
+- **Col 0**: scatter — nonTV original (no correction)
+- **Col 1**: scatter — nonTV + model at K passes
+- **Col 2**: scatter — TV variant
+- **Col 3**: nn-distance histogram overlay (nonTV orig / model K / TV)
+- **Col 4**: RDF overlay (nonTV orig / model K / TV)
+
+All scatter panels share a colormap range (1st–99th percentile of all nn-distances).
+All histogram panels share an x-axis. No `rd` reference lines in the output.
+
+---
+
+## Model architecture (model9)
+
+```
+Input: (B, N, D)  — batch of point clouds in invariant space
+For every pair (i,j):
+  edge_feat = [rel_pos(D), dist(1), violation(1)]  — violation = relu(rd - dist)
+  edge_emb  = edge_mlp(edge_feat)                  — 3-layer MLP, hidden_dim=128
+  weight_ij = violation_ij / sum_j(violation_ij)   — violation-weighted attention
+agg_i  = sum_j(weight_ij * edge_emb_ij)            — zero for non-violating neighbours
+disp_i = tanh(output_mlp(agg_i)) * max_displacement
+Output: (B, N, D)  — displacement vectors in invariant space
+```
+
+`uses_rd = True` — `rd` is passed as a scalar tensor at every forward call.
+
+---
+
+## Metrics (training eval)
+
+| Metric | Target |
+|---|---|
+| `mean_violation` — avg `relu(rd−dist)` | → 0 |
+| `illegal_pairs %` | → 0% |
+| `viol_reduction %` | → 100% |
+| `mean_nn_dist` | ≥ rd, not >> rd |
+| `correction_eff` — violation removed ÷ displacement | high |
+
+---
+
+## Current state
+
+Training is complete. Active work is on SPH inference:
+- **6×6 grid, n100 model**: K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%)
+- **10×10 grid, n50 model**: similar but slightly weaker than 6×6
+- **Next**: full refactor of `inference/` into pipeline + visualization + run_experiment
