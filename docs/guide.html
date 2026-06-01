@@ -1053,14 +1053,24 @@ and unshifting afterwards; the existing corrector is reused without modification
 <p>Percentage change in mean nn-distance vs TV baseline:</p>
 <table>
 <tr><th>t</th><th>K=1 standard</th><th><strong>Shifted K=1+K=1</strong></th>
-    <th>K=5 standard</th><th>Cost (model calls)</th></tr>
+    <th>K=5 standard</th><th>Cost (model calls)</th>
+    <th>Shifted captures</th></tr>
 <tr><td>300</td><td>&minus;0.6%</td><td><strong>+0.3%</strong></td>
     <td>+13.6%</td><td rowspan="4" style="text-align:center">
-    1 &nbsp;/&nbsp; <strong>2</strong> &nbsp;/&nbsp; 5</td></tr>
-<tr><td>500</td><td>+0.9%</td><td><strong>+5.6%</strong></td><td>+15.6%</td></tr>
-<tr><td>700</td><td>&minus;0.3%</td><td><strong>+4.3%</strong></td><td>+10.9%</td></tr>
-<tr><td>1000</td><td>&minus;5.1%</td><td><strong>&minus;0.3%</strong></td><td>+7.0%</td></tr>
+    1 &nbsp;/&nbsp; <strong>2</strong> &nbsp;/&nbsp; 5</td>
+    <td>6% of K=1&rarr;K=5 gap</td></tr>
+<tr><td>500</td><td>+0.9%</td><td><strong>+5.6%</strong></td><td>+15.6%</td>
+    <td>32% of gap</td></tr>
+<tr><td>700</td><td>&minus;0.3%</td><td><strong>+4.3%</strong></td><td>+10.9%</td>
+    <td><strong>41% of gap</strong></td></tr>
+<tr><td>1000</td><td>&minus;5.1%</td><td><strong>&minus;0.3%</strong></td><td>+7.0%</td>
+    <td><strong>40% of gap</strong></td></tr>
 </table>
+<p style="font-size:0.9em;color:#7a9cc0;margin-top:6px">
+  &ldquo;Shifted captures&rdquo; = fraction of the K=1&rarr;K=5 improvement
+  that shifted K=1+K=1 achieves.  At t&ge;500: &asymp;35&ndash;41% of the gain
+  at 40% of the model calls (2 vs 5).
+</p>
 <p>
 With only 2 total model passes, the shifted strategy consistently outperforms K=1
 and stays ahead of TV from t&asymp;300. It bridges the gap to K=5 at moderate cost.
