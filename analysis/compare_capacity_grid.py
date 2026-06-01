@@ -153,7 +153,8 @@ for name, cfg in RUNS.items():
     results[name] = run_results
 
 # ── Markdown report ───────────────────────────────────────────────────────────
-OUT_DIR = Path(__file__).parent
+OUT_DIR = Path(__file__).parent / 'outputs'
+OUT_DIR.mkdir(exist_ok=True)
 
 SHORT = {
     'model9\nhd128 d3\n(51K)'                  : 'model9 hd128 d3',

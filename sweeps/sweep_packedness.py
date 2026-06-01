@@ -10,9 +10,9 @@ import json, math, subprocess, sys
 from pathlib import Path
 import yaml
 
-ROOT   = Path(__file__).parent
+ROOT   = Path(__file__).parent.parent          # project root
 SWEEP  = ROOT / "configs" / "sweep"
-STATE  = ROOT / "sweep_state.json"
+STATE  = Path(__file__).parent / "sweep_state.json"   # state lives in sweeps/
 PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
 
 # ── sweep definition ────────────────────────────────────────────────────────

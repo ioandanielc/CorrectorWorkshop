@@ -14,13 +14,10 @@ from utils.logger import create_run_dir, setup_logger, set_logger_eta
 from utils.visualizations import plot_comparison, make_sample_gif
 from data.data_generator import PoissonDiskDataset, PackedPoissonDiskDataset
 from data.data_processor import DataProcessor
-from training.loss import classic_loss, rd_weighted_loss, coverage_loss, hybrid_loss
+from training.loss import hybrid_loss
 
 
 LOSS_FNS = {
-    'classic_loss': classic_loss,
-    'rd_weighted_loss': rd_weighted_loss,
-    'coverage_loss': coverage_loss,
     'hybrid_loss': hybrid_loss,
 }
 
@@ -93,7 +90,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     loss_fn = LOSS_FNS[loss_cfg['name']]
     rd = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
 
-    loss_csv = open(run_dir / "loss.csv", "w")
+    loss_csv = open(run_dir / "loss.csv", "w", buffering=1)   # line-buffered
     loss_csv.write(
         "iteration,loss,lr,"
         "mean_violation_pre,mean_violation_k1,median_violation_pre,median_violation_k1,"
@@ -129,8 +126,6 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
         total_loss.backward()
         optimizer.step()
         scheduler.step()
-
-        loss_val   = total_loss                           # for logging
 
         if iteration % eval_cfg['log_interval'] == 0:
             with torch.no_grad():
@@ -202,7 +197,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
             logger.info(
                 f"iter={iteration:6d}  {secs_per_iter:.3f}s/iter  lr={current_lr:.2e}  "
-                f"loss={loss_val.item():.6f}\n"
+                f"loss={total_loss.item():.6f}\n"
                 f"  {'':20s}  {'K=1 (deploy)':>22s}   {'K='+str(unroll_steps)+' (train)':>22s}\n"
                 f"  mean_violation   = {mean_viol_pre:.6f}  ->  {s1['mean_viol']:.6f}              {sk['mean_viol']:.6f}\n"
                 f"  illegal_pairs    = {ill_pct_pre:.2f}%      ->  {s1['ill_pct']:.2f}%                 {sk['ill_pct']:.2f}%\n"
@@ -215,7 +210,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
             )
             # CSV: write K=1 columns (primary), plus K=K illegal% and legal% for tracking
             loss_csv.write(
-                f"{iteration},{loss_val.item():.6f},{current_lr:.2e},"
+                f"{iteration},{total_loss.item():.6f},{current_lr:.2e},"
                 f"{mean_viol_pre:.6f},{s1['mean_viol']:.6f},"
                 f"{med_viol_pre:.6f},{s1['med_viol']:.6f},"
                 f"{ill_pct_pre:.2f},{s1['ill_pct']:.2f},"

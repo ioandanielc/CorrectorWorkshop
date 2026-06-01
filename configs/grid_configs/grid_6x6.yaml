@@ -1,0 +1,15 @@
+# 6x6 tiling — recommended for N=100 models (n100_p050)
+# Total pts/tile ≈ 107 (69 core + 38 ghost) matches training distribution N~100.
+
+name:        "6x6"
+grid_size:   6
+ghost_factor: 1.0   # ghost_width = ghost_factor * rd_test (minimum provably correct)
+
+# At SPH conditions (N=2500, rd_test=0.02, domain=[0,1]^2):
+#   cell_size       = 0.167
+#   core pts/tile   ~ 69
+#   ghost pts/tile  ~ 38
+#   total pts/tile  ~ 107   <-- matches N=100 training distribution
+#
+# Ghost buffer correctness: ghost_width = 1.0 * rd_test >= rd_test. QED.
+# (Any smaller ghost_factor breaks the correctness guarantee.)

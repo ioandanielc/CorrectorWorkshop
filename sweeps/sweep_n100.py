@@ -11,8 +11,8 @@ Usage:  .venv\\Scripts\\python.exe sweep_n100.py
 import json, subprocess, sys
 from pathlib import Path
 
-ROOT   = Path(__file__).parent
-STATE  = ROOT / "n100_state.json"
+ROOT   = Path(__file__).parent.parent
+STATE  = Path(__file__).parent / "n100_state.json"
 PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
 TRAIN  = "configs/sweep/train_small_n.yaml"
 

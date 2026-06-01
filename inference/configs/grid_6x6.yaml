@@ -13,9 +13,7 @@ data:
   rd_test:    0.02
   domain:     1.0
 
-tiling:
-  grid_size:    6
-  ghost_factor: 1.0   # ghost_width = 1.0 * rd_test = 0.02 (minimum provably correct)
+tiling: configs/grid_configs/grid_6x6.yaml
 
 experiment:
   stride:   100

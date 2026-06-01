@@ -52,12 +52,27 @@ class CorrectorConfig:
 
     @classmethod
     def from_yaml(cls, path: str) -> 'CorrectorConfig':
+        """
+        Load experiment config. The 'tiling' key can be either:
+          - a path string to a grid config  (e.g. "inference/configs/grids/grid_6x6.yaml")
+          - an inline dict                  (e.g. {grid_size: 6, ghost_factor: 1.0})
+        """
         with open(path) as f:
             raw = yaml.safe_load(f)
         m   = raw['model']
         d   = raw['data']
-        t   = raw.get('tiling', {})
         exp = raw.get('experiment', {})
+
+        # resolve tiling — file reference or inline
+        t_raw = raw.get('tiling', {})
+        if isinstance(t_raw, str):
+            grid_cfg = TilingConfig.from_yaml(t_raw)
+            grid_size    = grid_cfg.grid_size
+            ghost_factor = grid_cfg.ghost_factor
+        else:
+            grid_size    = int(t_raw.get('grid_size', 6))
+            ghost_factor = float(t_raw.get('ghost_factor', 1.0))
+
         return cls(
             checkpoint   = m['checkpoint'],
             model_config = m['config'],
@@ -65,8 +80,8 @@ class CorrectorConfig:
             rd_test      = float(d['rd_test']),
             domain       = float(d.get('domain', 1.0)),
             device       = exp.get('device', 'cpu'),
-            grid_size    = int(t.get('grid_size', 6)),
-            ghost_factor = float(t.get('ghost_factor', 1.0)),
+            grid_size    = grid_size,
+            ghost_factor = ghost_factor,
             k_values     = list(exp.get('k_values', [1, 2, 3, 5])),
             stride       = int(exp.get('stride', 100)),
         )

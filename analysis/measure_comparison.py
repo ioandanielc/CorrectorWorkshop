@@ -202,7 +202,8 @@ ROW_LABELS = {
 }
 
 # ── Markdown report ───────────────────────────────────────────────────────────
-OUT_DIR = Path(__file__).parent          # analysis/
+OUT_DIR = Path(__file__).parent / 'outputs'
+OUT_DIR.mkdir(exist_ok=True)
 
 lines = []
 lines.append("# Model Comparison Report\n")

@@ -8,8 +8,8 @@ Usage:  .venv\\Scripts\\python.exe sweep_capacity.py
 import json, subprocess, sys
 from pathlib import Path
 
-ROOT   = Path(__file__).parent
-STATE  = ROOT / "capacity_state.json"
+ROOT   = Path(__file__).parent.parent
+STATE  = Path(__file__).parent / "capacity_state.json"
 PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
 
 VARIANTS = [

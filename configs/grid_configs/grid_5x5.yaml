@@ -1,0 +1,13 @@
+# 5x5 tiling — NOT recommended for production
+# Total pts/tile ≈ 196 (100 core + 96 ghost) = 2x the training distribution N~100.
+# Included for reference and comparison only.
+
+name:        "5x5"
+grid_size:   5
+ghost_factor: 1.0   # ghost_width = ghost_factor * rd_test (minimum provably correct)
+
+# At SPH conditions (N=2500, rd_test=0.02, domain=[0,1]^2):
+#   cell_size       = 0.200
+#   core pts/tile   ~ 100
+#   ghost pts/tile  ~ 96
+#   total pts/tile  ~ 196   <-- 2x training N=100, degrades performance
