@@ -17,10 +17,15 @@ CorrectorWorkshop/
 │   └── data_processor.py       # DataProcessor — make_invariant (centers + normalises)
 ├── models/
 │   └── fixed_rd/
-│       ├── model6.py           # ViolationAwareEdgeNetwork — uniform-push baseline
-│       ├── model7.py           # ViolationWeightedEdgeNetwork — violation-weighted agg
-│       ├── model9.py           # model7 + deeper edge MLP (3→3 layers) + tanh clamping (CURRENT)
-│       └── archive/            # model1–5 (superseded)
+│       ├── model9.py           # ViolationWeightedEdgeNetwork, 3-layer edge MLP, tanh clamp (CURRENT)
+│       ├── model10.py          # model9 + self-feature concat (experimental, not better than model9)
+│       └── archive/            # model1–5 (superseded), model6 (uniform-push), model7 (plain viol-weighted)
+├── inference/
+│   ├── sph_apply.py            # apply model to SPH trajectory (tiling + PBC ghost buffer)
+│   ├── sph_visualize.py        # visualise SPH data / corrector output
+│   └── sph_data/
+│       ├── positions.npy       # raw SPH trajectory (T=1002, N=2500, rd=0.02)
+│       └── positions_without.npy  # SPH trajectory without transport velocity
 ├── training/
 │   ├── trainer.py              # Main training loop (iterative unrolling, dual K=1/K=K eval)
 │   └── loss.py                 # hybrid_loss (linear viol penalty + displacement reg)
@@ -32,15 +37,17 @@ CorrectorWorkshop/
 │   ├── trainer_configs/        # train_config_2 (K=3), _3 (K=5), _packed (packed regime)
 │   ├── dataset_configs/        # dataset_config_3 (50pts sparse), dataset_config_packed (N≈231, p=0.5)
 │   ├── loss_configs/           # loss_config_5 (principled sparse), loss_config_packed (N≈231)
-│   ├── model_configs/          # model_config_7, model_config_8, model_config_9 (current)
+│   ├── model_configs/          # model_config_9 (current) + capacity/n100 variants
 │   ├── smoke_test/             # fast CPU configs for quick testing
-│   ├── sweep/                  # auto-generated per-run configs (sweep_packedness.py)
+│   ├── sweep/                  # auto-generated per-run configs
 │   └── archive/                # superseded configs
 ├── analysis/                   # comparison outputs + scripts (comparison_report.md, *.png)
-├── docs/                       # architecture diagrams, PLANS.md
+├── docs/                       # architecture diagrams, PLANS.md, model_report.html
 ├── logs/                       # stdout/stderr logs from background training runs
 ├── training_artifacts/         # auto-created per run (see below)
 ├── sweep_packedness.py         # sweeper — packedness in {0.75, 0.90}, restart-safe
+├── sweep_capacity.py           # capacity grid sweep (hidden_dim × edge_depth at p=0.90)
+├── sweep_n100.py               # N=100 deployment sweep (p=0.50/0.75/1.00)
 ├── tracker.py                  # Streamlit live dashboard — run with: streamlit run tracker.py
 ├── COMMANDS.md                 # reference commands for common tasks
 └── CLAUDE.md                   # this file
