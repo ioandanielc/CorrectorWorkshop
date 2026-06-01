@@ -935,12 +935,77 @@ tiling: configs/grid_configs/grid_8x8.yaml
 
 </section>
 
+<!-- ══════════════════════ 12. NOTEBOOK ══════════════════════ -->
+<section>
+<h2>12 &nbsp; Interactive Notebook</h2>
+
+<p>
+<code>notebooks/pipeline_smoke_test.ipynb</code> is a fully executable
+end-to-end walkthrough that runs every pipeline component in order and
+produces inline figures for each step.
+</p>
+
+<h3>Open and run</h3>
+<pre><code><span class="comment"># Install Jupyter if not already present</span>
+.venv\Scripts\pip install jupyter
+
+<span class="comment"># Launch</span>
+.venv\Scripts\jupyter notebook notebooks/pipeline_smoke_test.ipynb
+
+<span class="comment"># Or execute non-interactively (overwrites outputs in place)</span>
+.venv\Scripts\python.exe -m jupyter nbconvert --to notebook --execute `
+  --ExecutePreprocessor.timeout=600 `
+  --output-dir notebooks `
+  notebooks/pipeline_smoke_test.ipynb
+</code></pre>
+
+<h3>Cell map</h3>
+<table>
+<tr><th>#</th><th>Section</th><th>Visualization</th><th>Calls</th></tr>
+<tr><td>1</td><td>Setup — ROOT, chdir, imports</td><td>—</td><td>—</td></tr>
+<tr><td>2</td><td>Data generation — clean vs noisy cloud</td><td><code>plot_cloud_pair()</code></td><td><code>data/data_generator.py</code></td></tr>
+<tr><td>3</td><td>Preprocessing — make_invariant round-trip</td><td>—</td><td><code>data/data_processor.py</code></td></tr>
+<tr><td>4</td><td>Training (optional smoke test)</td><td>—</td><td><code>training/trainer.py</code></td></tr>
+<tr><td>5</td><td>Training artifacts — loss curve + sample image</td><td><code>plot_training_curve()</code></td><td><code>inference/visualization/training.py</code></td></tr>
+<tr><td>6</td><td>Model load + forward pass sanity check</td><td>—</td><td><code>models/fixed_rd/model9.py</code></td></tr>
+<tr><td>7</td><td>Single synthetic cloud before/after</td><td><code>plot_cloud_pair()</code></td><td><code>inference/visualization/training.py</code></td></tr>
+<tr><td>8</td><td>SPH data — violation stats at t=0,300,700</td><td>—</td><td><code>inference/pipeline/pbc.py</code></td></tr>
+<tr><td>9</td><td>Tiling config — core/ghost counts + correctness guard</td><td>—</td><td><code>inference/pipeline/tiling.py</code></td></tr>
+<tr><td>10</td><td>Tiling decomposition — full domain + tile zoom</td><td><code>plot_tiling_overview()</code></td><td><code>inference/visualization/tiling.py</code></td></tr>
+<tr><td>11</td><td>Ghost buffer + PBC — RDF + closest pair</td><td>RDF inline</td><td><code>inference/pipeline/pbc.py</code></td></tr>
+<tr><td>12</td><td>Violation proof — ghost buffer captures both endpoints</td><td><code>plot_violation_proof()</code></td><td><code>inference/visualization/tiling.py</code></td></tr>
+<tr><td>13</td><td>Coordinate scaling — manual tile demo</td><td>—</td><td><code>inference/pipeline/scaling.py</code></td></tr>
+<tr><td>14</td><td>Full corrector — K=1,3,5 on t=300</td><td>—</td><td><code>inference/pipeline/corrector.py</code></td></tr>
+<tr><td>15</td><td>Grid swap — 10&times;10 vs 6&times;6, same model</td><td>—</td><td><code>inference/pipeline/corrector.py</code></td></tr>
+<tr><td>16</td><td>Short timeseries — K=5 vs TV over 5 timesteps</td><td><code>plot_timeseries()</code></td><td><code>inference/visualization/timeseries.py</code></td></tr>
+<tr><td>17</td><td>Standard comparison figure at t=300</td><td><code>plot_comparison_frame()</code></td><td><code>inference/visualization/comparison.py</code></td></tr>
+<tr><td>18</td><td>Summary — checklist of what passed</td><td>—</td><td>—</td></tr>
+</table>
+
+<div class="box green">
+  <div class="box-title">All visualization functions</div>
+  <p>Every figure in the notebook calls a function from
+  <code>inference/visualization/</code> — no plotting logic is inline in the cells.
+  The same functions are used by <code>run_experiment.py</code> for batch output,
+  so notebook and CLI produce identical figures.</p>
+  <table style="margin:8px 0 0 0">
+  <tr><th>Module</th><th>Functions</th></tr>
+  <tr><td><code>comparison.py</code></td><td><code>plot_comparison_frame()</code></td></tr>
+  <tr><td><code>tiling.py</code></td><td><code>plot_tiling_overview()</code>, <code>plot_tile_detail()</code>, <code>plot_violation_proof()</code></td></tr>
+  <tr><td><code>training.py</code></td><td><code>plot_training_curve()</code>, <code>plot_cloud_pair()</code></td></tr>
+  <tr><td><code>timeseries.py</code></td><td><code>plot_timeseries()</code></td></tr>
+  </table>
+</div>
+
+</section>
+
 </div><!-- /wrap -->
 
 <footer>
   Poisson Disk Corrector &mdash; model9 hd128_d3 &mdash;
   inference via 6&times;6 tiling, ghost buffer, coordinate scaling.
   Run <code>inference/run_experiment.py</code> to reproduce any result.
+  Interactive walkthrough: <code>notebooks/pipeline_smoke_test.ipynb</code>.
 </footer>
 
 </body>

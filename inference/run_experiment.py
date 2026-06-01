@@ -33,18 +33,18 @@ import logging
 import shutil
 import sys
 from datetime import datetime
+import matplotlib
+matplotlib.use('Agg')   # file-only rendering; must be set before any plt import
 from pathlib import Path
 
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from inference.pipeline.corrector import Corrector, CorrectorConfig
 from inference.pipeline.pbc import min_nn_pbc
 from inference.visualization.comparison import plot_comparison_frame
+from inference.visualization.timeseries import plot_timeseries
 
 
 def _setup_logger(log_path: Path) -> logging.Logger:
@@ -59,45 +59,6 @@ def _setup_logger(log_path: Path) -> logging.Logger:
     return log
 
 
-def _plot_timeseries(ts, metrics_by_k, metrics_tv, save_path):
-    """Plot mean nn and CV over time for all K values vs TV."""
-    C_TV  = '#e67e22'
-    BLUES = ['#aed6f1', '#5dade2', '#2471a3', '#1a3a5c']
-
-    k_values = sorted(metrics_by_k.keys())
-    colors   = {k: BLUES[min(i, len(BLUES)-1)] for i, k in enumerate(k_values)}
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4.5))
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.88, bottom=0.13, wspace=0.30)
-
-    for k in k_values:
-        ax1.plot(ts, metrics_by_k[k]['mean'], color=colors[k], lw=1.8, label=f'K={k}')
-        ax2.plot(ts, metrics_by_k[k]['cv'],   color=colors[k], lw=1.8, label=f'K={k}')
-
-    ax1.plot(ts, metrics_tv['mean'], color=C_TV, lw=1.8, ls='--', label='TV')
-    ax2.plot(ts, metrics_tv['cv'],   color=C_TV, lw=1.8, ls='--', label='TV')
-
-    k_best = max(k_values)
-    k3 = np.array(metrics_by_k[k_best]['mean'])
-    tv = np.array(metrics_tv['mean'])
-    ax1.fill_between(ts, k3, tv, where=(k3 >= tv), alpha=0.12,
-                     color=colors[k_best], label=f'K={k_best} ahead')
-
-    for ax, ylabel, title in [
-        (ax1, 'mean min-nn distance',    'Mean NN-distance over time'),
-        (ax2, 'CV = std/mean (min-nn)',  'Distribution uniformity  (lower = better)'),
-    ]:
-        ax.set_xlabel('timestep', fontsize=9)
-        ax.set_ylabel(ylabel,     fontsize=9)
-        ax.set_title(title,       fontsize=10)
-        ax.legend(fontsize=8, framealpha=0.9)
-        ax.grid(True, alpha=0.3)
-        ax.set_xlim(ts[0], ts[-1])
-
-    fig.suptitle('SPH corrector vs TV  —  trajectory summary', fontsize=10)
-    fig.savefig(save_path, dpi=150, bbox_inches='tight')
-    plt.close(fig)
-    print(f'Timeseries saved -> {save_path}')
 
 
 def main():
@@ -179,8 +140,9 @@ def main():
 
     # ── timeseries plot ──────────────────────────────────────────────────────
     if len(ts_list) > 1:
-        _plot_timeseries(ts_list, metrics_by_k, metrics_tv,
-                         exp_dir / 'timeseries.png')
+        plot_timeseries(ts_list, metrics_by_k, metrics_tv,
+                        save_path=str(exp_dir / 'timeseries.png'), show=False)
+        print(f'Timeseries saved -> {exp_dir / "timeseries.png"}')
 
     log.info(f'Done. Results in {exp_dir}')
 

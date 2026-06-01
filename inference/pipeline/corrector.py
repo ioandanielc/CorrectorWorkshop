@@ -64,9 +64,20 @@ class CorrectorConfig:
         exp = raw.get('experiment', {})
 
         # resolve tiling — file reference or inline
+        # relative paths are resolved: first against CWD, then against the
+        # experiment config's own directory, then two levels up (project root)
         t_raw = raw.get('tiling', {})
         if isinstance(t_raw, str):
-            grid_cfg = TilingConfig.from_yaml(t_raw)
+            tiling_path = Path(t_raw)
+            if not tiling_path.is_absolute():
+                config_dir  = Path(path).resolve().parent
+                for base in [Path('.'), config_dir, config_dir.parent,
+                             config_dir.parent.parent]:
+                    candidate = (base / tiling_path).resolve()
+                    if candidate.exists():
+                        tiling_path = candidate
+                        break
+            grid_cfg = TilingConfig.from_yaml(str(tiling_path))
             grid_size    = grid_cfg.grid_size
             ghost_factor = grid_cfg.ghost_factor
         else:

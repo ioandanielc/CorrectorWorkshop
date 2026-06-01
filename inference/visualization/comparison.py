@@ -29,8 +29,6 @@ from pathlib import Path
 from typing import Dict, Optional
 
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
