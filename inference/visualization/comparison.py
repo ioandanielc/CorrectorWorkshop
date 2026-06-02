@@ -120,8 +120,13 @@ def _pbc_disp_mag(pts_orig, pts_corr, domain=1.0):
 
 
 def _draw_disp_hist(ax, pts_orig, pts_corr, title, rd=1.0, domain=1.0,
-                    elapsed=None, color=C_MODEL):
-    """Histogram of per-particle PBC displacement magnitude, normalised by rd."""
+                    elapsed=None, color=C_MODEL, perf_info=None):
+    """
+    Histogram of per-particle PBC displacement magnitude, normalised by rd.
+
+    perf_info (optional dict): keys cpu_ms, gpu_ms, vram_mb — shown as a
+    highlighted performance box in the lower-right of the panel.
+    """
     disp = _pbc_disp_mag(pts_orig, pts_corr, domain) / rd
     p95  = np.percentile(disp, 95)
     bins = np.linspace(0, max(disp.max() * 1.05, 1e-4), 60)
@@ -140,6 +145,20 @@ def _draw_disp_hist(ax, pts_orig, pts_corr, title, rd=1.0, domain=1.0,
     ax.tick_params(labelsize=7)
     ax.set_title(title, fontsize=8.5, pad=3)
     ax.legend(fontsize=7, framealpha=0.85)
+
+    if perf_info:
+        cpu_ms  = perf_info.get('cpu_ms')
+        gpu_ms  = perf_info.get('gpu_ms')
+        vram_mb = perf_info.get('vram_mb')
+        lines = ['── timing ──']
+        if cpu_ms  is not None: lines.append(f'CPU  {cpu_ms:6.1f} ms')
+        if gpu_ms  is not None: lines.append(f'GPU  {gpu_ms:6.1f} ms')
+        if cpu_ms and gpu_ms:   lines.append(f'↑ {cpu_ms/gpu_ms:.1f}× speedup')
+        if vram_mb is not None: lines.append(f'VRAM {vram_mb:.0f} MB')
+        ax.text(0.03, 0.03, '\n'.join(lines), transform=ax.transAxes,
+                fontsize=7.5, va='bottom', ha='left', family='monospace',
+                color='white',
+                bbox=dict(boxstyle='round,pad=0.4', fc='#1a252f', alpha=0.90, lw=0))
 
 
 # ── main function ─────────────────────────────────────────────────────────────
@@ -256,6 +275,7 @@ def plot_shifted_grid_comparison(
     save_path:  Optional[str] = None,
     show:       bool = True,
     rd:         Optional[float] = None,
+    perf_data:  Optional[Dict] = None,
 ):
     """
     Five-row comparison at a single timestep:
@@ -266,10 +286,15 @@ def plot_shifted_grid_comparison(
       Row 4 — K=5 standard   (5 calls, upper bound)
 
     Each correction row: model scatter | displacement hist | nn-hist 3-way | RDF 3-way
+
+    perf_data: optional dict keyed by strategy short-name ('k1', 'k2', 'shifted', 'k5'),
+               each value a dict with optional keys: cpu_ms, gpu_ms, vram_mb.
+               Shown as a highlighted box in each displacement panel.
     """
     import time as _time
-    step_str = f't = {timestep}' if timestep is not None else ''
-    rd_val   = rd if rd is not None else (corrector.cfg.rd_test if hasattr(corrector.cfg, 'rd_test') else 1.0)
+    step_str  = f't = {timestep}' if timestep is not None else ''
+    rd_val    = rd if rd is not None else (corrector.cfg.rd_test if hasattr(corrector.cfg, 'rd_test') else 1.0)
+    perf_data = perf_data or {}
 
     print('  Applying correctors...')
     t0 = _time.perf_counter(); k1      = corrector.apply(pts_nonTV, k=1); t_k1  = _time.perf_counter() - t0
@@ -298,10 +323,10 @@ def plot_shifted_grid_comparison(
     r_k5,   g_k5   = compute_rdf(k5,        r_max, domain=domain)
 
     strategies = [
-        (k1,      nn_k1, r_k1, g_k1, 'K=1  standard  (1 call)',           t_k1),
-        (k2,      nn_k2, r_k2, g_k2, 'K=2  standard  (2 calls)',          t_k2),
-        (shifted, nn_sh,  r_sh, g_sh, 'K=1+K=1  shifted grid  (2 calls)', t_sh),
-        (k5,      nn_k5, r_k5, g_k5, 'K=5  standard  (5 calls)',          t_k5),
+        (k1,      nn_k1, r_k1, g_k1, 'K=1  standard  (1 call)',           t_k1, perf_data.get('k1')),
+        (k2,      nn_k2, r_k2, g_k2, 'K=2  standard  (2 calls)',          t_k2, perf_data.get('k2')),
+        (shifted, nn_sh,  r_sh, g_sh, 'K=1+K=1  shifted grid  (2 calls)', t_sh, perf_data.get('shifted')),
+        (k5,      nn_k5, r_k5, g_k5, 'K=5  standard  (5 calls)',          t_k5, perf_data.get('k5')),
     ]
     n_rows = 1 + len(strategies)
 
@@ -328,14 +353,15 @@ def plot_shifted_grid_comparison(
 
     # ── rows 1+: per strategy ─────────────────────────────────────────────────
     sc_last = sc_ref
-    for row_idx, (corr, nn_corr, r_m, g_m, label, elapsed) in enumerate(strategies, start=1):
+    for row_idx, (corr, nn_corr, r_m, g_m, label, elapsed, perf_info) in enumerate(strategies, start=1):
         ax_model, ax_disp, ax_hist, ax_rdf = axes[row_idx]
 
         sc_last = _draw_scatter(ax_model, corr, nn_corr, vmin, vmax,
                                 f'{label}   {step_str}')
         _draw_disp_hist(ax_disp, pts_nonTV, corr,
                         f'displacement   {label}',
-                        rd=rd_val, domain=domain, elapsed=elapsed)
+                        rd=rd_val, domain=domain, elapsed=elapsed,
+                        perf_info=perf_info)
         _draw_hist(ax_hist, nn_raw, nn_corr, nn_tv,
                    f'nn-dist: {label}', shared_xlim=xlim)
         _draw_rdf(ax_rdf, r_orig, g_orig, r_m, g_m, r_tv, g_tv,
@@ -347,10 +373,20 @@ def plot_shifted_grid_comparison(
     cbar.ax.tick_params(labelsize=7)
 
     shift = 0.5 * corrector.tiling.cell_size
+    vram_vals = [p.get('vram_mb') for p in perf_data.values() if p and p.get('vram_mb')]
+    vram_str  = f'   |   peak VRAM {max(vram_vals):.0f} MB' if vram_vals else ''
+    gpu_k5    = (perf_data.get('k5') or {}).get('gpu_ms')
+    cpu_k5    = (perf_data.get('k5') or {}).get('cpu_ms')
+    timing_str = ''
+    if gpu_k5 is not None:
+        timing_str = f'   |   K=5: GPU {gpu_k5:.1f} ms'
+        if cpu_k5 is not None:
+            timing_str += f' / CPU {cpu_k5:.0f} ms ({cpu_k5/gpu_k5:.0f}× speedup)'
     fig.suptitle(
         f'Shifted-grid strategy comparison   {step_str}'
-        f'   |   shift = cell/2 = {shift:.3f}   |   N=2500   |   {corrector.cfg.grid_size}x{corrector.cfg.grid_size} grid',
-        fontsize=10, y=0.975)
+        f'   |   shift = cell/2 = {shift:.3f}   |   N=2500   |   {corrector.cfg.grid_size}x{corrector.cfg.grid_size} grid'
+        f'{timing_str}{vram_str}',
+        fontsize=9.5, y=0.975)
 
     if save_path:
         fig.savefig(save_path, dpi=150, bbox_inches='tight')
