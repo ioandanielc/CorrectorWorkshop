@@ -80,33 +80,47 @@ class CorrectorModel(nn.Module):
             raise ValueError("model9 requires rd as input")
 
         B, N, D = x.shape
+        H = self.hidden_dim
 
-        # --- Edge features (B, N, N, dim+2) ---
-        xi = x.unsqueeze(2).expand(-1, -1, N, -1)
-        xj = x.unsqueeze(1).expand(-1, N, -1, -1)
-        rel_pos   = xi - xj
-        dist      = rel_pos.norm(dim=-1, keepdim=True)
-        violation = torch.relu(rd - dist)
+        # --- Pairwise distances ---
+        rel_pos = x.unsqueeze(2) - x.unsqueeze(1)          # (B, N, N, D)
+        dist    = rel_pos.norm(dim=-1)                       # (B, N, N)
+        eye     = torch.eye(N, dtype=torch.bool, device=x.device)
 
-        edge_feat = torch.cat([rel_pos, dist, violation], dim=-1)
+        # --- Sparse: only process violating, non-self pairs ---
+        # All non-violating pairs have weight=0 and contribute nothing to aggregation.
+        viol_map  = torch.relu(rd - dist)                    # (B, N, N)
+        viol_mask = (dist < rd) & ~eye                       # (B, N, N)
+        b_idx, i_idx, j_idx = viol_mask.nonzero(as_tuple=True)   # (M,)
 
-        # --- Embed edges ---
-        edge_emb = self.edge_mlp(edge_feat)
+        agg = torch.zeros(B, N, H, device=x.device, dtype=x.dtype)
 
-        # --- Zero self-edges ---
-        eye = torch.eye(N, dtype=torch.bool, device=x.device)
-        edge_emb  = edge_emb  * (~eye).unsqueeze(0).unsqueeze(-1)
-        violation = violation * (~eye).unsqueeze(0).unsqueeze(-1)
+        if b_idx.numel() > 0:
+            # Edge features for violating pairs only
+            rel_v = rel_pos [b_idx, i_idx, j_idx]            # (M, D)
+            d_v   = dist    [b_idx, i_idx, j_idx, None]      # (M, 1)
+            v_v   = viol_map[b_idx, i_idx, j_idx, None]      # (M, 1)
+            edge_emb = self.edge_mlp(
+                torch.cat([rel_v, d_v, v_v], dim=-1))        # (M, H)
 
-        # --- Violation-weighted aggregation ---
-        viol_sum = violation.sum(dim=2, keepdim=True)
-        weights  = violation / (viol_sum + 1e-8)
-        agg = (edge_emb * weights).sum(dim=2)
+            # Violation-weighted aggregation via scatter_add
+            flat_i   = (b_idx * N + i_idx).unsqueeze(-1)     # (M, 1)
+
+            viol_sum = torch.zeros(B * N, 1, device=x.device, dtype=x.dtype)
+            viol_sum.scatter_add_(0, flat_i, v_v)
+
+            w = v_v / (viol_sum[b_idx * N + i_idx] + 1e-8)   # (M, 1)
+
+            agg_flat = torch.zeros(B * N, H, device=x.device, dtype=x.dtype)
+            agg_flat.scatter_add_(0, flat_i.expand(-1, H), edge_emb * w)
+            agg = agg_flat.view(B, N, H)
 
         # --- Clamped displacement output ---
-        raw_disp    = self.output_mlp(agg)
-        displacement = torch.tanh(raw_disp) * self.max_disp
+        displacement = torch.tanh(self.output_mlp(agg)) * self.max_disp
 
         if return_attention_maps:
-            return displacement, weights.squeeze(-1)
+            viol_sum_full = (viol_sum.view(B, N, 1) if b_idx.numel() > 0
+                             else torch.zeros(B, N, 1, device=x.device, dtype=x.dtype))
+            weights = viol_map / (viol_sum_full + 1e-8) * (~eye).to(x.dtype)
+            return displacement, weights
         return displacement

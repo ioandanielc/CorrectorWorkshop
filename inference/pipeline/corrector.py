@@ -138,37 +138,59 @@ class Corrector:
         -------
         (N, 2)  corrected positions, PBC-wrapped to [0, domain)^2
         """
-        pts = points.astype(np.float32).copy()
+        pts     = points.astype(np.float32).copy()
         ghost_w = self.tiling.ghost_width(self.cfg.rd_test)
+        # Padding sentinel: distance to any real particle >> rd_train -> violation = 0
+        # -> weight = 0 -> real particle aggregations are unaffected by padding.
+        PAD = np.float32(1e3)
 
         for _ in range(k):
-            displacements = np.zeros_like(pts)
-            counts        = np.zeros(len(pts), dtype=int)
-
+            # ── Phase 1: ghost tiles + make_invariant (per tile, cheap) ───────
+            tiles = []
             for tile_lo, tile_hi in iter_tiles(self.tiling):
                 ext, is_core, orig_idx = build_ghost_tile(
-                    pts, tile_lo, tile_hi, ghost_w, self.cfg.domain
-                )
+                    pts, tile_lo, tile_hi, ghost_w, self.cfg.domain)
                 if is_core.sum() == 0:
                     continue
-
-                # scale -> invariant -> model -> unscale
                 pts_s         = ext * self.scale
                 x_inv, _, rev = self.processor.make_invariant(pts_s[None])
-                x_t           = torch.tensor(x_inv, dtype=torch.float32,
-                                             device=self.device)
-                with torch.no_grad():
-                    disp_inv = self.model(x_t, rd=self.rd_t).cpu().numpy()[0]
-                corrected = rev(x_inv + disp_inv)[0]
-                disp_orig = (corrected - pts_s) / self.scale
+                tiles.append((x_inv, pts_s, is_core, orig_idx, rev))
 
-                for idx_k in range(len(ext)):
-                    if is_core[idx_k]:
-                        displacements[orig_idx[idx_k]] += disp_orig[idx_k]
-                        counts[orig_idx[idx_k]] += 1
+            if not tiles:
+                continue
+
+            # ── Phase 2: pad to max_N, single batched forward pass ────────────
+            max_N   = max(t[0].shape[1] for t in tiles)
+            n_tiles = len(tiles)
+            # Spread padded positions so they don't violate each other (dist > rd_train).
+            pad_offsets = np.arange(max_N, dtype=np.float32) * 0.2   # 0.2 >> rd_train
+            batch_x = np.empty((n_tiles, max_N, 2), dtype=np.float32)
+            batch_x[:, :, 0] = PAD + pad_offsets          # broadcast over tiles
+            batch_x[:, :, 1] = PAD
+            for i, (x_inv, *_) in enumerate(tiles):
+                n = x_inv.shape[1]
+                batch_x[i, :n] = x_inv[0]
+
+            x_t = torch.tensor(batch_x, dtype=torch.float32, device=self.device)
+            with torch.no_grad():
+                disp_batch = self.model(x_t, rd=self.rd_t).cpu().numpy()
+
+            # ── Phase 3: unpad, rev, accumulate (vectorised) ──────────────────
+            displacements = np.zeros_like(pts)
+            counts        = np.zeros(len(pts), dtype=np.int32)
+
+            for i, (x_inv, pts_s, is_core, orig_idx, rev) in enumerate(tiles):
+                n         = x_inv.shape[1]
+                disp_inv  = disp_batch[i, :n]          # (n, 2)
+                corrected = rev(x_inv + disp_inv)[0]   # (n, 2)
+                disp_orig = (corrected - pts_s) / self.scale
+                core      = is_core.astype(bool)
+                ci        = orig_idx[core]
+                np.add.at(displacements, ci, disp_orig[core])
+                np.add.at(counts,        ci, 1)
 
             counts = np.maximum(counts, 1)
-            pts = (pts + displacements / counts[:, None]) % self.cfg.domain
+            pts    = (pts + displacements / counts[:, None]) % self.cfg.domain
 
         return pts
 

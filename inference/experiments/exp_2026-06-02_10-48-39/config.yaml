@@ -1,0 +1,21 @@
+# Experiment config: 10x10 tiling with the N=50 sparse model
+# ~49 pts/tile (25 core + 24 ghost) matches training distribution N=50.
+# Scale = rd_train / rd_test = 0.05 / 0.02 = 2.5
+
+model:
+  checkpoint: weights/n50_sparse.pt
+  config:     configs/model_configs/model_config_9.yaml
+  rd_train:   0.05
+
+data:
+  without_tv: inference/sph_data/positions_without.npy
+  with_tv:    inference/sph_data/positions.npy
+  rd_test:    0.02
+  domain:     1.0
+
+tiling: configs/grid_configs/grid_10x10.yaml
+
+experiment:
+  stride:   100
+  k_values: [1, 2, 3, 5]
+  device:   cpu

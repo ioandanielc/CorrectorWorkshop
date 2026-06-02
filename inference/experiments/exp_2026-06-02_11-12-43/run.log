@@ -1,0 +1,11 @@
+11:12:43  Config: inference/configs/grid_6x6_tight.yaml
+11:12:43  Grid: 6x6  scale=3.80  k_values=[1, 2, 3, 5]
+11:12:43  Data loaded  T=1002  N=2500
+11:12:43  Corrector ready
+11:12:43  [1/1]  t=300
+11:12:43    K=1: mean_nn=0.01476  (0.05s)
+11:12:44    K=2: mean_nn=0.01485  (0.07s)
+11:12:44    K=3: mean_nn=0.01544  (0.12s)
+11:12:44    K=5: mean_nn=0.01681  (0.21s)
+11:12:45    TV:  mean_nn=0.01496
+11:12:48  Done. Results in inference\experiments\exp_2026-06-02_11-12-43

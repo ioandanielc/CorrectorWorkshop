@@ -32,6 +32,7 @@ import argparse
 import logging
 import shutil
 import sys
+import time
 from datetime import datetime
 import matplotlib
 matplotlib.use('Agg')   # file-only rendering; must be set before any plt import
@@ -115,13 +116,16 @@ def main():
         pts_wi = pos_with[t].astype(np.float32)
 
         corrected_by_k = {}
+        time_by_k      = {}
         for k in cfg.k_values:
+            t0   = time.perf_counter()
             corr = corrector.apply(pts_wo, k=k)
+            time_by_k[k] = time.perf_counter() - t0
             corrected_by_k[k] = corr
             nn = min_nn_pbc(corr)
             metrics_by_k[k]['mean'].append(float(nn.mean()))
             metrics_by_k[k]['cv'].append(float(nn.std() / nn.mean()))
-            log.info(f'  K={k}: mean_nn={nn.mean():.5f}')
+            log.info(f'  K={k}: mean_nn={nn.mean():.5f}  ({time_by_k[k]:.2f}s)')
 
         nn_tv = min_nn_pbc(pts_wi)
         metrics_tv['mean'].append(float(nn_tv.mean()))
@@ -135,6 +139,8 @@ def main():
             timestep=t,
             grid=cfg.grid_size,
             scale=cfg.rd_train / cfg.rd_test,
+            rd=cfg.rd_test,
+            time_by_k=time_by_k,
             save_path=str(save),
         )
 

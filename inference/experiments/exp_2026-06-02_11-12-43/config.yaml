@@ -1,0 +1,20 @@
+# Experiment config: 6x6 tiling, TIGHT ghost buffer (ghost_factor=0.5)
+# Ablation: does a tighter ghost zone increase the shifted-grid advantage?
+
+model:
+  checkpoint: weights/n100_p050.pt
+  config:     configs/model_configs/model_config_9_n100_p050.yaml
+  rd_train:   0.076
+
+data:
+  without_tv: inference/sph_data/positions_without.npy
+  with_tv:    inference/sph_data/positions.npy
+  rd_test:    0.02
+  domain:     1.0
+
+tiling: configs/grid_configs/grid_6x6_tight.yaml   # ghost_factor=0.5 — ablation only
+
+experiment:
+  stride:   100
+  k_values: [1, 2, 3, 5]
+  device:   cpu
