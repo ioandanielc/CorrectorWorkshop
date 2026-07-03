@@ -34,7 +34,10 @@ class CorrectorModel(nn.Module):
         self.input_dim    = input_dim
         self.hidden_dim   = model_config['hidden_dim']
         self.norm_type    = model_config['norm']
-        self.max_disp     = model_config.get('max_displacement', 0.06)  # ~1.2 * rd default
+        self.max_disp     = nn.Parameter(
+            torch.tensor(model_config.get('max_displacement', 0.06))
+        )  # ~1.2 * rd default
+        # self.scale = nn.Parameter(torch.tensor(1.0))
 
         activation_cls = getattr(nn, model_config['activation'])
         edge_dim = input_dim + 2  # rel_pos (dim) + distance (1) + violation (1)
@@ -57,6 +60,7 @@ class CorrectorModel(nn.Module):
             *make_mlp(self.hidden_dim, self.hidden_dim),
             nn.Linear(self.hidden_dim, input_dim),
         )
+
 
         self._initialize_weights(initialization)
 
@@ -116,7 +120,10 @@ class CorrectorModel(nn.Module):
             agg = agg_flat.view(B, N, H)
 
         # --- Clamped displacement output ---
+        # FIXME: Maybe remove?
+        # [min, max]
         displacement = torch.tanh(self.output_mlp(agg)) * self.max_disp
+        # scale*[-1, 1]
 
         if return_attention_maps:
             viol_sum_full = (viol_sum.view(B, N, 1) if b_idx.numel() > 0
