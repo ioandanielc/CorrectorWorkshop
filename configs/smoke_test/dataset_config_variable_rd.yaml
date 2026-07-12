@@ -1,0 +1,13 @@
+type: variable_rd_packed
+rd_min: 0.05
+rd_max: 0.5      # narrower range + smaller n_max than the full run — fast CPU sanity check
+packedness: 0.3
+n_min: 5
+n_max: 20
+pool_size: 200   # tiny pool — this config is for a fast sanity check, not real training
+
+dim: 2
+seed: 42
+
+noise_scale_min_frac: 0.0
+noise_scale_max_frac: 0.4
