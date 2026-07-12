@@ -24,6 +24,7 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utils.config import load_model_config
+from data.data_processor import compute_invariant, revert_invariant
 from .tiling import TilingConfig
 from .scaling import compute_scale
 
@@ -266,29 +267,17 @@ class Corrector:
             batch_orig_idx[t_idx, slot_idx] = p_idx
             real_mask_np  [t_idx, slot_idx] = 1.0
 
-            # ── Phase 1b cont: make_invariant on CPU (eigh of 36×2×2 is trivial) ──
-            N_real_safe = np.maximum(real_mask_np.sum(axis=1), 1.0)
-            mean_batch  = ((batch_pts_s * real_mask_np[:, :, None]).sum(axis=1)
-                           / N_real_safe[:, None])                        # (T, 2)
-            centered    = batch_pts_s - mean_batch[:, None]              # (T, max_N, 2)
-            centered_r  = centered * real_mask_np[:, :, None]
-            # matmul is faster than einsum for small batched (T,2,N)@(T,N,2)→(T,2,2)
-            cov         = (np.matmul(centered_r.transpose(0, 2, 1), centered_r)
-                           / N_real_safe[:, None, None])                 # (T, 2, 2)
-            _, eigvecs  = np.linalg.eigh(cov)                            # ascending
-            eigvecs     = np.ascontiguousarray(eigvecs[:, :, ::-1])      # descending
-            x_inv       = np.matmul(centered, eigvecs)                  # (T, max_N, 2)
+            # ── Phase 1b cont: center + PCA-rotate each tile (same as DataProcessor.make_invariant) ──
+            x_inv, mean_batch, eigvecs = compute_invariant(batch_pts_s, mask=real_mask_np)
 
             # ── Phase 2: H2D x_inv only → GPU forward → D2H disp ────────────
             x_t = torch.tensor(x_inv, dtype=torch.float32, device=self.device)
             with torch.no_grad():
                 disp = self.model(x_t, rd=self.rd_t).cpu().numpy()       # (T, max_N, 2)
 
-            # ── Phase 3: un-rotate + scatter (CPU, no add.at — orig_idx unique) ─
-            # disp_orig = disp rotated back to original space / scale
-            # derivation: corrected = eigvecs.T @ (x_inv+disp) + mean
-            #             disp_orig = (corrected - batch_pts_s) / scale = eigvecs.T @ disp / scale
-            disp_orig = np.matmul(disp, eigvecs.transpose(0, 2, 1)) / self.scale  # (T, max_N, 2)
+            # ── Phase 3: revert to scaled space, take the displacement, unscale ──
+            corrected_s = revert_invariant(x_inv + disp, mean_batch, eigvecs)  # (T, max_N, 2)
+            disp_orig   = (corrected_s - batch_pts_s) / self.scale             # (T, max_N, 2)
 
             # Each particle is core in exactly one tile → orig_indices is a permutation
             # of [0,N-1], so direct assignment beats np.add.at

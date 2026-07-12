@@ -1,43 +1,50 @@
 import numpy as np
 
 
+def compute_invariant(points, mask=None):
+    """
+    Center and PCA-rotate a batch of 2D point clouds.
+
+    points : (B, N, 2)
+    mask   : (B, N) bool/float, True/1 for real points; None = every point is real.
+             Used for padded batches (e.g. tiles with unequal particle counts) so
+             padding doesn't skew the centroid/covariance.
+
+    Returns
+    -------
+    x_inv   : (B, N, 2)  centered, then rotated into descending-eigenvalue PCA frame
+    mean    : (B, 2)     per-cloud centroid (over real points only)
+    eigvecs : (B, 2, 2)  rotation applied (columns = eigenvectors, descending eigenvalue)
+    """
+    if mask is None:
+        mask = np.ones(points.shape[:2], dtype=np.float32)
+    else:
+        mask = mask.astype(np.float32)
+
+    n_real = np.maximum(mask.sum(axis=1, keepdims=True), 1.0)    # (B, 1)
+    mean = (points * mask[..., None]).sum(axis=1) / n_real       # (B, 2)
+    centered = points - mean[:, None]                            # (B, N, 2)
+    centered_real = centered * mask[..., None]
+
+    cov = (np.matmul(centered_real.transpose(0, 2, 1), centered_real)
+           / n_real[..., None])                                  # (B, 2, 2)
+    _, eigvecs = np.linalg.eigh(cov)      # ascending eigenvalues
+    eigvecs = eigvecs[:, :, ::-1]         # descending
+
+    x_inv = np.matmul(centered, eigvecs)
+    return x_inv, mean, eigvecs
+
+
+def revert_invariant(x_inv, mean, eigvecs):
+    """Undo compute_invariant: rotate back, then re-add the centroid."""
+    return np.matmul(x_inv, eigvecs.transpose(0, 2, 1)) + mean[:, None]
+
+
 class DataProcessor:
-    def make_translational_invariant(self, sample):
-        centroids = sample.mean(axis=1, keepdims=True)  # (batch_size, 1, dim)
-        transformed = sample - centroids
-
-        def revert(s):
-            return s + centroids
-
-        return transformed, {"centroids": centroids}, revert
-
-    def make_rotational_invariant(self, sample):
-        aligned = []
-        eigvecs_list = []
-        for cloud in sample:
-            cov = np.cov(cloud, rowvar=False)
-            _, eigvecs = np.linalg.eigh(cov)
-            eigvecs = eigvecs[:, ::-1]
-            aligned.append(cloud @ eigvecs)
-            eigvecs_list.append(eigvecs)
-        transformed = np.stack(aligned)
-        eigvecs_arr = np.stack(eigvecs_list)  # (batch_size, dim, dim)
-
-        def revert(s):
-            reverted = []
-            for cloud, evecs in zip(s, eigvecs_arr):
-                reverted.append(cloud @ evecs.T)
-            return np.stack(reverted)
-
-        return transformed, {"eigvecs": eigvecs_arr}, revert
-
     def make_invariant(self, sample):
-        sample, t_params, revert_translation = self.make_translational_invariant(sample)
-        sample, r_params, revert_rotation = self.make_rotational_invariant(sample)
+        x_inv, mean, eigvecs = compute_invariant(sample)
 
         def revert(s):
-            s = revert_rotation(s)
-            s = revert_translation(s)
-            return s
+            return revert_invariant(s, mean, eigvecs)
 
-        return sample, {**t_params, **r_params}, revert
+        return x_inv, {"centroids": mean[:, None], "eigvecs": eigvecs}, revert
