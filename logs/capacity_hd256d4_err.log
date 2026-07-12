@@ -1,8 +1,0 @@
-2026-05-27 21:38:45 +00:00:00 --:--:-- [INFO] Run directory: training_artifacts\train_run_2026-05-27_21-38-45
-2026-05-27 21:38:45 +00:00:00 --:--:-- [INFO] Configs copied to run directory
-2026-05-27 21:38:45 +00:00:00 --:--:-- [INFO] Using device: cuda
-2026-05-27 21:38:45 +00:00:00 --:--:-- [INFO] Packed dataset: packedness=0.9, N_target=416, rd=0.05
-2026-05-27 21:38:45 +00:00:00 --:--:-- [INFO] Generating validation set (19 clouds)...
-2026-05-27 21:38:46 +00:00:01 --:--:-- [INFO] Validation set saved
-2026-05-27 21:38:47 +00:00:01 --:--:-- [INFO] Model built: 267,522 parameters
-2026-05-27 21:38:48 +00:00:02 --:--:-- [INFO] Starting training for 10000 iterations

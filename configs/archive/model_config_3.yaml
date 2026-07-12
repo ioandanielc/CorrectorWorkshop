@@ -1,8 +1,0 @@
-architecture: self_attention_mlp
-model_file: models/fixed_rd/model3  # additive residuals + LayerNorm + tanh output
-
-hidden_dim: 128
-num_attention_modules: 8
-norm: layer  # options: layer, none  (replaces batch_norm from model1/2)
-activation: ELU  # options: ELU, ReLU, LeakyReLU, GELU
-max_displacement: 0.5  # output = max_displacement * tanh(out) — hard displacement bound

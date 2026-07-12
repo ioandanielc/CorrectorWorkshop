@@ -1,9 +1,0 @@
-architecture: violation_weighted_edge_network
-model_file: models/fixed_rd/model7   # same architecture as model7, different activation
-
-hidden_dim: 128
-norm: layer
-activation: GELU   # smooth everywhere — C-inf, no zero-gradient region for negative inputs
-                   # replaces ReLU; motivated by Mishra & Rusch (2020): smooth activations
-                   # preserve finite Hardy-Krause variation, keeping low-discrepancy
-                   # theoretical bounds intact. ReLU has infinite HK variation.

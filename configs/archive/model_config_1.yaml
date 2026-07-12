@@ -1,8 +1,0 @@
-architecture: self_attention_mlp
-model_file: models/fixed_rd/model1
-output: displacement  # options: displacement, corrected_positions
-
-hidden_dim: 128
-num_attention_modules: 8
-batch_norm: true
-activation: ELU  # options: ELU, ReLU, LeakyReLU, GELU

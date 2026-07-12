@@ -11,8 +11,9 @@ dist/
 build/
 .DS_Store
 
-# Training artifacts (large files / run outputs)
+# Training/inference artifacts (large files / run outputs)
 training_artifacts/
+inference/experiments/
 *.pt
 *.npy
 

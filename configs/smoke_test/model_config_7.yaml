@@ -1,6 +1,0 @@
-architecture: violation_weighted_edge_network
-model_file: models/fixed_rd/model7
-
-hidden_dim: 32
-norm: layer
-activation: ReLU

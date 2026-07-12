@@ -1,7 +1,0 @@
-architecture: self_attention_mlp
-model_file: models/fixed_rd/model2  # additive residuals
-
-hidden_dim: 128
-num_attention_modules: 8
-batch_norm: true
-activation: ELU  # options: ELU, ReLU, LeakyReLU, GELU

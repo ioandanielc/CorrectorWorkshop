@@ -1,7 +1,0 @@
-dim: 2
-type: packed
-packedness: 0.50
-rd: 0.05
-seed: 42
-noise_scale_min: 0.0
-noise_scale_max: 0.02

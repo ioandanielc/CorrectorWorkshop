@@ -1,4 +1,5 @@
-name: classic_loss
+name: hybrid_loss
 params:
   lambda1: 30
+  lambda1_quad: 0
   lambda2: 1

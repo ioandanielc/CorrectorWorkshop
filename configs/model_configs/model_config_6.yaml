@@ -1,8 +1,0 @@
-architecture: violation_aware_edge_network
-model_file: models/fixed_rd/model6
-
-# Much smaller than attention models — physically motivated architecture
-# needs far fewer parameters for the same task.
-hidden_dim: 128
-norm: layer   # LayerNorm — operates on last dim directly, no permute needed
-activation: ReLU

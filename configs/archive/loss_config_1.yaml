@@ -1,4 +1,0 @@
-name: classic_loss  # options: classic_loss, rd_weighted_loss
-params:
-  lambda1: 30
-  lambda2: 1

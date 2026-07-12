@@ -1,7 +1,0 @@
-architecture: self_attention_mlp
-model_file: models/fixed_rd/model5  # model4 + LayerNorm (no BatchNorm permute hack)
-
-hidden_dim: 512
-num_attention_modules: 8
-norm: layer   # options: layer, none
-activation: ELU

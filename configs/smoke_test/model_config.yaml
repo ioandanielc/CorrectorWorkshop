@@ -1,8 +1,0 @@
-architecture: self_attention_mlp
-model_file: models/fixed_rd/model1
-output: displacement
-
-hidden_dim: 32
-num_attention_modules: 2
-batch_norm: true
-activation: ELU

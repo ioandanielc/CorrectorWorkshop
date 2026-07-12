@@ -13,7 +13,11 @@ data:
   rd_test:    0.02
   domain:     1.0
 
-tiling: configs/grid_configs/grid_6x6.yaml
+tiling:
+  # 6x6 — recommended for N=100 models (n100_p050).
+  # Total pts/tile ~107 (69 core + 38 ghost) matches training distribution N~100.
+  grid_size:    6
+  ghost_factor: 1.0   # ghost_width = ghost_factor * rd_test (minimum provably correct)
 
 experiment:
   stride:   100

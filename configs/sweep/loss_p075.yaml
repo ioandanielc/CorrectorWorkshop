@@ -1,5 +1,0 @@
-name: hybrid_loss
-params:
-  lambda1: 20
-  lambda1_quad: 0
-  lambda2: 0.005797
