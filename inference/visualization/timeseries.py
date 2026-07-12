@@ -12,27 +12,32 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-C_TV    = '#e67e22'
-BLUES   = ['#aed6f1', '#5dade2', '#2471a3', '#1a3a5c']
+C_TV      = '#e67e22'   # TV from simulation
+C_TV_ALGO = '#27ae60'   # TV algorithm (post-processing)
+BLUES     = ['#aed6f1', '#5dade2', '#2471a3', '#1a3a5c']
 
 
 def plot_timeseries(
-    timesteps:     List[int],
-    metrics_by_k:  Dict[int, Dict[str, List[float]]],
-    metrics_tv:    Dict[str, List[float]],
-    figsize:       Tuple[float, float] = (13, 4.5),
-    title:         str = 'SPH corrector vs TV — trajectory summary',
-    save_path:     Optional[str] = None,
-    show:          bool = True,
+    timesteps:        List[int],
+    metrics_by_k:     Dict[int, Dict[str, List[float]]],
+    metrics_tv:       Dict[str, List[float]],
+    metrics_tv_algo:  Optional[Dict[str, List[float]]] = None,
+    tv_algo_label:    str = 'TV algo',
+    figsize:          Tuple[float, float] = (13, 4.5),
+    title:            str = 'SPH corrector vs TV — trajectory summary',
+    save_path:        Optional[str] = None,
+    show:             bool = True,
 ):
     """
     Two-panel timeseries: mean nn-distance (left) and CV = std/mean (right).
 
     Parameters
     ----------
-    timesteps    : list of int timestep indices
-    metrics_by_k : {K: {'mean': [...], 'cv': [...]}}  one entry per K value
-    metrics_tv   : {'mean': [...], 'cv': [...]}        TV baseline
+    timesteps       : list of int timestep indices
+    metrics_by_k    : {K: {'mean': [...], 'cv': [...]}}  one entry per K value
+    metrics_tv      : {'mean': [...], 'cv': [...]}        TV from simulation
+    metrics_tv_algo : {'mean': [...], 'cv': [...]}        TV algorithm (optional)
+    tv_algo_label   : legend label for TV algo line
     """
     k_values = sorted(metrics_by_k.keys())
     colors   = {k: BLUES[min(i, len(BLUES)-1)] for i, k in enumerate(k_values)}
@@ -45,8 +50,14 @@ def plot_timeseries(
         ax1.plot(ts, metrics_by_k[k]['mean'], color=colors[k], lw=1.8, label=f'K={k}')
         ax2.plot(ts, metrics_by_k[k]['cv'],   color=colors[k], lw=1.8, label=f'K={k}')
 
-    ax1.plot(ts, metrics_tv['mean'], color=C_TV, lw=1.8, ls='--', label='TV')
-    ax2.plot(ts, metrics_tv['cv'],   color=C_TV, lw=1.8, ls='--', label='TV')
+    ax1.plot(ts, metrics_tv['mean'], color=C_TV, lw=1.8, ls='--', label='TV sim')
+    ax2.plot(ts, metrics_tv['cv'],   color=C_TV, lw=1.8, ls='--', label='TV sim')
+
+    if metrics_tv_algo is not None:
+        ax1.plot(ts, metrics_tv_algo['mean'], color=C_TV_ALGO, lw=1.8, ls='-.',
+                 label=tv_algo_label)
+        ax2.plot(ts, metrics_tv_algo['cv'],   color=C_TV_ALGO, lw=1.8, ls='-.',
+                 label=tv_algo_label)
 
     # shade region where the best K is ahead of TV
     k_best = max(k_values)

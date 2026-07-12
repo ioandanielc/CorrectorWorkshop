@@ -23,3 +23,8 @@ experiment:
   stride:   100
   k_values: [1, 2, 3, 5]
   device:   cpu
+
+tv:
+  h_factor: 1.3   # h = h_factor * dx,  dx = domain / sqrt(N)
+  nmax:     10
+  dt:       0.2   # relaxation factor (matches colleague reference code)

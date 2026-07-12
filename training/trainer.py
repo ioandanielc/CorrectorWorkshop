@@ -12,7 +12,7 @@ from pathlib import Path
 from utils.config import load_train_config, load_dataset_config, load_loss_config, load_model_config
 from utils.logger import create_run_dir, setup_logger, set_logger_eta
 from utils.visualizations import plot_comparison, make_sample_gif
-from data.data_generator import PoissonDiskDataset, PackedPoissonDiskDataset
+from data.data_generator import PoissonDiskDataset, PackedPoissonDiskDataset, VariableRdPackedPoissonDiskDataset
 from data.data_processor import DataProcessor
 from training.loss import hybrid_loss
 
@@ -41,6 +41,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     device = torch.device(train_cfg['device'])
     logger.info(f"Using device: {device}")
 
+    is_variable_rd = dataset_cfg.get('type') == 'variable_rd_packed'
+
     if dataset_cfg.get('type', 'standard') == 'packed':
         dataset = PackedPoissonDiskDataset(
             dim=dataset_cfg['dim'],
@@ -53,6 +55,25 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
         logger.info(
             f"Packed dataset: packedness={dataset_cfg['packedness']}, "
             f"N_target={dataset.n_target}, rd={dataset_cfg['rd']}"
+        )
+    elif is_variable_rd:
+        dataset = VariableRdPackedPoissonDiskDataset(
+            dim=dataset_cfg['dim'],
+            rd_min=dataset_cfg['rd_min'],
+            rd_max=dataset_cfg['rd_max'],
+            packedness=dataset_cfg['packedness'],
+            seed=dataset_cfg['seed'],
+            noise_scale_min_frac=dataset_cfg['noise_scale_min_frac'],
+            noise_scale_max_frac=dataset_cfg['noise_scale_max_frac'],
+            rd_gen=dataset_cfg.get('rd_gen', 0.05),
+            n_min=dataset_cfg.get('n_min', 20),
+            n_max=dataset_cfg.get('n_max', 250),
+            pool_size=dataset_cfg.get('pool_size', 100_000),
+        )
+        logger.info(
+            f"Variable-rd packed dataset: generated at rd_gen={dataset.rd_gen} "
+            f"(N={dataset.n_request}), rescaled to rd in [{dataset_cfg['rd_min']}, "
+            f"{dataset_cfg['rd_max']}] (log-uniform)"
         )
     else:
         dataset = PoissonDiskDataset(
@@ -68,6 +89,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     logger.info(f"Generating validation set ({eval_cfg['validation_size']} clouds)...")
     val_clean = dataset.generate_sample(eval_cfg['validation_size'])
     val_noisy = dataset.noise_sample(val_clean)
+    val_rd = dataset.last_rd if is_variable_rd else dataset_cfg['rd']
     np.save(run_dir / "validation_set.npy", val_noisy)
     logger.info("Validation set saved")
 
@@ -88,7 +110,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     scheduler = scheduler_cls(optimizer, **train_cfg['lr_scheduler']['params'])
 
     loss_fn = LOSS_FNS[loss_cfg['name']]
-    rd = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
+    rd = None if is_variable_rd else torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
 
     loss_csv = open(run_dir / "loss.csv", "w", buffering=1)   # line-buffered
     loss_csv.write(
@@ -113,13 +135,24 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
         noisy_processed, _, _ = processor.make_invariant(noisy)
         x = torch.tensor(noisy_processed, dtype=torch.float32).to(device)
 
+        if is_variable_rd:
+            rd = torch.tensor(dataset.last_rd, dtype=torch.float32, device=device)
+
         x_current  = x
         total_loss = torch.tensor(0.0, device=device)
         unroll_steps = train_cfg.get('unroll_steps', 1)
         for _ in range(unroll_steps):
             displacement = model(x_current, rd=rd) if getattr(model, 'uses_rd', False) else model(x_current)
             x_next       = x_current + displacement
-            total_loss   = total_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
+            if loss_cfg.get('dynamic_rd_scaling', False):
+                N_cloud      = x_current.shape[1]
+                lp           = loss_cfg['params']
+                lambda1      = lp['lambda1_coeff'] / rd
+                lambda2      = lambda1 / (N_cloud - 1) * lp['lambda2_ratio']
+                total_loss   = total_loss + loss_fn(x_current, x_next, rd, lambda1=lambda1,
+                                                    lambda1_quad=lp.get('lambda1_quad', 0), lambda2=lambda2)
+            else:
+                total_loss   = total_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
             x_current    = x_next.detach()
 
         optimizer.zero_grad()
@@ -188,6 +221,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 viol_red_k1 = (ill_count_pre - s1['ill_count']) / (ill_count_pre + 1e-9) * 100
                 viol_red_kK = (ill_count_pre - sk['ill_count']) / (ill_count_pre + 1e-9) * 100
 
+            rd_value = rd.item()
             secs_per_iter = (time.time() - iter_timer) / eval_cfg['log_interval']
             iter_timer = time.time()
             current_lr = optimizer.param_groups[0]['lr']
@@ -204,8 +238,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 f"  viol_per_cloud   = {ill_count_pre:.2f}       ->  {s1['ill_count']:.2f}                  {sk['ill_count']:.2f}\n"
                 f"  viol_reduction   = {'':10s}     {viol_red_k1:.1f}%                    {viol_red_kK:.1f}%\n"
                 f"  mean_nn_dist     = {mean_nn_pre:.6f}  ->  {s1['mean_nn']:.6f}              {sk['mean_nn']:.6f}\n"
-                f"  displacement     = {'':10s}     {s1['disp']:.4f} ({s1['disp']/dataset_cfg['rd']:.3f}x rd)   "
-                f"{sk['disp']:.4f} ({sk['disp']/dataset_cfg['rd']:.3f}x rd)\n"
+                f"  displacement     = {'':10s}     {s1['disp']:.4f} ({s1['disp']/rd_value:.3f}x rd)   "
+                f"{sk['disp']:.4f} ({sk['disp']/rd_value:.3f}x rd)\n"
                 f"  correction_eff   = {'':10s}     {eff1:.4f} ({pct1:.1f}% ceil)         {effk:.4f} ({pctk:.1f}% ceil)"
             )
             # CSV: write K=1 columns (primary), plus K=K illegal% and legal% for tracking
@@ -217,8 +251,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 f"{ill_count_pre:.4f},{s1['ill_count']:.4f},{viol_red_k1:.2f},"
                 f"{mean_nn_pre:.6f},{s1['mean_nn']:.6f},"
                 f"{med_nn_pre:.6f},{s1['med_nn']:.6f},"
-                f"{s1['disp']:.6f},{s1['disp']/dataset_cfg['rd']:.6f},"
-                f"{s1['disp_med']:.6f},{s1['disp_med']/dataset_cfg['rd']:.6f},"
+                f"{s1['disp']:.6f},{s1['disp']/rd_value:.6f},"
+                f"{s1['disp_med']:.6f},{s1['disp_med']/rd_value:.6f},"
                 f"{eff1:.6f},{pct1:.2f},"
                 f"{sk['ill_pct']:.2f},{sk['ill_count']:.4f},{viol_red_kK:.2f},{pctk:.2f}\n"
             )
@@ -228,7 +262,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
             corrected = corr1
 
         if iteration % eval_cfg['sample_interval'] == 0:
-            _save_sample(model, processor, val_noisy, dataset_cfg, device, run_dir, iteration,
+            _save_sample(model, processor, val_noisy, val_rd, device, run_dir, iteration,
                          eval_cfg['num_visual_samples'])
             logger.debug(f"Sample saved at iteration {iteration}")
 
@@ -240,20 +274,20 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     logger.info(f"Evolution GIF saved to {gif_path}")
 
 
-def _save_sample(model, processor, val_noisy, dataset_cfg, device, run_dir, iteration, num_visual_samples):
+def _save_sample(model, processor, val_noisy, rd_value, device, run_dir, iteration, num_visual_samples):
     model.eval()
     with torch.no_grad():
         batch = val_noisy[:num_visual_samples]
         processed, _, _ = processor.make_invariant(batch)
         x = torch.tensor(processed, dtype=torch.float32).to(device)
-        rd_tensor = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
+        rd_tensor = torch.tensor(rd_value, dtype=torch.float32, device=device)
         displacement = model(x, rd=rd_tensor) if getattr(model, 'uses_rd', False) else model(x)
         corrected = (x + displacement).cpu().numpy()
 
     plot_comparison(
         noisy_clouds=processed,
         corrected_clouds=corrected,
-        rd=dataset_cfg['rd'],
+        rd=rd_value,
         save_path=run_dir / "samples" / f"sample_{iteration:06d}.png",
     )
 

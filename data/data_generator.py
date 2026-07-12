@@ -1,5 +1,21 @@
+import multiprocessing as mp
+import time
+
 import numpy as np
 from scipy.stats import qmc, uniform, norm
+
+_SQRT3 = 3 ** 0.5
+
+
+def _packed_n_target(rd, packedness):
+    """N_target = packedness fraction of the triangular-lattice max density at radius rd."""
+    return max(2, round(packedness * 2.0 / (_SQRT3 * rd ** 2)))
+
+
+def _gen_one_cloud(dim, rd, n_request, seed):
+    """Module-level (picklable) worker for parallel pool generation — see
+    VariableRdPackedPoissonDiskDataset._build_pool."""
+    return qmc.PoissonDisk(d=dim, radius=rd, seed=seed).random(n_request)
 
 
 class PoissonDiskDataset:
@@ -62,14 +78,12 @@ class PackedPoissonDiskDataset(PoissonDiskDataset):
     Config keys: dim, rd, packedness, seed, noise_scale_min, noise_scale_max.
     """
 
-    _SQRT3 = 3 ** 0.5
-
     def __init__(self, dim, rd, packedness, seed,
                  noise_scale_min, noise_scale_max):
         if not (0 < packedness <= 1.0):
             raise ValueError(f"packedness must be in (0, 1], got {packedness}")
 
-        n_target  = max(2, round(packedness * 2.0 / (self._SQRT3 * rd ** 2)))
+        n_target  = _packed_n_target(rd, packedness)
         n_request = n_target if packedness < 1.0 else 10_000
 
         super().__init__(
@@ -98,6 +112,99 @@ class PackedPoissonDiskDataset(PoissonDiskDataset):
     @property
     def points_per_cloud(self):
         return self.n_target
+
+
+class VariableRdPackedPoissonDiskDataset:
+    """Poisson disk dataset that trains one model across a wide range of rd.
+
+    Sampling Poisson-disk clouds *directly* at large rd in a fixed [0,1]^dim domain is
+    physically infeasible (e.g. rd=1.0 fits only ~1-2 points in the unit square, and with
+    a whole batch of clouds the worst one frequently places just 1 — which then blows up
+    make_invariant's covariance/eigh with a degenerate 1-point cloud). So instead every
+    cloud is generated at one small, fixed `rd_gen` (packedness formula clipped to
+    [n_min, n_max], same regime as PackedPoissonDiskDataset / dataset_config_packed.yaml —
+    always physically safe), then uniformly rescaled by `rd_target / rd_gen` where
+    rd_target is drawn log-uniformly from [rd_min, rd_max] on every call. This is exact,
+    not an approximation: a Poisson-disk cloud valid at radius rd_gen is, after uniform
+    rescaling, valid at radius rd_target too (all pairwise distances scale linearly with
+    the coordinates). The model never assumes a bounded domain — make_invariant only
+    centers + PCA-rotates — so points landing outside [0,1]^dim after rescaling are fine.
+
+    noise_scale is a *fraction* of rd_target (not an absolute value) since rd spans two
+    orders of magnitude across calls.
+
+    Since every cloud is generated at the *same* rd_gen/packedness/N regardless of
+    rd_target, generation doesn't need to be repeated every training iteration: a pool of
+    `pool_size` base clouds is pre-generated once (in parallel across CPU cores — scipy's
+    PoissonDisk sampler is ~6ms/cloud, single-threaded, and doesn't get faster by batching,
+    so at batch_size~1000 the naive per-iteration approach is CPU-generation-bound, not
+    GPU-bound). generate_sample() then just samples `batch_size` clouds from the pool
+    (with replacement) and rescales them — no scipy calls on the training hot path.
+
+    self.last_rd / self.last_n_target expose the values used by the most recent
+    generate_sample() call — read these afterward to drive the model + loss for that batch.
+    """
+
+    def __init__(self, dim, rd_min, rd_max, packedness, seed,
+                 noise_scale_min_frac, noise_scale_max_frac,
+                 rd_gen=0.05, n_min=20, n_max=250,
+                 pool_size=100_000, n_workers=None):
+        if not (0 < packedness <= 1.0):
+            raise ValueError(f"packedness must be in (0, 1], got {packedness}")
+
+        self.dim                  = dim
+        self.rd_min                = rd_min
+        self.rd_max                = rd_max
+        self.packedness            = packedness
+        self.seed                  = seed
+        self.noise_scale_min_frac  = noise_scale_min_frac
+        self.noise_scale_max_frac  = noise_scale_max_frac
+        self.rd_gen                = rd_gen
+        self.n_min                 = n_min
+        self.n_max                 = n_max
+        self.pool_size             = pool_size
+        self._rng                  = np.random.default_rng(seed)
+        self.n_request             = int(np.clip(_packed_n_target(rd_gen, packedness), n_min, n_max))
+        self._pool                 = self._build_pool(pool_size, n_workers)
+        self.last_rd               = None
+        self.last_n_target         = None
+
+    def _build_pool(self, pool_size, n_workers):
+        seeds = [self.seed + i if self.seed is not None else None for i in range(pool_size)]
+        args  = [(self.dim, self.rd_gen, self.n_request, s) for s in seeds]
+        print(f"Building rd_gen={self.rd_gen} cloud pool "
+              f"({pool_size} clouds, N_request={self.n_request})...", flush=True)
+        t0 = time.time()
+        with mp.Pool(n_workers or mp.cpu_count()) as pool:
+            clouds = pool.starmap(_gen_one_cloud, args)
+        n_placed = min(len(c) for c in clouds)
+        print(f"Pool built in {time.time() - t0:.1f}s (N={n_placed})", flush=True)
+        return np.stack([c[:n_placed] for c in clouds], axis=0)
+
+    def generate_sample(self, batch_size):
+        """Sample batch_size base clouds from the pool, rescale to a fresh log-uniform rd_target."""
+        idx = self._rng.integers(0, self.pool_size, size=batch_size)
+        clean_at_rd_gen = self._pool[idx]
+
+        rd_target = float(10 ** self._rng.uniform(np.log10(self.rd_min), np.log10(self.rd_max)))
+        self.last_rd       = rd_target
+        self.last_n_target = clean_at_rd_gen.shape[1]
+        return clean_at_rd_gen * (rd_target / self.rd_gen)
+
+    def noise_sample(self, sample):
+        """Add per-cloud Gaussian noise scaled by the most recent rd_target (no domain clip —
+        the rescaled cloud is not bounded to [0, 1]^dim, and the model doesn't assume it is)."""
+        if self.last_rd is None:
+            raise RuntimeError("generate_sample() must be called before noise_sample()")
+        u = uniform(loc=self.noise_scale_min_frac * self.last_rd,
+                   scale=(self.noise_scale_max_frac - self.noise_scale_min_frac) * self.last_rd)
+        sigmas = u.rvs(size=sample.shape[0], random_state=self.seed)
+        noise  = np.stack([
+            norm(loc=0.0, scale=sigma).rvs(
+                size=sample.shape[1:], random_state=self.seed)
+            for sigma in sigmas
+        ])
+        return sample + noise
 
 
 if __name__ == "__main__":
