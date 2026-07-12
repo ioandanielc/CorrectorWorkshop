@@ -148,8 +148,7 @@ corrected = corrector.apply(pts, k=5)                                   # (2500,
 ```
 
 `k` is the number of correction passes. Higher K = more correction, more
-compute, diminishing returns. K=5 is where the numbers in `docs/guide.html`
-come from.
+compute, diminishing returns.
 
 There's also `corrector.apply_shifted_grid()` — two K=1 passes on grids
 offset by half a tile. It sounded like a good idea (symmetric context for
@@ -163,7 +162,3 @@ bother with it; use `apply(k=...)`.
 - `inference/sph_data/*.npy` must exist locally — not part of this repo.
 - `training_artifacts/` and `inference/experiments/` are gitignored run
   output. Nothing there is source; delete freely.
-- `docs/guide.html` has more background (architecture, design rationale,
-  full results table) but was written before this cleanup — some file paths
-  in it may be stale. Treat it as prose, not as documentation of this repo's
-  current layout.
