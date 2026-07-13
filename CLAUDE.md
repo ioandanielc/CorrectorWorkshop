@@ -27,17 +27,19 @@ CorrectorWorkshop/
 ├── inference/
 │   ├── pipeline/
 │   │   ├── base.py               # Corrector / Experiment ABCs — the shared interfaces below implement these
-│   │   ├── corrector.py          # GridCorrector2D(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
-│   │   ├── tiling.py             # TilingConfig, tile geometry
-│   │   ├── pbc.py                # periodic-boundary distance helpers
+│   │   ├── corrector.py          # GridCorrector2D/3D(Corrector) — tiling + ghost buffer + scaling + model (shared ND body)
+│   │   ├── tiling.py             # TilingConfig, tile geometry (2D or 3D: n_cells^dim tiles)
+│   │   ├── pbc.py                # periodic-boundary distance helpers (2D or 3D: 3^dim images)
 │   │   ├── scaling.py            # rd_train / rd_test coordinate scaling
 │   │   ├── obstruction.py        # domain obstructions (ellipse/polygon/gear masks + ghost-particle fill)
 │   │   ├── tv_corrector.py       # TVCorrector2D/FastTVCorrector2D(Corrector) — naive O(N^2) / cKDTree (~125x faster)
+│   │   ├── kdtree_corrector.py   # KDTreeCorrector2D/3D(Corrector) — violation-targeted greedy sweeps, k = cap w/ early stop
 │   │   └── pure_inference.py     # PureInference2D(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
 │   ├── visualization/
 │   │   ├── comparison.py        # 4-row x 5-col comparison figure
 │   │   ├── timeseries.py        # mean nn-distance / CV over time
 │   │   ├── ml_vs_tv.py          # 3-panel ML-corrector-vs-TV comparison (quality + timing)
+│   │   ├── enhanced.py          # 3-panel per-apply() figure (input | tiling+ghosts | displacement arrows)
 │   │   └── tiling.py, training.py  # secondary plots
 │   ├── configs/
 │   │   ├── grid_6x6.yaml         # n100 model, 6x6 tiling (recommended)
@@ -121,8 +123,15 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 4. **Iterative application**: `GridCorrector2D.apply(pts, k=...)` applies K passes. Higher K = more correction, more compute, diminishing returns. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory.
 
 **Corrector / Experiment interfaces (`inference/pipeline/base.py`):**
-- `Corrector` — ABC, one method: `apply(points, k=1) -> points`. `GridCorrector2D` (tiled ML model), `TVCorrector2D`/`FastTVCorrector2D` (Transport Velocity), and `PureInference2D` (bare model9, no tiling) all implement it, so callers can swap correctors without caring which one they hold. Concrete correctors carry a `2D` suffix — 3D variants are planned; the ABCs stay dimension-neutral. Every ML corrector's config carries its own `checkpoint` + `model_config` (+ `rd_train`): `GridCorrector2DConfig` from the experiment YAML's `model:` block, `PureInference2DConfig` as dataclass fields defaulting to the production `n100_p050` paths.
+- `Corrector` — ABC, one method: `apply(points, k=1) -> points`. `GridCorrector2D/3D` (tiled ML model), `KDTreeCorrector2D/3D` (violation-targeted ML model), `TVCorrector2D`/`FastTVCorrector2D` (Transport Velocity), and `PureInference2D` (bare model9, no tiling) all implement it, so callers can swap correctors without caring which one they hold. The grid and kdtree 2D/3D pairs are thin `DIM = 2/3` subclasses of private dimension-generic bodies (`_GridCorrectorND`, `_KDTreeCorrectorND`); 3D config types (`GridCorrector3DConfig`, `KDTreeCorrector3DConfig`) exist so 3D defaults can diverge (kdtree 3D defaults: `total_core=50`, `inner_core=12`, sized for the first 3D checkpoint). `enhanced_visualization` is 2D-only (warned and ignored on 3D). Concrete correctors carry a `2D` suffix — 3D variants are planned; the ABCs stay dimension-neutral. Every ML corrector's config carries its own `checkpoint` + `model_config` (+ `rd_train`): `GridCorrector2DConfig` from the experiment YAML's `model:` block, `PureInference2DConfig` as dataclass fields defaulting to the production `n100_p050` paths.
 - `Experiment` — ABC, one method: `run()`. `SPHTVExperiment` (`sph_tv_experiment.py`) and `ObstructionExperiment` (`obstruction_experiment.py`) implement it. Each owns its own config dataclass — `stride`/`k_values` live on `SPHTVExperiment`, not on `GridCorrector2DConfig`, since they're experiment-loop concerns (how many SPH timesteps / which K sweep), not something the corrector itself needs.
+
+**KDTreeCorrector2D (`inference/pipeline/kdtree_corrector.py`):**
+- Runs the model only around violations, unlike the grid which tiles everything. One sweep: PBC `cKDTree(boxsize)` → violating points worst-first → greedy claiming — a site is the worst unclaimed violator, its neighbourhood its `total_core` (≈ N_train) nearest points, its inner core the `inner_core` most central unclaimed points; only inner-core points receive displacements (disjoint by construction), the outer ring is frozen context, the ghost-buffer analog → one rectangular `(n_sites, total_core, 2)` batched model call, no padding.
+- `apply(points, k)`: k is a **cap** — at most k sweeps, early stop once no violations remain. Sweeps get cheaper as the violation set shrinks.
+- Warns when a site's frozen ring is thinner than `rd_test` (count-based analog of the grid's `ghost_width` check).
+- Config: `KDTreeCorrector2DConfig` — same model/data fields as the grid config + `total_core` (default 100) / `inner_core` (default 25), YAML block `kdtree: {total_core, inner_core}`.
+- Measured (N=2500 SPH): in the all-violating regime, `k≤5` matches grid K=5 quality at ~2.4× time, `k≤10` beats it (mean nn 0.0184–0.0185 vs 0.0170–0.0180); on sparse violations it is ~ms (grid pays full price regardless). `grid K=5` then `kdtree k≤10` composes to the best quality so far (mean nn ≈ 0.0186–0.0187) — first data point for `MixedCorrector`.
 
 **Obstructions (domain obstacles — gears, ellipses, polygons):**
 - `inference/pipeline/obstruction.py` fills the obstacle interior with ghost particles at spacing `rd` so the corrector sees a uniform-looking environment and naturally pushes real particles away from the boundary. Ghosts are dropped from the output after `corrector.apply()`.
@@ -163,6 +172,11 @@ tv:
   h_factor: 1.3   # h = h_factor * dx,  dx = domain / sqrt(N)
   nmax:     10
   dt:       0.2   # relaxation factor (matches reference implementation)
+
+visualization:      # optional — off by default
+  enhanced: true    # save a 3-panel figure per GridCorrector2D.apply() call:
+                    #   input+violations | tiling grid+ghost neighbourhood | displacement arrows
+  dir: inference/experiments/enhanced_viz   # output directory for apply_NNNN.png
 ```
 
 `stride`/`k_values` are read directly by `SPHTVExperiment`, not by `GridCorrector2DConfig` — see "Corrector / Experiment interfaces" above.
@@ -212,4 +226,6 @@ Training is complete on model9. Active work is on SPH inference and obstruction 
 - **6×6 grid, n100 model**: K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%)
 - **10×10 grid, n50 model**: similar but slightly weaker than 6×6
 - Obstruction/TV-corrector work (ghost-particle obstacle fill, TV baseline) just ported from `main`
-- `Corrector`/`Experiment` ABCs introduced in `inference/pipeline/base.py`; `GridCorrector2D`/`SPHTVExperiment`/`ObstructionExperiment` are the current implementations. Roadmap: refine `GridCorrector2D` (visualizations TBD), then `KDTreeCorrector2D`, then a `MixedCorrector` combining the two, then a 3D model + 3D variants of all three correctors (hence the `2D` suffix).
+- `Corrector`/`Experiment` ABCs introduced in `inference/pipeline/base.py`; `GridCorrector2D`/`SPHTVExperiment`/`ObstructionExperiment` are the current implementations. `enhanced_visualization` flag (3-panel per-apply figure) added to `GridCorrector2D`. `KDTreeCorrector2D` (violation-targeted greedy sweeps) implemented and validated.
+- **3D (in progress)**: training two 3D model9 checkpoints on standard Poisson-sphere clouds with a noise range (no packed hypothesis) — n50 (rd=0.15) then n100 (rd=0.12), both ~12% of FCC max density; configs `*_3d_n50/_3d_n100` + `train_config_3d.yaml`. `GridCorrector3D`/`KDTreeCorrector3D` implemented via the ND refactor (2D regression exact; 3D machinery verified; quality validation pending the first checkpoint). Fixed en route: frozen-seed data generation (every iteration used to see the identical batch — the 2D production checkpoints trained that way) and ragged `PoissonDisk` batches (short clouds now resampled). Roadmap: `MixedCorrector` combining grid + kdtree (2D composition already measured best, see above).
+- Known open issue (found via enhanced viz): on lattice-like inputs (e.g. t=0) the inferred domain (max extent) undershoots the true PBC box, pinching the wrap seam into artificial violations — `GridCorrector2D` degrades mean nn at t=0 (0.0184 → 0.0174); self-heals by t≈300. Fix TBD (pad extent by one nn-spacing?).

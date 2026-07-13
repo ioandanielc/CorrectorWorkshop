@@ -1,16 +1,19 @@
 """
 pipeline/pbc.py
 ---------------
-Periodic Boundary Condition utilities for 2D particle clouds in [0, L)^2.
+Periodic Boundary Condition utilities for particle clouds in [0, L)^dim
+(2D or 3D — dimension inferred from the points array).
 
 All functions are pure numpy — no torch, no model dependencies.
 
-Correctness guarantee for build_ghost_tile:
+Correctness guarantee for build_ghost_tile (dimension-free):
   If ghost_width >= rd, every pair (i,j) with d_PBC(pi,pj) < rd is jointly
   visible in at least one tile's ghost-augmented neighbourhood. Proof: let
   q_j = closest periodic image of p_j to p_i; ||pi - q_j|| < rd <= ghost_width,
   so q_j lies within ghost_width of the tile containing p_i. QED.
 """
+import itertools
+
 import numpy as np
 
 
@@ -59,39 +62,40 @@ def build_ghost_tile(
     domain: float = 1.0,
 ):
     """
-    Collect core + ghost particles for one tile via all 9 periodic images.
+    Collect core + ghost particles for one tile via all 3^dim periodic images
+    (9 in 2D, 27 in 3D).
 
     Parameters
     ----------
-    points     : (N, 2)  all particle positions in [0, domain)^2
-    tile_lo    : (2,)    lower-left corner of tile
-    tile_hi    : (2,)    upper-right corner of tile (exclusive)
-    ghost_width: float   buffer width; must be >= rd for correctness guarantee
+    points     : (N, dim)  all particle positions in [0, domain)^dim
+    tile_lo    : (dim,)    lower corner of tile
+    tile_hi    : (dim,)    upper corner of tile (exclusive)
+    ghost_width: float     buffer width; must be >= rd for correctness guarantee
 
     Returns
     -------
-    pts_ext  : (M, 2)  positions in extended-tile coordinates
-    is_core  : (M,)    True if the particle belongs to this tile (not a ghost)
-    orig_idx : (M,)    index into `points` for each extended particle
+    pts_ext  : (M, dim)  positions in extended-tile coordinates
+    is_core  : (M,)      True if the particle belongs to this tile (not a ghost)
+    orig_idx : (M,)      index into `points` for each extended particle
     """
+    dim    = points.shape[1]
     ext_lo = tile_lo - ghost_width
     ext_hi = tile_hi + ghost_width
     pts_list, idx_list, core_list = [], [], []
-    for dx in (-1, 0, 1):
-        for dy in (-1, 0, 1):
-            shifted = points + np.array([dx * domain, dy * domain])
-            in_ext  = np.all((shifted >= ext_lo) & (shifted < ext_hi), axis=1)
-            if not in_ext.any():
-                continue
-            pts_list.append(shifted[in_ext])
-            idx_list.append(np.where(in_ext)[0])
-            if dx == 0 and dy == 0:
-                in_core = np.all((points >= tile_lo) & (points < tile_hi), axis=1)
-                core_list.append(in_core[in_ext])
-            else:
-                core_list.append(np.zeros(in_ext.sum(), dtype=bool))
+    for offset in itertools.product((-1, 0, 1), repeat=dim):
+        shifted = points + domain * np.asarray(offset, dtype=points.dtype)
+        in_ext  = np.all((shifted >= ext_lo) & (shifted < ext_hi), axis=1)
+        if not in_ext.any():
+            continue
+        pts_list.append(shifted[in_ext])
+        idx_list.append(np.where(in_ext)[0])
+        if not any(offset):
+            in_core = np.all((points >= tile_lo) & (points < tile_hi), axis=1)
+            core_list.append(in_core[in_ext])
+        else:
+            core_list.append(np.zeros(in_ext.sum(), dtype=bool))
     if not pts_list:
-        return (np.empty((0, 2), dtype=points.dtype),
+        return (np.empty((0, dim), dtype=points.dtype),
                 np.empty(0, dtype=bool),
                 np.empty(0, dtype=np.int64))
     return (np.vstack(pts_list),
