@@ -90,6 +90,10 @@ def build_ghost_tile(
                 core_list.append(in_core[in_ext])
             else:
                 core_list.append(np.zeros(in_ext.sum(), dtype=bool))
+    if not pts_list:
+        return (np.empty((0, 2), dtype=points.dtype),
+                np.empty(0, dtype=bool),
+                np.empty(0, dtype=np.int64))
     return (np.vstack(pts_list),
             np.concatenate(core_list),
             np.concatenate(idx_list))

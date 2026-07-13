@@ -3,69 +3,55 @@ pipeline/tiling.py
 ------------------
 Spatial tiling of a 2D periodic domain for blocked model inference.
 
-The domain [0, L)^2 is split into a grid_size x grid_size regular grid.
-Each tile is extended by ghost_width = ghost_factor * rd_test on all sides.
+The domain [0, L)^2 is split into an n_cells x n_cells regular grid.
+Each tile is extended by ghost_width = ghost_factor * cell_size on all sides.
 
-Grid configs live in inference/configs/grids/*.yaml.
-Use TilingConfig.from_yaml() to load one.
-
-Recommended grids (N=2500 SPH, rd_test=0.02):
-  grid_6x6.yaml   ->  ~107 pts/tile (69 core + 38 ghost)  [N=100 model]
-  grid_10x10.yaml ->  ~49 pts/tile  (25 core + 24 ghost)  [N=50 model]
+Recommended grids (N=2500 SPH, rd_test=0.02, domain~1.0):
+  n_cells=6  ->  ~107 pts/tile (69 core + 38 ghost)  [N=100 model]
+  n_cells=10 ->  ~49 pts/tile  (25 core + 24 ghost)  [N=50 model]
 
 Ghost buffer correctness:
-  ghost_factor >= 1.0 guarantees every PBC-violating pair is visible in at
-  least one tile's ghost-augmented neighbourhood. Do not set below 1.0.
+  ghost_width = ghost_factor * cell_size must be >= rd_test, or some
+  cross-boundary violations become invisible to the model. ghost_width()
+  below warns if that's violated.
 """
 from dataclasses import dataclass
 from typing import Iterator, Tuple
 
 import numpy as np
-import yaml
 
 
 @dataclass
 class TilingConfig:
-    grid_size:    int    # number of tiles per dimension (total: grid_size^2)
-    ghost_factor: float  # ghost_width = ghost_factor * rd_test  (must be >= 1.0)
+    n_cells:      int    # number of tiles per dimension (total: n_cells^2)
+    ghost_factor: float  # ghost_width = ghost_factor * cell_size (fraction of a tile)
     domain:       float = 1.0
-    name:         str   = ""
-
-    @classmethod
-    def from_yaml(cls, path: str) -> 'TilingConfig':
-        """Load a grid config from inference/configs/grids/*.yaml."""
-        with open(path) as f:
-            raw = yaml.safe_load(f)
-        return cls(
-            grid_size    = int(raw['grid_size']),
-            ghost_factor = float(raw.get('ghost_factor', 1.0)),
-            name         = raw.get('name', ''),
-        )
 
     @property
     def cell_size(self) -> float:
-        return self.domain / self.grid_size
+        return self.domain / self.n_cells
 
     @property
     def n_tiles(self) -> int:
-        return self.grid_size ** 2
+        return self.n_cells ** 2
 
     def ghost_width(self, rd_test: float) -> float:
-        if self.ghost_factor < 1.0:
+        width = self.ghost_factor * self.cell_size
+        if width < rd_test:
             import warnings
             warnings.warn(
-                f"ghost_factor={self.ghost_factor} < 1.0 violates the correctness "
-                "guarantee (ghost_width < rd_test). Some cross-boundary violations "
-                "may be invisible to the model. Use only for ablation experiments.",
+                f"ghost_width={width:.4g} (ghost_factor={self.ghost_factor} of "
+                f"cell_size={self.cell_size:.4g}) is below rd_test={rd_test}: some "
+                "cross-boundary violations may be invisible to the model.",
                 UserWarning, stacklevel=2,
             )
-        return self.ghost_factor * rd_test
+        return width
 
 
 def iter_tiles(cfg: TilingConfig) -> Iterator[Tuple[np.ndarray, np.ndarray]]:
     """Yield (tile_lo, tile_hi) for every tile in row-major order."""
     c = cfg.cell_size
-    for i in range(cfg.grid_size):
-        for j in range(cfg.grid_size):
+    for i in range(cfg.n_cells):
+        for j in range(cfg.n_cells):
             yield (np.array([i * c, j * c]),
                    np.array([(i+1)*c, (j+1)*c]))

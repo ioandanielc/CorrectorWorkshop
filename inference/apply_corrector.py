@@ -40,7 +40,7 @@ def main():
     T, N, D = pos_without.shape
     print(f'Loaded positions_without.npy  T={T}  N={N}  D={D}')
     print(f'Config: {args.config}  K={args.k}  device={cfg.device}  '
-          f'grid={cfg.grid_size}x{cfg.grid_size}  '
+          f'grid={cfg.n_cells}x{cfg.n_cells}  '
           f'scale={cfg.rd_train/cfg.rd_test:.2f}')
 
     corrector = Corrector(cfg)
@@ -77,7 +77,7 @@ def main():
         f.write(f'# Source: inference/sph_data/positions_without.npy\n')
         f.write(f'# Model : n100_p050  (train_run_2026-05-28_14-53-45)\n')
         f.write(f'# Config: {args.config}\n')
-        f.write(f'# Tiling: {cfg.grid_size}x{cfg.grid_size} grid  '
+        f.write(f'# Tiling: {cfg.n_cells}x{cfg.n_cells} grid  '
                 f'ghost_factor={cfg.ghost_factor}  '
                 f'scale={cfg.rd_train/cfg.rd_test:.2f}\n')
         f.write(f'# Passes: K={args.k}\n')

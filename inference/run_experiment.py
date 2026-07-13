@@ -88,7 +88,7 @@ def main():
     shutil.copy(args.config, exp_dir / 'config.yaml')
     log = _setup_logger(exp_dir / 'run.log')
     log.info(f'Config: {args.config}')
-    log.info(f'Grid: {cfg.grid_size}x{cfg.grid_size}  '
+    log.info(f'Grid: {cfg.n_cells}x{cfg.n_cells}  '
              f'scale={cfg.rd_train/cfg.rd_test:.2f}  '
              f'k_values={cfg.k_values}')
 
@@ -108,15 +108,13 @@ def main():
         _raw = yaml.safe_load(_f)
     _tv_cfg = _raw.get('tv', {})
     _tv_kw = dict(
-        N        = pos_without.shape[1],
-        domain   = cfg.domain,
         h_factor = float(_tv_cfg.get('h_factor', 1.3)),
         nmax     = int(_tv_cfg.get('nmax', 10)),
         dt       = float(_tv_cfg.get('dt', 0.2)),
     )
-    tv_naive    = TVCorrector.from_n(**_tv_kw)
-    tv_corrector = FastTVCorrector.from_n(**_tv_kw)   # fast version used in main loop
-    log.info(f'TV corrector (fast): h={tv_corrector.h:.4f}  nmax={tv_corrector.nmax}'
+    tv_naive     = TVCorrector(**_tv_kw)
+    tv_corrector = FastTVCorrector(**_tv_kw)   # fast version used in main loop
+    log.info(f'TV corrector (fast): h_factor={tv_corrector.h_factor:.4f}  nmax={tv_corrector.nmax}'
              f'  dt={tv_corrector.dt}')
 
     # ── timesteps ────────────────────────────────────────────────────────────
@@ -181,7 +179,7 @@ def main():
         plot_comparison_frame(
             pts_wo, corrected_by_k, pts_wi,
             timestep=t,
-            grid=cfg.grid_size,
+            grid=cfg.n_cells,
             scale=cfg.rd_train / cfg.rd_test,
             rd=cfg.rd_test,
             time_by_k=time_by_k,

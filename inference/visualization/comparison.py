@@ -384,7 +384,7 @@ def plot_shifted_grid_comparison(
             timing_str += f' / CPU {cpu_k5:.0f} ms ({cpu_k5/gpu_k5:.0f}× speedup)'
     fig.suptitle(
         f'Shifted-grid strategy comparison   {step_str}'
-        f'   |   shift = cell/2 = {shift:.3f}   |   N=2500   |   {corrector.cfg.grid_size}x{corrector.cfg.grid_size} grid'
+        f'   |   shift = cell/2 = {shift:.3f}   |   N=2500   |   {corrector.cfg.n_cells}x{corrector.cfg.n_cells} grid'
         f'{timing_str}{vram_str}',
         fontsize=9.5, y=0.975)
 

@@ -39,31 +39,21 @@ class TVCorrector:
     """
     Applies the TV particle-shifting algorithm to a 2D PBC point cloud.
 
+    The cloud's own domain (box size) is inferred fresh on every apply()
+    call from the cloud itself — see Corrector._infer_frame's docstring
+    for the same convention used by the ML corrector.
+
     Parameters
     ----------
-    h      : smoothing length (h = h_factor * dx)
-    nmax   : number of correction iterations
-    domain : domain edge length ([0, domain)^2)
-    dt     : relaxation factor (0.2 in the reference implementation)
+    h_factor : smoothing length factor (h = h_factor * dx, dx = domain / sqrt(N))
+    nmax     : number of correction iterations
+    dt       : relaxation factor (0.2 in the reference implementation)
     """
 
-    def __init__(self, h: float, nmax: int,
-                 domain: float = 1.0, dt: float = 0.2):
-        self.h      = float(h)
-        self.nmax   = int(nmax)
-        self.domain = float(domain)
-        self.dt     = float(dt)
-        self.radius = 2.0 * h   # neighbour cutoff (matches reference code)
-
-    @classmethod
-    def from_n(cls, N: int, domain: float = 1.0, h_factor: float = 1.3,
-               nmax: int = 10, dt: float = 0.2) -> 'TVCorrector':
-        """
-        Construct from particle count N.
-        Uses h = h_factor * (domain / sqrt(N)) as the smoothing length.
-        """
-        dx = domain / float(np.sqrt(N))
-        return cls(h=h_factor * dx, nmax=nmax, domain=domain, dt=dt)
+    def __init__(self, h_factor: float, nmax: int, dt: float = 0.2):
+        self.h_factor = float(h_factor)
+        self.nmax     = int(nmax)
+        self.dt       = float(dt)
 
     def apply(self, pts: np.ndarray, nmax: Optional[int] = None) -> np.ndarray:
         """
@@ -71,19 +61,25 @@ class TVCorrector:
 
         Parameters
         ----------
-        pts  : (N, 2) positions in [0, domain)^2
+        pts  : (N, 2) positions in any consistent coordinate frame
         nmax : override iteration count (uses self.nmax if None)
 
         Returns
         -------
-        (N, 2) corrected positions, PBC-wrapped to [0, domain)^2
+        (N, 2) corrected positions, in the same coordinate frame as the input
         """
-        n_iter = nmax if nmax is not None else self.nmax
-        pts  = pts.astype(np.float32).copy()
-        dom  = np.float32(self.domain)
-        h    = self.h
-        dt   = np.float32(self.dt)
-        rad  = np.float32(self.radius)
+        n_iter   = nmax if nmax is not None else self.nmax
+        pts      = pts.astype(np.float32)
+        centroid = pts.mean(axis=0)
+        centered = pts - centroid
+        dom      = np.float32(max(centered[:, 0].max() - centered[:, 0].min(),
+                                   centered[:, 1].max() - centered[:, 1].min()))
+        dx       = dom / np.float32(np.sqrt(len(pts)))
+        h        = self.h_factor * dx
+        rad      = np.float32(2.0 * h)
+        dt       = np.float32(self.dt)
+
+        pts = (centered + dom / 2).astype(np.float32)   # shift into [0, domain)
 
         for _ in range(n_iter):
             # diff[a, b] = pos_b - pos_a  (r_ab: vector from a to b, PBC)
@@ -106,7 +102,7 @@ class TVCorrector:
             disp  = dt * (dW_dr[:, :, None] * e_ab).sum(axis=1)  # (N, 2)
             pts   = (pts + disp) % dom
 
-        return pts
+        return pts - dom / 2 + centroid
 
 
 class FastTVCorrector:
@@ -121,19 +117,10 @@ class FastTVCorrector:
     Identical physics and parameters to TVCorrector.
     """
 
-    def __init__(self, h: float, nmax: int,
-                 domain: float = 1.0, dt: float = 0.2):
-        self.h      = float(h)
-        self.nmax   = int(nmax)
-        self.domain = float(domain)
-        self.dt     = float(dt)
-        self.radius = 2.0 * h
-
-    @classmethod
-    def from_n(cls, N: int, domain: float = 1.0, h_factor: float = 1.3,
-               nmax: int = 10, dt: float = 0.2) -> 'FastTVCorrector':
-        dx = domain / float(np.sqrt(N))
-        return cls(h=h_factor * dx, nmax=nmax, domain=domain, dt=dt)
+    def __init__(self, h_factor: float, nmax: int, dt: float = 0.2):
+        self.h_factor = float(h_factor)
+        self.nmax     = int(nmax)
+        self.dt       = float(dt)
 
     def apply(self, pts: np.ndarray, nmax: Optional[int] = None) -> np.ndarray:
         """
@@ -141,22 +128,28 @@ class FastTVCorrector:
 
         Parameters
         ----------
-        pts  : (N, 2) positions in [0, domain)^2
+        pts  : (N, 2) positions in any consistent coordinate frame
         nmax : override iteration count (uses self.nmax if None)
 
         Returns
         -------
-        (N, 2) corrected positions, PBC-wrapped to [0, domain)^2
+        (N, 2) corrected positions, in the same coordinate frame as the input
         """
         from scipy.spatial import cKDTree
 
-        n_iter = nmax if nmax is not None else self.nmax
-        pts    = pts.astype(np.float64).copy()
-        N      = len(pts)
-        dom    = self.domain
-        h      = self.h
-        dt     = self.dt
-        radius = self.radius
+        n_iter   = nmax if nmax is not None else self.nmax
+        pts      = pts.astype(np.float64)
+        N        = len(pts)
+        centroid = pts.mean(axis=0)
+        centered = pts - centroid
+        dom      = float(max(centered[:, 0].max() - centered[:, 0].min(),
+                              centered[:, 1].max() - centered[:, 1].min()))
+        dx       = dom / np.sqrt(N)
+        h        = self.h_factor * dx
+        radius   = 2.0 * h
+        dt       = self.dt
+
+        pts = np.clip(centered + dom / 2, 0.0, np.nextafter(dom, 0.0))  # shift into [0, domain)
 
         for _ in range(n_iter):
             # Single PBC-aware tree — no 9-image replica needed
@@ -187,4 +180,4 @@ class FastTVCorrector:
 
             pts = (pts + disp) % dom
 
-        return pts.astype(np.float32)
+        return (pts - dom / 2 + centroid).astype(np.float32)

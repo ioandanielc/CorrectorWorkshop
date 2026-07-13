@@ -77,7 +77,7 @@ def plot_tiling_overview(
     rd_test        : float  the SPH minimum distance (used to compute ghost_width)
     highlight_tile : (i, j) grid indices of the tile to zoom on
     """
-    G, c  = tc.grid_size, tc.cell_size
+    G, c  = tc.n_cells, tc.cell_size
     gw    = tc.ghost_width(rd_test)
     lo, hi = _tile_bounds(tc, highlight_tile)
 
@@ -247,7 +247,7 @@ def plot_violation_proof(
         ii, jj = pair
 
     gw = tc.ghost_width(rd_test)
-    c, G = tc.cell_size, tc.grid_size
+    c, G = tc.cell_size, tc.n_cells
     tile_lo_ij = np.floor(pts[ii] / c).astype(int).clip(0, G-1)
     lo_v = tile_lo_ij * c; hi_v = lo_v + c
 

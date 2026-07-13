@@ -103,11 +103,15 @@ data:
   with_tv:    inference/sph_data/positions.npy
   rd_test:    0.02
 tiling:
-  grid_size:    6
-  ghost_factor: 1.0
+  n_cells:      6
+  ghost_factor: 0.13   # fraction of a tile's own size, not of rd_test
 experiment:
   k_values: [1, 2, 3, 5]
 ```
+
+No `domain` field — the corrector centers the input cloud on its own
+centroid and infers the domain from its extent, fresh on every `apply()`
+call.
 
 To run a variant, copy one of the two files in `inference/configs/` and
 change what you need — no code changes required.

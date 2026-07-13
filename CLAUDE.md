@@ -105,13 +105,15 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 - Loss operates in invariant space. `lambda2 = lambda1 / (N−1) / 10` keeps displacement reg a constant fraction of violation penalty regardless of N.
 - Training uses K-step unrolling (backprop through all K steps). Eval reports both K=1 and K=unroll_steps.
 
-**Inference on SPH data (`rd_test=0.02`, `N=2500`, `domain=[0,1]²`, PBC):**
+**Inference on SPH data (`rd_test=0.02`, `N=2500`, PBC):**
 
-1. **Tiling**: split domain into a `G×G` grid so each tile has `N_tile ≈ N_train` points.
+0. **Domain inference**: `Corrector.apply()` doesn't take a `domain` config — it centers the input cloud on its own centroid and takes the domain as the largest axis extent of the centered cloud, fresh on every call (held fixed across all `k` passes within that call). Works regardless of what coordinate frame the input is in.
+
+1. **Tiling**: split the inferred domain into an `n_cells × n_cells` grid so each tile has `N_tile ≈ N_train` points.
    - 6×6 → ~107 pts/tile (69 core + 38 ghost) ≈ N_train=100 for n100 model.
    - 10×10 → ~49 pts/tile ≈ N_train=50 for n50 model.
 
-2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * rd_test` on all sides. All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_factor ≥ 1.0` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer. Do not set below 1.0.
+2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * cell_size` on all sides (`ghost_factor` is a fraction of a tile's own size, not of `rd_test`). All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_width ≥ rd_test` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer — `Corrector` warns if the configured `ghost_factor` violates this for the inferred domain.
 
 3. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before `make_invariant`; divide displacements by `scale` after reverting. This maps violations from `rd_test`-scale to `rd_train`-scale so the model operates in its training distribution.
 
@@ -142,11 +144,10 @@ data:
   without_tv: inference/sph_data/positions_without.npy
   with_tv:    inference/sph_data/positions.npy
   rd_test:    0.02
-  domain:     1.0
 
 tiling:
-  grid_size:    6
-  ghost_factor: 1.0   # ghost_width = ghost_factor * rd_test
+  n_cells:      6
+  ghost_factor: 0.13   # ghost_width = ghost_factor * cell_size (fraction of a tile)
 
 experiment:
   stride:   100

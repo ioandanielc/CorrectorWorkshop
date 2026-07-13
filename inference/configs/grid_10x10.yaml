@@ -11,13 +11,12 @@ data:
   without_tv: inference/sph_data/positions_without.npy
   with_tv:    inference/sph_data/positions.npy
   rd_test:    0.02
-  domain:     1.0
 
 tiling:
   # 10x10 — recommended for N=50 models (n50_sparse).
   # Total pts/tile ~49 (25 core + 24 ghost) matches training distribution N=50.
-  grid_size:    10
-  ghost_factor: 1.0   # ghost_width = ghost_factor * rd_test (minimum provably correct)
+  n_cells:      10
+  ghost_factor: 0.22  # ghost_width = ghost_factor * cell_size; cell_size=1/10 -> width~0.022 (>rd_test, with margin)
 
 experiment:
   stride:   100
