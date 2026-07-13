@@ -1,9 +1,9 @@
 # Poisson Disk Corrector
 
-Neural net (`model9`) that takes a 2D point cloud violating a minimum-distance
-constraint `rd` and predicts per-point displacements that fix it. Used as a
-drop-in replacement for the Transport Velocity (TV) algorithm on SPH
-simulation output.
+Neural net (`model9`) that takes a 2D or 3D point cloud violating a
+minimum-distance constraint `rd` and predicts per-point displacements that fix
+it. Used as a drop-in replacement for the Transport Velocity (TV) algorithm on
+SPH simulation output.
 
 This branch is the stripped-down version of the project: only the code that
 trains model9 and runs it on SPH data. No archived model iterations, no sweep
@@ -50,15 +50,17 @@ training/
 inference/
   pipeline/
     base.py                 Corrector / Experiment ABCs — shared interfaces, implemented below
-    corrector.py            GridCorrector2D(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+    corrector.py            GridCorrector2D/3D(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+    kdtree_corrector.py     KDTreeCorrector2D/3D(Corrector) — runs the model only around violations, k = cap w/ early stop
     tv_corrector.py          TVCorrector2D/FastTVCorrector2D(Corrector) — Transport Velocity baseline
     pure_inference.py        PureInference2D(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
-    tiling.py               TilingConfig, tile geometry
-    pbc.py                  periodic-boundary distance helpers
+    tiling.py               TilingConfig, tile geometry (n_cells^dim tiles)
+    pbc.py                  periodic-boundary distance helpers (3^dim images)
     scaling.py               rd_train / rd_test coordinate scaling
   visualization/
     comparison.py            the 4-row x 5-col comparison figure
     timeseries.py            mean nn-distance / CV over time
+    enhanced.py              3-panel per-apply() figure: input | tiling+ghosts | displacement arrows
     tiling.py, training.py   secondary plots
   configs/
     grid_6x6.yaml            n100 model, 6x6 tiling
@@ -77,17 +79,20 @@ utils/                     config loading, logging, training-time plots
 
 ## Checkpoints
 
-Two trained models in `weights/`, details in `weights/README.md`. Short version:
+Four trained models in `weights/`, details in `weights/README.md`. Short version:
 
-| Checkpoint | Model config | Use with |
-|---|---|---|
-| `weights/n100_p050.pt` | `configs/model_configs/model_config_9_n100_p050.yaml` | `inference/configs/grid_6x6.yaml` |
-| `weights/n50_sparse.pt` | `configs/model_configs/model_config_9.yaml` | `inference/configs/grid_10x10.yaml` |
+| Checkpoint | Dim | Model config | Use with |
+|---|---|---|---|
+| `weights/n100_p050.pt` | 2D | `configs/model_configs/model_config_9_n100_p050.yaml` | `inference/configs/grid_6x6.yaml` |
+| `weights/n50_sparse.pt` | 2D | `configs/model_configs/model_config_9.yaml` | `inference/configs/grid_10x10.yaml` |
+| `weights/n50_3d.pt` | 3D | `configs/model_configs/model_config_9_3d_n50.yaml` | correctors directly (no experiment YAML yet) |
+| `weights/n100_3d.pt` | 3D | `configs/model_configs/model_config_9_3d_n100.yaml` | correctors directly (no experiment YAML yet) |
 
-Don't cross them — different `hidden_dim` / `max_displacement`, will either
-error or silently produce garbage. `n100_p050` is the one to reach for by
-default; it beats `n50_sparse` across the board despite the theoretically
-worse tile-size match.
+Never cross a checkpoint with another checkpoint's model config — different
+`hidden_dim` / `max_displacement`, will either error or silently produce
+garbage. Defaults to reach for: `n100_p050` in 2D, `n50_3d` in 3D (`n100_3d`
+performs identically on sparse data and costs more; it exists for denser
+clouds).
 
 ---
 
@@ -144,9 +149,33 @@ Writes to `training_artifacts/train_run_<timestamp>/` (gitignored — copy
 `n50_sparse.pt`. `*_packed.yaml` is the N≈231 packed setup that produced
 `n100_p050.pt`.
 
+**3D** — same trainer, swap the configs (`*_3d_n50` or `*_3d_n100` +
+shared `train_config_3d.yaml`). ~20 min (n50) / ~40 min (n100) on an
+RTX 4080S. This is what produced `n50_3d.pt` / `n100_3d.pt`:
+
+```bash
+.venv\Scripts\python.exe -m training.trainer ^
+  --train-config   configs/trainer_configs/train_config_3d.yaml ^
+  --dataset-config configs/dataset_configs/dataset_config_3d_n50.yaml ^
+  --loss-config    configs/loss_configs/loss_config_3d_n50.yaml ^
+  --model-config   configs/model_configs/model_config_9_3d_n50.yaml
+```
+
+Recipe for scaling the constants to any new rd/N: `lambda1 = 1/rd`,
+`lambda2 = 0.1 * lambda1 / (N-1)`, `max_displacement = 1.2 * rd`,
+`noise_scale_max = 1.0 * rd`. Density: `N_max = 2/(sqrt(3)*rd^2)` in 2D,
+`sqrt(2)/rd^3` in 3D — pick rd so N/N_max lands where you want it
+(the 3D checkpoints train at ~12%).
+
 ---
 
 ## Programmatic use
+
+Every corrector satisfies the `Corrector` ABC (`inference/pipeline/base.py`):
+one method, `apply(points, k=1) -> points`, same coordinate frame in and out.
+Code that just needs "a corrector" can take any of them.
+
+**Grid corrector** — tiles the whole domain, every pass costs the same:
 
 ```python
 from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
@@ -159,12 +188,46 @@ pts       = np.load('inference/sph_data/positions_without.npy')[300]   # (2500, 
 corrected = corrector.apply(pts, k=5)                                   # (2500, 2)
 ```
 
-`corrector` here satisfies the `Corrector` ABC (`inference/pipeline/base.py`)
-— `TVCorrector2D`/`FastTVCorrector2D` implement the same `apply(points, k) ->
-points` shape, so code that just needs "a corrector" can take any of them.
+`k` = number of passes. Higher K = more correction, diminishing returns.
+K=3–5 beats TV on the SPH data from t≈300 onwards.
 
-`k` is the number of correction passes. Higher K = more correction, more
-compute, diminishing returns.
+**KDTree corrector** — runs the model only around violations. `k` is a *cap*:
+it stops early once the cloud is clean, and passes get cheaper as violations
+shrink. On sparse clouds it fully zeroes out violations ~30x faster than the
+grid; on the packed SPH data it's ~5x slower per pass but reaches better
+quality. Best 2D quality measured so far: grid K=5, then kdtree k=10 on top.
+
+```python
+from inference.pipeline.kdtree_corrector import KDTreeCorrector2D, KDTreeCorrector2DConfig
+
+kd = KDTreeCorrector2D(KDTreeCorrector2DConfig(
+    checkpoint='weights/n100_p050.pt',
+    model_config='configs/model_configs/model_config_9_n100_p050.yaml',
+    rd_train=0.076, rd_test=0.02))
+corrected = kd.apply(pts, k=10)   # stops as soon as no violations remain
+```
+
+**3D** — same API, `3D` classes, 3D checkpoints:
+
+```python
+from inference.pipeline.kdtree_corrector import KDTreeCorrector3D, KDTreeCorrector3DConfig
+
+kd3 = KDTreeCorrector3D(KDTreeCorrector3DConfig(
+    checkpoint='weights/n50_3d.pt',
+    model_config='configs/model_configs/model_config_9_3d_n50.yaml',
+    rd_train=0.15, rd_test=0.05))          # defaults: total_core=50, inner_core=12
+corrected = kd3.apply(pts3d, k=10)          # (N, 3) -> (N, 3)
+```
+
+`GridCorrector3D` works the same way (config: `GridCorrector3DConfig`). One
+3D-specific gotcha: ghost overhead is ~2.7x the core count in 3D, so choose
+`n_cells` so that **total** (core+ghost) points per tile ≈ N_train, not core
+alone. For N=1400 and the n50 model that's `n_cells=4, ghost_factor=0.2`.
+
+**Per-apply diagnostics** (2D only): set `visualization: {enhanced: true}` in
+the experiment YAML (or `enhanced_visualization=True` on the config) and every
+`apply()` saves a 3-panel figure — input+violations | tiling+ghost buffer |
+displacement arrows — to `inference/experiments/enhanced_viz/`.
 
 There's also `corrector.apply_shifted_grid()` — two K=1 passes on grids
 offset by half a tile. It sounded like a good idea (symmetric context for
