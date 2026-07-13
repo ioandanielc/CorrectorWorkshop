@@ -32,7 +32,8 @@ CorrectorWorkshop/
 │   │   ├── pbc.py                # periodic-boundary distance helpers
 │   │   ├── scaling.py            # rd_train / rd_test coordinate scaling
 │   │   ├── obstruction.py        # domain obstructions (ellipse/polygon/gear masks + ghost-particle fill)
-│   │   └── tv_corrector.py       # TVCorrector/FastTVCorrector(Corrector) — naive O(N^2) / cKDTree (~125x faster)
+│   │   ├── tv_corrector.py       # TVCorrector/FastTVCorrector(Corrector) — naive O(N^2) / cKDTree (~125x faster)
+│   │   └── pure_inference.py     # PureInference(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
 │   ├── visualization/
 │   │   ├── comparison.py        # 4-row x 5-col comparison figure
 │   │   ├── timeseries.py        # mean nn-distance / CV over time
@@ -46,7 +47,6 @@ CorrectorWorkshop/
 │   │   └── replace_positions.py  # overwrite coords_0/coords_1 in an H5Part file from a positions.txt
 │   ├── sph_tv_experiment.py    # SPHTVExperiment(Experiment) — ML corrector vs TV baseline across K values
 │   ├── apply_corrector.py      # apply the corrector to every timestep of the no-TV SPH trajectory, save output
-│   ├── apply_single_cloud.py   # apply model9 to a single bounded cloud with N == N_train (no tiling/PBC)
 │   ├── obstruction_demo.py     # visualize the three obstruction types (ellipse/polygon/gear)
 │   ├── obstruction_experiment.py  # ObstructionExperiment(Experiment) — two init strategies, corrector applied cumulatively
 │   ├── pbc_toy.py               # standalone synthetic proof the ghost-buffer approach is correct

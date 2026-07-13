@@ -128,7 +128,7 @@ class GridCorrector(Corrector):
         tiling  = TilingConfig(self.cfg.n_cells, self.cfg.ghost_factor, domain)
         ghost_w = tiling.ghost_width(self.cfg.rd_test)   # warns once if too narrow
 
-        pts = (points - centroid + domain / 2).astype(np.float32)   # shift into [0, domain)
+        pts = (points - centroid + domain / 2).astype(np.float32) % domain   # shift into [0, domain)
         PAD = np.float32(1e3)   # sentinel: far outside the domain, no violation vs real points
 
         for _ in range(k):

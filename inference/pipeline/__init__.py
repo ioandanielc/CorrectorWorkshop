@@ -4,3 +4,4 @@ from .tiling import TilingConfig, iter_tiles
 from .scaling import compute_scale
 from .corrector import GridCorrector, GridCorrectorConfig
 from .tv_corrector import TVCorrector, FastTVCorrector
+from .pure_inference import PureInference
