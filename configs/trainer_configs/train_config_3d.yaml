@@ -1,0 +1,31 @@
+# -- Training --
+# Shared by both 3D runs (n50 and n100). Mirrors train_config_2.yaml (the 2D
+# standard recipe). batch 32 at N=100 -> 320k pairwise edges, below the proven
+# packed-run budget (426k) on the RTX 4080S.
+batch_size: 32
+num_iterations: 10000
+initialization: xavier_uniform
+device: cuda
+unroll_steps: 3
+
+# -- Optimizer --
+optimizer:
+  name: Adam
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+
+# -- LR Scheduler --
+lr_scheduler:
+  name: CosineAnnealingLR
+  params:
+    T_max: 10000
+    eta_min: 1.0e-6
+
+# -- Eval --
+eval:
+  validation_size: 256
+  num_visual_samples: 6
+  log_interval: 100
+  sample_interval: 500

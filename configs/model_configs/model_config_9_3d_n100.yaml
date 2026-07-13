@@ -1,0 +1,10 @@
+architecture: violation_weighted_edge_network_v2
+model_file: models/fixed_rd/model9
+
+hidden_dim: 128
+norm: layer
+activation: GELU
+
+# Output clamping: displacement per step is bounded to [-max_displacement, +max_displacement]
+# per coordinate via tanh. Same 1.2 * rd rule as the 2D configs.
+max_displacement: 0.144   # 1.2 * rd=0.12

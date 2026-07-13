@@ -1,0 +1,6 @@
+points_per_cloud: 32
+dim: 3
+rd: 0.2
+seed: 42
+noise_scale_min: 0.001
+noise_scale_max: 0.02

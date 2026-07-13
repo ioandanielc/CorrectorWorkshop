@@ -1,0 +1,14 @@
+name: hybrid_loss
+
+params:
+  # ── Same calibration rules as loss_config_5.yaml, at rd=0.12, N=100 ─────────
+  #
+  # lambda1: normalised so lambda1 * rd = 1.0  ->  1.0 / 0.12
+  lambda1: 8.33
+
+  # lambda1_quad: disabled (same reasoning as 2D)
+  lambda1_quad: 0
+
+  # lambda2 = 0.1 * (lambda1 / (N-1)) = 0.1 * 8.33 / 99
+  # 10x preference for fixing violations over minimising displacement.
+  lambda2: 0.0084

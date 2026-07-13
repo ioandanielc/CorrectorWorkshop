@@ -1,0 +1,8 @@
+points_per_cloud: 50
+dim: 3
+rd: 0.15    # 50 / (sqrt(2)/rd^3 = 419) ~= 12% of FCC max — same sparseness as the 2D n50 setup (~11%)
+seed: 42
+noise_scale_min: 0.0    # includes clean clouds — teaches model to output ~zero when legal
+noise_scale_max: 0.15   # 1.0 * rd — raised from 0.6*rd: sigma is drawn per cloud from
+                        # [0, max], so this widens coverage to deep overlaps without
+                        # dropping the milder noise levels
