@@ -3,8 +3,8 @@ pipeline/tv_corrector.py
 ------------------------
 Transport Velocity (TV) position corrector — two implementations:
 
-  TVCorrector      — naive O(N²) reference (faithful port of colleague's code)
-  FastTVCorrector  — O(N·k) sparse neighbor list via cKDTree (~125× faster for N=2500)
+  TVCorrector2D      — naive O(N²) reference (faithful port of colleague's code)
+  FastTVCorrector2D  — O(N·k) sparse neighbor list via cKDTree (~125× faster for N=2500)
 
 Both implement the same physics:
 
@@ -37,12 +37,12 @@ def _gaussian_dW_dr(r: np.ndarray, h: float) -> np.ndarray:
     return -2.0 * r / h**2 * np.exp(-(r / h)**2)
 
 
-class TVCorrector(Corrector):
+class TVCorrector2D(Corrector):
     """
     Applies the TV particle-shifting algorithm to a 2D PBC point cloud.
 
     The cloud's own domain (box size) is inferred fresh on every apply()
-    call from the cloud itself — see GridCorrector._infer_frame's docstring
+    call from the cloud itself — see GridCorrector2D._infer_frame's docstring
     for the same convention used by the ML corrector.
 
     Parameters
@@ -107,16 +107,16 @@ class TVCorrector(Corrector):
         return pts - dom / 2 + centroid
 
 
-class FastTVCorrector(Corrector):
+class FastTVCorrector2D(Corrector):
     """
     O(N·k) TV corrector using cKDTree with native PBC support (boxsize).
 
     Uses scipy.spatial.cKDTree(boxsize=domain) to find all pairs within
     the cutoff radius under periodic boundary conditions in a single query,
     avoiding the 9-image replica of the naive implementation.
-    For N=2500, k≈20: ~50× faster than TVCorrector.
+    For N=2500, k≈20: ~50× faster than TVCorrector2D.
 
-    Identical physics and parameters to TVCorrector.
+    Identical physics and parameters to TVCorrector2D.
     """
 
     def __init__(self, h_factor: float, nmax: int, dt: float = 0.2):

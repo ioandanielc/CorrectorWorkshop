@@ -37,7 +37,7 @@ from scipy.spatial import cKDTree
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from inference.pipeline.base import Experiment
-from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
+from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
 from inference.pipeline.obstruction import fill_obstruction, gear_mask
 
 
@@ -95,10 +95,10 @@ class ObstructionExperiment(Experiment):
     def __init__(self, cfg: ObstructionExperimentConfig):
         self.cfg = cfg
 
-        corrector_cfg          = GridCorrectorConfig.from_yaml(cfg.corrector_config)
+        corrector_cfg          = GridCorrector2DConfig.from_yaml(cfg.corrector_config)
         corrector_cfg.rd_test  = cfg.rd     # override to match experiment rd (scale = rd_train/rd_test)
         corrector_cfg.device   = cfg.device
-        self.corrector = GridCorrector(corrector_cfg)
+        self.corrector = GridCorrector2D(corrector_cfg)
 
         self.mask   = gear_mask(cfg.cx, cfg.cy, r=0.18, n_teeth=8, k=2)
         self.ghosts = fill_obstruction(self.mask, cfg.rd, erode_by=cfg.rd)

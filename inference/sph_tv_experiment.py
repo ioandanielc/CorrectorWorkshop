@@ -45,9 +45,9 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from inference.pipeline.base import Experiment
-from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
+from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
 from inference.pipeline.pbc import min_nn_pbc
-from inference.pipeline.tv_corrector import TVCorrector, FastTVCorrector
+from inference.pipeline.tv_corrector import TVCorrector2D, FastTVCorrector2D
 from inference.visualization.comparison import plot_comparison_frame
 from inference.visualization.timeseries import plot_timeseries
 from inference.visualization.ml_vs_tv import plot_ml_vs_tv, save_report
@@ -72,13 +72,13 @@ class SPHTVExperiment(Experiment):
 
     stride/k_values are experiment-loop concerns, not corrector config, so
     they're read here from the same YAML's 'experiment' block rather than
-    living on GridCorrectorConfig.
+    living on GridCorrector2DConfig.
     """
 
     def __init__(self, config_path: str, timestep: Optional[int] = None,
                  stride: Optional[int] = None):
         self.config_path = config_path
-        self.cfg          = GridCorrectorConfig.from_yaml(config_path)
+        self.cfg          = GridCorrector2DConfig.from_yaml(config_path)
         with open(config_path) as f:
             self.raw = yaml.safe_load(f)
         exp_raw       = self.raw.get('experiment', {})
@@ -109,7 +109,7 @@ class SPHTVExperiment(Experiment):
         T, N, _     = pos_without.shape
         log.info(f'Data loaded  T={T}  N={N}')
 
-        corrector = GridCorrector(cfg)
+        corrector = GridCorrector2D(cfg)
         log.info('Corrector ready')
 
         # ── TV algorithm corrector ───────────────────────────────────────────
@@ -119,8 +119,8 @@ class SPHTVExperiment(Experiment):
             nmax     = int(tv_cfg.get('nmax', 10)),
             dt       = float(tv_cfg.get('dt', 0.2)),
         )
-        tv_naive     = TVCorrector(**tv_kw)
-        tv_corrector = FastTVCorrector(**tv_kw)   # fast version used in main loop
+        tv_naive     = TVCorrector2D(**tv_kw)
+        tv_corrector = FastTVCorrector2D(**tv_kw)   # fast version used in main loop
         log.info(f'TV corrector (fast): h_factor={tv_corrector.h_factor:.4f}  nmax={tv_corrector.nmax}'
                  f'  dt={tv_corrector.dt}')
 

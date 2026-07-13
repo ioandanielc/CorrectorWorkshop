@@ -5,10 +5,10 @@ Full inference pipeline: tiling + ghost buffer + coordinate scaling + model.
 
 Usage
 -----
-    from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
+    from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
 
-    cfg = GridCorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
-    corrector = GridCorrector(cfg)
+    cfg = GridCorrector2DConfig.from_yaml('inference/configs/grid_6x6.yaml')
+    corrector = GridCorrector2D(cfg)
 
     pts_corrected = corrector.apply(pts, k=3)   # (N, 2) -> (N, 2)
 """
@@ -31,7 +31,7 @@ from .scaling import compute_scale
 
 
 @dataclass
-class GridCorrectorConfig:
+class GridCorrector2DConfig:
     # model
     checkpoint:  str
     model_config: str
@@ -46,7 +46,7 @@ class GridCorrectorConfig:
     ghost_factor: float = 1.0   # ghost_width = ghost_factor * cell_size
 
     @classmethod
-    def from_yaml(cls, path: str) -> 'GridCorrectorConfig':
+    def from_yaml(cls, path: str) -> 'GridCorrector2DConfig':
         """Load a corrector config. 'tiling' is an inline {n_cells, ghost_factor} dict."""
         with open(path) as f:
             raw = yaml.safe_load(f)
@@ -69,7 +69,7 @@ class GridCorrectorConfig:
         )
 
 
-class GridCorrector(Corrector):
+class GridCorrector2D(Corrector):
     """
     Applies the trained Poisson-disk corrector to large PBC point clouds
     via tiled inference with ghost buffer and coordinate scaling.
@@ -80,7 +80,7 @@ class GridCorrector(Corrector):
     apply() works regardless of what coordinate frame the input is in.
     """
 
-    def __init__(self, cfg: GridCorrectorConfig):
+    def __init__(self, cfg: GridCorrector2DConfig):
         self.cfg    = cfg
         self.device = torch.device(cfg.device)
         self.scale  = compute_scale(cfg.rd_train, cfg.rd_test)

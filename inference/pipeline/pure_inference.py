@@ -7,6 +7,7 @@ scale -> invariant -> model -> revert -> unscale.
 """
 import sys
 import importlib
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -19,23 +20,36 @@ from .base import Corrector
 from .scaling import compute_scale
 
 
-class PureInference(Corrector):
+@dataclass
+class PureInference2DConfig:
+    # data — the test case's minimum distance, in its own domain units
+    rd_test:      float
+
+    # model — defaults to the primary production checkpoint
+    checkpoint:   str   = 'weights/n100_p050.pt'
+    model_config: str   = 'configs/model_configs/model_config_9_n100_p050.yaml'
+    rd_train:     float = 0.076
+
+    device:       str   = 'cpu'
+
+
+class PureInference2D(Corrector):
     """
     Applies model9 directly to a single bounded cloud (N == N_train, no
     tiling/PBC — see module docstring). points : (N, 2) in any consistent
-    coordinate frame, at the constructor's rd_test.
+    coordinate frame, at cfg.rd_test.
     """
 
-    def __init__(self, checkpoint: str, model_config: str,
-                 rd_train: float, rd_test: float, device: str = 'cpu'):
-        self.device = torch.device(device)
-        self.scale  = compute_scale(rd_train, rd_test)
-        self.rd_t   = torch.tensor(rd_train, dtype=torch.float32, device=self.device)
+    def __init__(self, cfg: PureInference2DConfig):
+        self.cfg    = cfg
+        self.device = torch.device(cfg.device)
+        self.scale  = compute_scale(cfg.rd_train, cfg.rd_test)
+        self.rd_t   = torch.tensor(cfg.rd_train, dtype=torch.float32, device=self.device)
 
-        model_cfg = load_model_config(model_config)
+        model_cfg = load_model_config(cfg.model_config)
         m = importlib.import_module('models.fixed_rd.model9')
         self.model = m.CorrectorModel(model_cfg, input_dim=2, initialization='xavier_uniform')
-        self.model.load_state_dict(torch.load(checkpoint, map_location='cpu'))
+        self.model.load_state_dict(torch.load(cfg.checkpoint, map_location='cpu'))
         self.model.to(self.device).eval()
 
     def apply(self, points: np.ndarray, k: int = 1) -> np.ndarray:
@@ -52,13 +66,8 @@ class PureInference(Corrector):
 
 
 if __name__ == '__main__':
-    inference = PureInference(
-        checkpoint   = 'training_artifacts/train_run_2026-05-28_14-53-45/model_final.pt',
-        model_config = 'configs/model_configs/model_config_9_n100_p050.yaml',
-        rd_train     = 0.076,
-        rd_test      = 1.0,   # your test case's minimum distance, in [0,10]-domain units
-        device       = 'cpu',
-    )
+    # rd_test = 1.0: minimum distance for a demo cloud in [0, 10]^2
+    inference = PureInference2D(PureInference2DConfig(rd_test=1.0))
 
     rng = np.random.default_rng(0)
     points = rng.uniform(0, 10, size=(100, 2)).astype(np.float32)

@@ -50,8 +50,9 @@ training/
 inference/
   pipeline/
     base.py                 Corrector / Experiment ABCs — shared interfaces, implemented below
-    corrector.py            GridCorrector(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
-    tv_corrector.py          TVCorrector/FastTVCorrector(Corrector) — Transport Velocity baseline
+    corrector.py            GridCorrector2D(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+    tv_corrector.py          TVCorrector2D/FastTVCorrector2D(Corrector) — Transport Velocity baseline
+    pure_inference.py        PureInference2D(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
     tiling.py               TilingConfig, tile geometry
     pbc.py                  periodic-boundary distance helpers
     scaling.py               rd_train / rd_test coordinate scaling
@@ -117,7 +118,7 @@ centroid and infers the domain from its extent, fresh on every `apply()`
 call.
 
 `stride`/`k_values` under `experiment:` are read by `SPHTVExperiment`
-itself, not by `GridCorrectorConfig` — they're experiment-loop concerns
+itself, not by `GridCorrector2DConfig` — they're experiment-loop concerns
 (how many SPH timesteps, which K sweep), not corrector config.
 
 To run a variant, copy one of the two files in `inference/configs/` and
@@ -148,18 +149,18 @@ Writes to `training_artifacts/train_run_<timestamp>/` (gitignored — copy
 ## Programmatic use
 
 ```python
-from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
+from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
 import numpy as np
 
-cfg       = GridCorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
-corrector = GridCorrector(cfg)
+cfg       = GridCorrector2DConfig.from_yaml('inference/configs/grid_6x6.yaml')
+corrector = GridCorrector2D(cfg)
 
 pts       = np.load('inference/sph_data/positions_without.npy')[300]   # (2500, 2)
 corrected = corrector.apply(pts, k=5)                                   # (2500, 2)
 ```
 
 `corrector` here satisfies the `Corrector` ABC (`inference/pipeline/base.py`)
-— `TVCorrector`/`FastTVCorrector` implement the same `apply(points, k) ->
+— `TVCorrector2D`/`FastTVCorrector2D` implement the same `apply(points, k) ->
 points` shape, so code that just needs "a corrector" can take any of them.
 
 `k` is the number of correction passes. Higher K = more correction, more

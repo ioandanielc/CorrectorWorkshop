@@ -24,7 +24,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
+from inference.pipeline.corrector import GridCorrector2D, GridCorrector2DConfig
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
                         help='Number of corrector passes (default 5)')
     args = parser.parse_args()
 
-    cfg = GridCorrectorConfig.from_yaml(args.config)
+    cfg = GridCorrector2DConfig.from_yaml(args.config)
 
     pos_without = np.load('inference/sph_data/positions_without.npy')
     T, N, D = pos_without.shape
@@ -43,7 +43,7 @@ def main():
           f'grid={cfg.n_cells}x{cfg.n_cells}  '
           f'scale={cfg.rd_train/cfg.rd_test:.2f}')
 
-    corrector = GridCorrector(cfg)
+    corrector = GridCorrector2D(cfg)
     print('Corrector ready. Running...\n')
 
     corrected = np.empty_like(pos_without)

@@ -27,13 +27,13 @@ CorrectorWorkshop/
 ├── inference/
 │   ├── pipeline/
 │   │   ├── base.py               # Corrector / Experiment ABCs — the shared interfaces below implement these
-│   │   ├── corrector.py          # GridCorrector(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+│   │   ├── corrector.py          # GridCorrector2D(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
 │   │   ├── tiling.py             # TilingConfig, tile geometry
 │   │   ├── pbc.py                # periodic-boundary distance helpers
 │   │   ├── scaling.py            # rd_train / rd_test coordinate scaling
 │   │   ├── obstruction.py        # domain obstructions (ellipse/polygon/gear masks + ghost-particle fill)
-│   │   ├── tv_corrector.py       # TVCorrector/FastTVCorrector(Corrector) — naive O(N^2) / cKDTree (~125x faster)
-│   │   └── pure_inference.py     # PureInference(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
+│   │   ├── tv_corrector.py       # TVCorrector2D/FastTVCorrector2D(Corrector) — naive O(N^2) / cKDTree (~125x faster)
+│   │   └── pure_inference.py     # PureInference2D(Corrector) — bare model9 round trip, N == N_train, no tiling/PBC
 │   ├── visualization/
 │   │   ├── comparison.py        # 4-row x 5-col comparison figure
 │   │   ├── timeseries.py        # mean nn-distance / CV over time
@@ -108,25 +108,25 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 **Inference on SPH data (`rd_test=0.02`, `N=2500`, PBC):**
 
-0. **Domain inference**: `GridCorrector.apply()` doesn't take a `domain` config — it centers the input cloud on its own centroid and takes the domain as the largest axis extent of the centered cloud, fresh on every call (held fixed across all `k` passes within that call). Works regardless of what coordinate frame the input is in.
+0. **Domain inference**: `GridCorrector2D.apply()` doesn't take a `domain` config — it centers the input cloud on its own centroid and takes the domain as the largest axis extent of the centered cloud, fresh on every call (held fixed across all `k` passes within that call). Works regardless of what coordinate frame the input is in.
 
 1. **Tiling**: split the inferred domain into an `n_cells × n_cells` grid so each tile has `N_tile ≈ N_train` points.
    - 6×6 → ~107 pts/tile (69 core + 38 ghost) ≈ N_train=100 for n100 model.
    - 10×10 → ~49 pts/tile ≈ N_train=50 for n50 model.
 
-2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * cell_size` on all sides (`ghost_factor` is a fraction of a tile's own size, not of `rd_test`). All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_width ≥ rd_test` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer — `GridCorrector` warns if the configured `ghost_factor` violates this for the inferred domain.
+2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * cell_size` on all sides (`ghost_factor` is a fraction of a tile's own size, not of `rd_test`). All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_width ≥ rd_test` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer — `GridCorrector2D` warns if the configured `ghost_factor` violates this for the inferred domain.
 
 3. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before `make_invariant`; divide displacements by `scale` after reverting. This maps violations from `rd_test`-scale to `rd_train`-scale so the model operates in its training distribution.
 
-4. **Iterative application**: `GridCorrector.apply(pts, k=...)` applies K passes. Higher K = more correction, more compute, diminishing returns. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory.
+4. **Iterative application**: `GridCorrector2D.apply(pts, k=...)` applies K passes. Higher K = more correction, more compute, diminishing returns. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory.
 
 **Corrector / Experiment interfaces (`inference/pipeline/base.py`):**
-- `Corrector` — ABC, one method: `apply(points, k=1) -> points`. `GridCorrector` (tiled ML model) and `TVCorrector`/`FastTVCorrector` (Transport Velocity) all implement it, so callers can swap correctors without caring which one they hold.
-- `Experiment` — ABC, one method: `run()`. `SPHTVExperiment` (`sph_tv_experiment.py`) and `ObstructionExperiment` (`obstruction_experiment.py`) implement it. Each owns its own config dataclass — `stride`/`k_values` live on `SPHTVExperiment`, not on `GridCorrectorConfig`, since they're experiment-loop concerns (how many SPH timesteps / which K sweep), not something the corrector itself needs.
+- `Corrector` — ABC, one method: `apply(points, k=1) -> points`. `GridCorrector2D` (tiled ML model), `TVCorrector2D`/`FastTVCorrector2D` (Transport Velocity), and `PureInference2D` (bare model9, no tiling) all implement it, so callers can swap correctors without caring which one they hold. Concrete correctors carry a `2D` suffix — 3D variants are planned; the ABCs stay dimension-neutral. Every ML corrector's config carries its own `checkpoint` + `model_config` (+ `rd_train`): `GridCorrector2DConfig` from the experiment YAML's `model:` block, `PureInference2DConfig` as dataclass fields defaulting to the production `n100_p050` paths.
+- `Experiment` — ABC, one method: `run()`. `SPHTVExperiment` (`sph_tv_experiment.py`) and `ObstructionExperiment` (`obstruction_experiment.py`) implement it. Each owns its own config dataclass — `stride`/`k_values` live on `SPHTVExperiment`, not on `GridCorrector2DConfig`, since they're experiment-loop concerns (how many SPH timesteps / which K sweep), not something the corrector itself needs.
 
 **Obstructions (domain obstacles — gears, ellipses, polygons):**
 - `inference/pipeline/obstruction.py` fills the obstacle interior with ghost particles at spacing `rd` so the corrector sees a uniform-looking environment and naturally pushes real particles away from the boundary. Ghosts are dropped from the output after `corrector.apply()`.
-- `inference/pipeline/tv_corrector.py` provides `TVCorrector` (naive O(N²), faithful port of the reference implementation) and `FastTVCorrector` (cKDTree neighbor list, ~125× faster) as the Transport Velocity baseline to compare against, driven by a `tv:` block in the experiment config (`h_factor`, `nmax`, `dt`).
+- `inference/pipeline/tv_corrector.py` provides `TVCorrector2D` (naive O(N²), faithful port of the reference implementation) and `FastTVCorrector2D` (cKDTree neighbor list, ~125× faster) as the Transport Velocity baseline to compare against, driven by a `tv:` block in the experiment config (`h_factor`, `nmax`, `dt`).
 
 **Run an experiment:**
 ```
@@ -165,7 +165,7 @@ tv:
   dt:       0.2   # relaxation factor (matches reference implementation)
 ```
 
-`stride`/`k_values` are read directly by `SPHTVExperiment`, not by `GridCorrectorConfig` — see "Corrector / Experiment interfaces" above.
+`stride`/`k_values` are read directly by `SPHTVExperiment`, not by `GridCorrector2DConfig` — see "Corrector / Experiment interfaces" above.
 
 Copy one of the two files in `inference/configs/` and change what you need — no code changes required to run a variant.
 
@@ -212,4 +212,4 @@ Training is complete on model9. Active work is on SPH inference and obstruction 
 - **6×6 grid, n100 model**: K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%)
 - **10×10 grid, n50 model**: similar but slightly weaker than 6×6
 - Obstruction/TV-corrector work (ghost-particle obstacle fill, TV baseline) just ported from `main`
-- `Corrector`/`Experiment` ABCs introduced in `inference/pipeline/base.py`; `GridCorrector`/`SPHTVExperiment`/`ObstructionExperiment` are the current implementations. A KD-tree-based ML corrector (different config shape) is the next planned `Corrector` implementation.
+- `Corrector`/`Experiment` ABCs introduced in `inference/pipeline/base.py`; `GridCorrector2D`/`SPHTVExperiment`/`ObstructionExperiment` are the current implementations. Roadmap: refine `GridCorrector2D` (visualizations TBD), then `KDTreeCorrector2D`, then a `MixedCorrector` combining the two, then a 3D model + 3D variants of all three correctors (hence the `2D` suffix).
