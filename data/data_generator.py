@@ -2,14 +2,25 @@ import multiprocessing as mp
 import time
 
 import numpy as np
-from scipy.stats import qmc, uniform, norm
+from scipy.stats import qmc
 
 _SQRT3 = 3 ** 0.5
+_SQRT2 = 2 ** 0.5
 
 
-def _packed_n_target(rd, packedness):
-    """N_target = packedness fraction of the triangular-lattice max density at radius rd."""
-    return max(2, round(packedness * 2.0 / (_SQRT3 * rd ** 2)))
+def _packed_n_target(rd, packedness, dim=2):
+    """N_target = packedness fraction of the max-packing density at radius rd.
+
+    2D: triangular lattice, N_max = 2 / (sqrt(3) * rd^2)
+    3D: FCC lattice,        N_max = sqrt(2) / rd^3
+    """
+    if dim == 2:
+        n_max = 2.0 / (_SQRT3 * rd ** 2)
+    elif dim == 3:
+        n_max = _SQRT2 / rd ** 3
+    else:
+        raise ValueError(f"_packed_n_target supports dim 2 or 3, got {dim}")
+    return max(2, round(packedness * n_max))
 
 
 def _gen_one_cloud(dim, rd, n_request, seed):
@@ -36,27 +47,44 @@ class PoissonDiskDataset:
         self.seed            = seed
         self.noise_scale_min = noise_scale_min
         self.noise_scale_max = noise_scale_max
+        # One generator drives all randomness: the same dataset seed reproduces the
+        # same *sequence* of batches, but every call yields fresh clouds and noise.
+        # (The previous fixed-seed scheme regenerated the identical batch on every
+        # call, so training effectively saw batch_size clouds total.)
+        self._rng            = np.random.default_rng(seed)
+
+    def _cloud_seeds(self, batch_size):
+        if self.seed is None:
+            return [None] * batch_size
+        return [int(s) for s in self._rng.integers(0, 2**31 - 1, size=batch_size)]
 
     def generate_sample(self, batch_size):
-        """Return (batch_size, cardinality, dim) array of valid clouds."""
-        return np.stack([
-            qmc.PoissonDisk(
-                d=self.dim, radius=self.rd,
-                seed=self.seed + i if self.seed is not None else None,
-            ).random(self.cardinality)
-            for i in range(batch_size)
-        ], axis=0)
+        """Return (batch_size, cardinality, dim) array of valid clouds.
+
+        scipy's sampler is stochastic and occasionally places fewer than
+        `cardinality` points; such clouds are resampled with a fresh seed.
+        """
+        clouds = []
+        for _ in range(batch_size):
+            for _ in range(20):   # resample budget per cloud
+                seed  = self._cloud_seeds(1)[0]
+                cloud = qmc.PoissonDisk(
+                    d=self.dim, radius=self.rd, seed=seed).random(self.cardinality)
+                if len(cloud) == self.cardinality:
+                    break
+            else:
+                raise RuntimeError(
+                    f"PoissonDisk placed fewer than {self.cardinality} points at "
+                    f"rd={self.rd} (dim={self.dim}) in 20 attempts — density too "
+                    f"high for reliable sampling")
+            clouds.append(cloud)
+        return np.stack(clouds, axis=0)
 
     def noise_sample(self, sample):
-        """Add per-cloud Gaussian noise. Returns same shape as input."""
-        u      = uniform(loc=self.noise_scale_min,
-                         scale=self.noise_scale_max - self.noise_scale_min)
-        sigmas = u.rvs(size=sample.shape[0], random_state=self.seed)
-        noise  = np.stack([
-            norm(loc=0.0, scale=sigma).rvs(
-                size=sample.shape[1:], random_state=self.seed)
-            for sigma in sigmas
-        ])
+        """Add per-cloud Gaussian noise (sigma drawn uniformly per cloud)."""
+        sigmas = self._rng.uniform(self.noise_scale_min, self.noise_scale_max,
+                                   size=sample.shape[0])
+        noise  = self._rng.normal(0.0, 1.0, size=sample.shape) * sigmas[:, None, None]
         return sample + noise
 
 
@@ -83,7 +111,7 @@ class PackedPoissonDiskDataset(PoissonDiskDataset):
         if not (0 < packedness <= 1.0):
             raise ValueError(f"packedness must be in (0, 1], got {packedness}")
 
-        n_target  = _packed_n_target(rd, packedness)
+        n_target  = _packed_n_target(rd, packedness, dim)
         n_request = n_target if packedness < 1.0 else 10_000
 
         super().__init__(
@@ -96,11 +124,8 @@ class PackedPoissonDiskDataset(PoissonDiskDataset):
 
     def generate_sample(self, batch_size):
         clouds = [
-            qmc.PoissonDisk(
-                d=self.dim, radius=self.rd,
-                seed=self.seed + i if self.seed is not None else None,
-            ).random(self.n_request)
-            for i in range(batch_size)
+            qmc.PoissonDisk(d=self.dim, radius=self.rd, seed=s).random(self.n_request)
+            for s in self._cloud_seeds(batch_size)
         ]
         n_min  = min(len(c) for c in clouds)
         return np.stack([c[:n_min] for c in clouds], axis=0)
@@ -164,7 +189,7 @@ class VariableRdPackedPoissonDiskDataset:
         self.n_max                 = n_max
         self.pool_size             = pool_size
         self._rng                  = np.random.default_rng(seed)
-        self.n_request             = int(np.clip(_packed_n_target(rd_gen, packedness), n_min, n_max))
+        self.n_request             = int(np.clip(_packed_n_target(rd_gen, packedness, dim), n_min, n_max))
         self._pool                 = self._build_pool(pool_size, n_workers)
         self.last_rd               = None
         self.last_n_target         = None
@@ -196,14 +221,10 @@ class VariableRdPackedPoissonDiskDataset:
         the rescaled cloud is not bounded to [0, 1]^dim, and the model doesn't assume it is)."""
         if self.last_rd is None:
             raise RuntimeError("generate_sample() must be called before noise_sample()")
-        u = uniform(loc=self.noise_scale_min_frac * self.last_rd,
-                   scale=(self.noise_scale_max_frac - self.noise_scale_min_frac) * self.last_rd)
-        sigmas = u.rvs(size=sample.shape[0], random_state=self.seed)
-        noise  = np.stack([
-            norm(loc=0.0, scale=sigma).rvs(
-                size=sample.shape[1:], random_state=self.seed)
-            for sigma in sigmas
-        ])
+        sigmas = self._rng.uniform(self.noise_scale_min_frac * self.last_rd,
+                                   self.noise_scale_max_frac * self.last_rd,
+                                   size=sample.shape[0])
+        noise  = self._rng.normal(0.0, 1.0, size=sample.shape) * sigmas[:, None, None]
         return sample + noise
 
 
