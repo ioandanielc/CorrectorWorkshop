@@ -13,10 +13,10 @@ and tiling config together. Use those directly:
 
 ```bash
 # n100_p050 + 6x6 grid (recommended)
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_6x6.yaml
 
 # n50_sparse + 10x10 grid
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_10x10.yaml
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_10x10.yaml
 ```
 
 **Do not mix** `n50_sparse.pt` with `model_config_9_n100_p050.yaml` or vice versa —

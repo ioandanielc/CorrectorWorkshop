@@ -23,7 +23,7 @@ on `main`.
   --model-config   configs/smoke_test/model_config_9.yaml
 
 # Run inference on SPH data with a production checkpoint
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml --timestep 300
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_6x6.yaml --timestep 300
 ```
 
 The second command needs `inference/sph_data/positions.npy` and
@@ -49,7 +49,9 @@ training/
 
 inference/
   pipeline/
-    corrector.py           Corrector — tiling + ghost buffer + scaling + model, all in one apply() call
+    base.py                 Corrector / Experiment ABCs — shared interfaces, implemented below
+    corrector.py            GridCorrector(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+    tv_corrector.py          TVCorrector/FastTVCorrector(Corrector) — Transport Velocity baseline
     tiling.py               TilingConfig, tile geometry
     pbc.py                  periodic-boundary distance helpers
     scaling.py               rd_train / rd_test coordinate scaling
@@ -60,7 +62,8 @@ inference/
   configs/
     grid_6x6.yaml            n100 model, 6x6 tiling
     grid_10x10.yaml          n50 model, 10x10 tiling
-  run_experiment.py         entry point
+  sph_tv_experiment.py      SPHTVExperiment(Experiment) — ML corrector vs TV baseline, entry point
+  obstruction_experiment.py ObstructionExperiment(Experiment) — obstacle init strategies
   sph_data/                 positions.npy / positions_without.npy — NOT in git, put your own here
   pbc_toy.py                 standalone synthetic proof that the ghost-buffer approach is correct
 
@@ -113,6 +116,10 @@ No `domain` field — the corrector centers the input cloud on its own
 centroid and infers the domain from its extent, fresh on every `apply()`
 call.
 
+`stride`/`k_values` under `experiment:` are read by `SPHTVExperiment`
+itself, not by `GridCorrectorConfig` — they're experiment-loop concerns
+(how many SPH timesteps, which K sweep), not corrector config.
+
 To run a variant, copy one of the two files in `inference/configs/` and
 change what you need — no code changes required.
 
@@ -141,15 +148,19 @@ Writes to `training_artifacts/train_run_<timestamp>/` (gitignored — copy
 ## Programmatic use
 
 ```python
-from inference.pipeline.corrector import Corrector, CorrectorConfig
+from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
 import numpy as np
 
-cfg       = CorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
-corrector = Corrector(cfg)
+cfg       = GridCorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
+corrector = GridCorrector(cfg)
 
 pts       = np.load('inference/sph_data/positions_without.npy')[300]   # (2500, 2)
 corrected = corrector.apply(pts, k=5)                                   # (2500, 2)
 ```
+
+`corrector` here satisfies the `Corrector` ABC (`inference/pipeline/base.py`)
+— `TVCorrector`/`FastTVCorrector` implement the same `apply(points, k) ->
+points` shape, so code that just needs "a corrector" can take any of them.
 
 `k` is the number of correction passes. Higher K = more correction, more
 compute, diminishing returns.

@@ -5,18 +5,17 @@ Full inference pipeline: tiling + ghost buffer + coordinate scaling + model.
 
 Usage
 -----
-    from inference.pipeline.corrector import Corrector, CorrectorConfig
+    from inference.pipeline.corrector import GridCorrector, GridCorrectorConfig
 
-    cfg = CorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
-    corrector = Corrector(cfg)
+    cfg = GridCorrectorConfig.from_yaml('inference/configs/grid_6x6.yaml')
+    corrector = GridCorrector(cfg)
 
     pts_corrected = corrector.apply(pts, k=3)   # (N, 2) -> (N, 2)
 """
 import sys
 import importlib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 import numpy as np
 import torch
@@ -25,13 +24,14 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from utils.config import load_model_config
 from data.data_processor import compute_invariant, revert_invariant
+from .base import Corrector
 from .tiling import TilingConfig, iter_tiles
 from .pbc import build_ghost_tile
 from .scaling import compute_scale
 
 
 @dataclass
-class CorrectorConfig:
+class GridCorrectorConfig:
     # model
     checkpoint:  str
     model_config: str
@@ -45,13 +45,9 @@ class CorrectorConfig:
     n_cells:      int   = 6
     ghost_factor: float = 1.0   # ghost_width = ghost_factor * cell_size
 
-    # experiment
-    k_values:     List[int] = field(default_factory=lambda: [1, 2, 3, 5])
-    stride:       int        = 100
-
     @classmethod
-    def from_yaml(cls, path: str) -> 'CorrectorConfig':
-        """Load experiment config. 'tiling' is an inline {n_cells, ghost_factor} dict."""
+    def from_yaml(cls, path: str) -> 'GridCorrectorConfig':
+        """Load a corrector config. 'tiling' is an inline {n_cells, ghost_factor} dict."""
         with open(path) as f:
             raw = yaml.safe_load(f)
         m   = raw['model']
@@ -70,12 +66,10 @@ class CorrectorConfig:
             device       = exp.get('device', 'cpu'),
             n_cells      = n_cells,
             ghost_factor = ghost_factor,
-            k_values     = list(exp.get('k_values', [1, 2, 3, 5])),
-            stride       = int(exp.get('stride', 100)),
         )
 
 
-class Corrector:
+class GridCorrector(Corrector):
     """
     Applies the trained Poisson-disk corrector to large PBC point clouds
     via tiled inference with ghost buffer and coordinate scaling.
@@ -86,7 +80,7 @@ class Corrector:
     apply() works regardless of what coordinate frame the input is in.
     """
 
-    def __init__(self, cfg: CorrectorConfig):
+    def __init__(self, cfg: GridCorrectorConfig):
         self.cfg    = cfg
         self.device = torch.device(cfg.device)
         self.scale  = compute_scale(cfg.rd_train, cfg.rd_test)

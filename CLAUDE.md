@@ -26,12 +26,13 @@ CorrectorWorkshop/
 │   └── loss.py                 # hybrid_loss: linear violation penalty + displacement regulariser
 ├── inference/
 │   ├── pipeline/
-│   │   ├── corrector.py         # Corrector — tiling + ghost buffer + scaling + model, one apply() call
-│   │   ├── tiling.py            # TilingConfig, tile geometry
-│   │   ├── pbc.py               # periodic-boundary distance helpers
-│   │   ├── scaling.py           # rd_train / rd_test coordinate scaling
-│   │   ├── obstruction.py       # domain obstructions (ellipse/polygon/gear masks + ghost-particle fill)
-│   │   └── tv_corrector.py      # TVCorrector (naive O(N^2)) + FastTVCorrector (cKDTree, ~125x faster)
+│   │   ├── base.py               # Corrector / Experiment ABCs — the shared interfaces below implement these
+│   │   ├── corrector.py          # GridCorrector(Corrector) — tiling + ghost buffer + scaling + model, one apply() call
+│   │   ├── tiling.py             # TilingConfig, tile geometry
+│   │   ├── pbc.py                # periodic-boundary distance helpers
+│   │   ├── scaling.py            # rd_train / rd_test coordinate scaling
+│   │   ├── obstruction.py        # domain obstructions (ellipse/polygon/gear masks + ghost-particle fill)
+│   │   └── tv_corrector.py       # TVCorrector/FastTVCorrector(Corrector) — naive O(N^2) / cKDTree (~125x faster)
 │   ├── visualization/
 │   │   ├── comparison.py        # 4-row x 5-col comparison figure
 │   │   ├── timeseries.py        # mean nn-distance / CV over time
@@ -43,11 +44,11 @@ CorrectorWorkshop/
 │   ├── corrected/
 │   │   ├── inspector.py          # scratch script to inspect .h5part contents
 │   │   └── replace_positions.py  # overwrite coords_0/coords_1 in an H5Part file from a positions.txt
-│   ├── run_experiment.py       # main entry point: comparison figures across K values
+│   ├── sph_tv_experiment.py    # SPHTVExperiment(Experiment) — ML corrector vs TV baseline across K values
 │   ├── apply_corrector.py      # apply the corrector to every timestep of the no-TV SPH trajectory, save output
 │   ├── apply_single_cloud.py   # apply model9 to a single bounded cloud with N == N_train (no tiling/PBC)
 │   ├── obstruction_demo.py     # visualize the three obstruction types (ellipse/polygon/gear)
-│   ├── obstruction_experiment.py  # two SPH-around-obstacle init strategies, corrector applied cumulatively
+│   ├── obstruction_experiment.py  # ObstructionExperiment(Experiment) — two init strategies, corrector applied cumulatively
 │   ├── pbc_toy.py               # standalone synthetic proof the ghost-buffer approach is correct
 │   └── sph_data/                # positions.npy / positions_without.npy — NOT in git, put your own here
 ├── configs/                     # dataset/model/loss/trainer YAMLs, plus configs/smoke_test/ (fast CPU variants)
@@ -107,17 +108,21 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 **Inference on SPH data (`rd_test=0.02`, `N=2500`, PBC):**
 
-0. **Domain inference**: `Corrector.apply()` doesn't take a `domain` config — it centers the input cloud on its own centroid and takes the domain as the largest axis extent of the centered cloud, fresh on every call (held fixed across all `k` passes within that call). Works regardless of what coordinate frame the input is in.
+0. **Domain inference**: `GridCorrector.apply()` doesn't take a `domain` config — it centers the input cloud on its own centroid and takes the domain as the largest axis extent of the centered cloud, fresh on every call (held fixed across all `k` passes within that call). Works regardless of what coordinate frame the input is in.
 
 1. **Tiling**: split the inferred domain into an `n_cells × n_cells` grid so each tile has `N_tile ≈ N_train` points.
    - 6×6 → ~107 pts/tile (69 core + 38 ghost) ≈ N_train=100 for n100 model.
    - 10×10 → ~49 pts/tile ≈ N_train=50 for n50 model.
 
-2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * cell_size` on all sides (`ghost_factor` is a fraction of a tile's own size, not of `rd_test`). All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_width ≥ rd_test` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer — `Corrector` warns if the configured `ghost_factor` violates this for the inferred domain.
+2. **Ghost buffer**: each tile is extended by `ghost_width = ghost_factor * cell_size` on all sides (`ghost_factor` is a fraction of a tile's own size, not of `rd_test`). All 9 periodic images of each particle are checked. Any image falling in the extended tile becomes a ghost. After inference, only *core* (non-ghost) displacements are kept. **Correctness**: `ghost_width ≥ rd_test` guarantees every PBC-violating pair is visible in at least one tile's ghost buffer — `GridCorrector` warns if the configured `ghost_factor` violates this for the inferred domain.
 
 3. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before `make_invariant`; divide displacements by `scale` after reverting. This maps violations from `rd_test`-scale to `rd_train`-scale so the model operates in its training distribution.
 
-4. **Iterative application**: `Corrector.apply(pts, k=...)` applies K passes. Higher K = more correction, more compute, diminishing returns. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory.
+4. **Iterative application**: `GridCorrector.apply(pts, k=...)` applies K passes. Higher K = more correction, more compute, diminishing returns. K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory.
+
+**Corrector / Experiment interfaces (`inference/pipeline/base.py`):**
+- `Corrector` — ABC, one method: `apply(points, k=1) -> points`. `GridCorrector` (tiled ML model) and `TVCorrector`/`FastTVCorrector` (Transport Velocity) all implement it, so callers can swap correctors without caring which one they hold.
+- `Experiment` — ABC, one method: `run()`. `SPHTVExperiment` (`sph_tv_experiment.py`) and `ObstructionExperiment` (`obstruction_experiment.py`) implement it. Each owns its own config dataclass — `stride`/`k_values` live on `SPHTVExperiment`, not on `GridCorrectorConfig`, since they're experiment-loop concerns (how many SPH timesteps / which K sweep), not something the corrector itself needs.
 
 **Obstructions (domain obstacles — gears, ellipses, polygons):**
 - `inference/pipeline/obstruction.py` fills the obstacle interior with ghost particles at spacing `rd` so the corrector sees a uniform-looking environment and naturally pushes real particles away from the boundary. Ghosts are dropped from the output after `corrector.apply()`.
@@ -125,9 +130,9 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 **Run an experiment:**
 ```
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_10x10.yaml
-.venv\Scripts\python.exe inference/run_experiment.py inference/configs/grid_6x6.yaml --timestep 300
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_6x6.yaml
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_10x10.yaml
+.venv\Scripts\python.exe inference/sph_tv_experiment.py inference/configs/grid_6x6.yaml --timestep 300
 ```
 
 ---
@@ -159,6 +164,8 @@ tv:
   nmax:     10
   dt:       0.2   # relaxation factor (matches reference implementation)
 ```
+
+`stride`/`k_values` are read directly by `SPHTVExperiment`, not by `GridCorrectorConfig` — see "Corrector / Experiment interfaces" above.
 
 Copy one of the two files in `inference/configs/` and change what you need — no code changes required to run a variant.
 
@@ -205,4 +212,4 @@ Training is complete on model9. Active work is on SPH inference and obstruction 
 - **6×6 grid, n100 model**: K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%)
 - **10×10 grid, n50 model**: similar but slightly weaker than 6×6
 - Obstruction/TV-corrector work (ghost-particle obstacle fill, TV baseline) just ported from `main`
-- A more direct/simplified entry point for applying the corrector to the grid tiling cases is planned but not yet started
+- `Corrector`/`Experiment` ABCs introduced in `inference/pipeline/base.py`; `GridCorrector`/`SPHTVExperiment`/`ObstructionExperiment` are the current implementations. A KD-tree-based ML corrector (different config shape) is the next planned `Corrector` implementation.

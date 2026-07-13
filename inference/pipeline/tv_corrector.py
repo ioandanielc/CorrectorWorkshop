@@ -26,6 +26,8 @@ dW/dr < 0 → displacement in the (b→a) direction → repulsion / particle spr
 import numpy as np
 from typing import Optional
 
+from .base import Corrector
+
 
 def _gaussian_dW_dr(r: np.ndarray, h: float) -> np.ndarray:
     """
@@ -35,18 +37,18 @@ def _gaussian_dW_dr(r: np.ndarray, h: float) -> np.ndarray:
     return -2.0 * r / h**2 * np.exp(-(r / h)**2)
 
 
-class TVCorrector:
+class TVCorrector(Corrector):
     """
     Applies the TV particle-shifting algorithm to a 2D PBC point cloud.
 
     The cloud's own domain (box size) is inferred fresh on every apply()
-    call from the cloud itself — see Corrector._infer_frame's docstring
+    call from the cloud itself — see GridCorrector._infer_frame's docstring
     for the same convention used by the ML corrector.
 
     Parameters
     ----------
     h_factor : smoothing length factor (h = h_factor * dx, dx = domain / sqrt(N))
-    nmax     : number of correction iterations
+    nmax     : default number of correction iterations
     dt       : relaxation factor (0.2 in the reference implementation)
     """
 
@@ -55,20 +57,20 @@ class TVCorrector:
         self.nmax     = int(nmax)
         self.dt       = float(dt)
 
-    def apply(self, pts: np.ndarray, nmax: Optional[int] = None) -> np.ndarray:
+    def apply(self, pts: np.ndarray, k: Optional[int] = None) -> np.ndarray:
         """
         Apply iterative TV position correction with PBC.
 
         Parameters
         ----------
-        pts  : (N, 2) positions in any consistent coordinate frame
-        nmax : override iteration count (uses self.nmax if None)
+        pts : (N, 2) positions in any consistent coordinate frame
+        k   : override iteration count (uses self.nmax if None)
 
         Returns
         -------
         (N, 2) corrected positions, in the same coordinate frame as the input
         """
-        n_iter   = nmax if nmax is not None else self.nmax
+        n_iter   = k if k is not None else self.nmax
         pts      = pts.astype(np.float32)
         centroid = pts.mean(axis=0)
         centered = pts - centroid
@@ -105,7 +107,7 @@ class TVCorrector:
         return pts - dom / 2 + centroid
 
 
-class FastTVCorrector:
+class FastTVCorrector(Corrector):
     """
     O(N·k) TV corrector using cKDTree with native PBC support (boxsize).
 
@@ -122,14 +124,14 @@ class FastTVCorrector:
         self.nmax     = int(nmax)
         self.dt       = float(dt)
 
-    def apply(self, pts: np.ndarray, nmax: Optional[int] = None) -> np.ndarray:
+    def apply(self, pts: np.ndarray, k: Optional[int] = None) -> np.ndarray:
         """
         Apply iterative TV position correction with PBC.
 
         Parameters
         ----------
-        pts  : (N, 2) positions in any consistent coordinate frame
-        nmax : override iteration count (uses self.nmax if None)
+        pts : (N, 2) positions in any consistent coordinate frame
+        k   : override iteration count (uses self.nmax if None)
 
         Returns
         -------
@@ -137,7 +139,7 @@ class FastTVCorrector:
         """
         from scipy.spatial import cKDTree
 
-        n_iter   = nmax if nmax is not None else self.nmax
+        n_iter   = k if k is not None else self.nmax
         pts      = pts.astype(np.float64)
         N        = len(pts)
         centroid = pts.mean(axis=0)
