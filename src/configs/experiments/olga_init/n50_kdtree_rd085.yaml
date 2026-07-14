@@ -1,0 +1,31 @@
+# OlgaInitExperiment: kdtree corrector, 3D n50 model, rd_test = 0.85 — the
+# "fully separated" setting. 0.85 is where the equilibrated liquid's own g(r)
+# takes off at T=1.4 (in data.npy: 477 pairs below 0.85 = defect tail, 1483
+# below 0.90 = already real structure), so it is the largest target that
+# removes only the generative-model artifact.
+# This is the config that produced the state shipped to Olga: 477 -> 0 pairs,
+# min pair distance 0.8500, PBC-verified pure, g(r) intact from the first
+# peak outward, 872/5096 particles moved (max 0.36).
+#   .venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n50_kdtree_rd085.yaml
+
+model:
+  checkpoint: src/models/weights/model9_3d_n50.pt
+  config:     src/configs/training/model/model_config_9_3d_n50.yaml
+  rd_train:   0.15
+
+data:
+  input:   artifacts/inference/experiments/olga_init/data/data.npy
+  box:     18.0
+  rd_test: 0.85
+
+kdtree:
+  total_core: 50
+  inner_core: 8    # thicker frozen ring than the default 12 — at rd=0.85 the
+                   # ring must span more physical radius or boundary pairs
+                   # don't fully separate (the corrector warns); 12 left 2
+                   # pairs at 0.836, 8 reaches zero
+
+experiment:
+  corrector: kdtree
+  k_kdtree:  25    # cap only — early-stops once clean (~10 sweeps used)
+  device:    cpu
