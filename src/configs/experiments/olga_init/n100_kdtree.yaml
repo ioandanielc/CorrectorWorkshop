@@ -1,0 +1,21 @@
+# OlgaInitExperiment: kdtree corrector, 3D n100 model.
+#   .venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n100_kdtree.yaml
+
+model:
+  checkpoint: src/models/weights/model9_3d_n100.pt
+  config:     src/configs/training/model/model_config_9_3d_n100.yaml
+  rd_train:   0.12
+
+data:
+  input:   artifacts/inference/experiments/olga_init/data/data.npy
+  box:     18.0
+  rd_test: 0.6    # see n50_grid.yaml for the choice of 0.6
+
+kdtree:
+  total_core: 100
+  inner_core: 25
+
+experiment:
+  corrector: kdtree
+  k_kdtree:  10
+  device:    cpu

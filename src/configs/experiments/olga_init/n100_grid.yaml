@@ -1,0 +1,21 @@
+# OlgaInitExperiment: grid corrector, 3D n100 model.
+#   .venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n100_grid.yaml
+
+model:
+  checkpoint: src/models/weights/model9_3d_n100.pt
+  config:     src/configs/training/model/model_config_9_3d_n100.yaml
+  rd_train:   0.12
+
+data:
+  input:   artifacts/inference/experiments/olga_init/data/data.npy
+  box:     18.0
+  rd_test: 0.6    # see n50_grid.yaml for the choice of 0.6
+
+tiling:
+  n_cells:      5     # 5096/5^3 ≈ 41 core/tile; ×(1+2·0.2)^3 ≈ 112 total ≈ N_train
+  ghost_factor: 0.2   # ghost_width = 0.2 · 18/5 = 0.72 ≥ rd_test
+
+experiment:
+  corrector: grid
+  k_grid:    5
+  device:    cpu

@@ -1,0 +1,19 @@
+# apply_corrector.py config: n100 corrector, 6x6 tiling.
+#   .venv\Scripts\python.exe src/inference/experiments/apply_corrector/apply_corrector.py --config src/configs/experiments/apply_corrector/grid_6x6.yaml --k 5
+# Corrector blocks only — apply_corrector.py hardcodes the input trajectory
+# (artifacts/inference/experiments/sph_tv/data/positions_without.npy) and takes K on the CLI.
+
+model:
+  checkpoint: src/models/weights/model9_n100_p050.pt
+  config:     src/configs/training/model/model_config_9_n100_p050.yaml
+  rd_train:   0.076
+
+data:
+  rd_test:    0.02
+
+tiling:
+  n_cells:      6
+  ghost_factor: 0.13  # ghost_width = ghost_factor * cell_size; cell_size~1/6 -> width~0.0217 (>rd_test, with margin)
+
+experiment:
+  device: cpu

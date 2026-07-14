@@ -1,0 +1,9 @@
+# install into a venv at the project root:  pip install -r requirements.txt
+# torch: pick the build matching your CUDA from https://pytorch.org (cpu-only works, training is just slower)
+torch>=2.0
+numpy>=1.24
+scipy>=1.10          # cKDTree (PBC neighbour queries), qmc Poisson-disk sampling
+matplotlib>=3.7
+PyYAML>=6.0
+Pillow>=10.0         # training evolution GIF
+h5py>=3.9            # only for the apply_corrector h5part tools

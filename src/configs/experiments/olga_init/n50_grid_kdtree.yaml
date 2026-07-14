@@ -1,0 +1,27 @@
+# OlgaInitExperiment: grid passes then kdtree passes, 3D n50 model — the
+# composition that measured best in 2D (grid K=5, then kdtree k<=10).
+#   .venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n50_grid_kdtree.yaml
+
+model:
+  checkpoint: src/models/weights/model9_3d_n50.pt
+  config:     src/configs/training/model/model_config_9_3d_n50.yaml
+  rd_train:   0.15
+
+data:
+  input:   artifacts/inference/experiments/olga_init/data/data.npy
+  box:     18.0
+  rd_test: 0.6    # see n50_grid.yaml for the choice of 0.6
+
+tiling:
+  n_cells:      7
+  ghost_factor: 0.25
+
+kdtree:
+  total_core: 50
+  inner_core: 12
+
+experiment:
+  corrector: grid_then_kdtree
+  k_grid:    5
+  k_kdtree:  10
+  device:    cpu

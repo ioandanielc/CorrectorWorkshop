@@ -1,9 +1,0 @@
-architecture: variable_rd_edge_network
-model_file: models/variable_rd/model11
-
-hidden_dim: 128
-edge_depth: 3
-norm: layer
-activation: GELU
-max_displacement_factor: 1.2   # displacement clamp = 1.2 * rd (scales with rd automatically)
-rd_embed_dim: 16

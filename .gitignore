@@ -11,11 +11,10 @@ dist/
 build/
 .DS_Store
 
-# Training/inference artifacts (large files / run outputs)
-training_artifacts/
-inference/experiments/
+# All experiment/training inputs and run outputs live here — never tracked
+artifacts/
 *.pt
 *.npy
 
 # Production weights are explicitly tracked
-!weights/*.pt
+!src/models/weights/*.pt
