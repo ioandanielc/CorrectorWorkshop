@@ -1,0 +1,11 @@
+name: sph_loss
+
+# Pure SPH symmetry loss: L = lambda_sph * mean_i |KG_i|^2, forcing the
+# quintic-spline kernel-gradient sum (Morris 1997, periodic) toward zero.
+# No violation term — rd only shapes what the model attends to.
+
+params:
+  lambda_sph: 1.0
+  lambda2:    0.0     # optional displacement regulariser; 0 = pure kernel term
+  h_factor:   2.0     # h = h_factor * dx, dx = box / sqrt(N)  (reference: h ~ 2*dx)
+  box:        1.0     # unit torus — matches periodic: true in the dataset config

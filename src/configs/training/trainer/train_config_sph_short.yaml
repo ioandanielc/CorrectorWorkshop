@@ -1,0 +1,30 @@
+# Sweep variant of train_config_sph.yaml: num_iterations/T_max 10000 -> 6000.
+# Evidence (2026-07-15 sweep, runs A-E): loss and eval metrics (K=1/K=5
+# viol_reduction, mean|KG|) consistently peak around iter 6000 then regress
+# by iter 10000 across every run, even as LR anneals toward eta_min. This
+# tests whether stopping at the observed peak reproduces (or beats) the
+# iter-10000 checkpoint at 40% less compute.
+batch_size: 32
+num_iterations: 6000
+initialization: xavier_uniform
+device: cuda
+unroll_steps: 5
+
+optimizer:
+  name: Adam
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+
+lr_scheduler:
+  name: CosineAnnealingLR
+  params:
+    T_max: 6000
+    eta_min: 1.0e-6
+
+eval:
+  validation_size: 256
+  num_visual_samples: 6
+  log_interval: 100
+  sample_interval: 500

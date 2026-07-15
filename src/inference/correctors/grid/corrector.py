@@ -111,7 +111,8 @@ class _GridCorrectorND(Corrector):
 
     def _load_model(self):
         model_cfg = load_model_config(self.cfg.model_config)
-        m = importlib.import_module('models.architectures.model9.model9')
+        module_path = model_cfg.get('model_file', 'models/architectures/model9/model9')
+        m = importlib.import_module(module_path.replace('/', '.'))
         self.model = m.CorrectorModel(
             model_cfg, input_dim=self.DIM, initialization='xavier_uniform'
         )
@@ -119,6 +120,17 @@ class _GridCorrectorND(Corrector):
         self.model.load_state_dict(state)
         self.model.to(self.device)
         self.model.eval()
+
+        # Box-aware models (e.g. model12) take a separate attention radius,
+        # distinct from rd_train (constraint rd, which still drives scaling
+        # and ghost-width). They were also trained in a fixed, unrotated
+        # periodic frame, so the PCA-rotation invariant transform below must
+        # be skipped for them — the ghost buffer already resolves periodicity
+        # into flat local coordinates, so box=None is passed at inference
+        # regardless of what the model trained with.
+        self.periodic_frame = getattr(self.model, 'uses_box', False)
+        attention_rd = model_cfg.get('attention_rd', self.cfg.rd_train)
+        self.rd_model_t = torch.tensor(attention_rd, dtype=torch.float32, device=self.device)
 
     def _infer_frame(self, points: np.ndarray):
         """Center on the centroid; domain = largest axis extent of the centered cloud."""
@@ -172,14 +184,23 @@ class _GridCorrectorND(Corrector):
                 batch_orig_idx[i, :m] = orig_idx
                 real_mask[i, :m]      = 1.0
 
-            # ── center + PCA-rotate each tile, run the model once for all tiles ──
-            x_inv, mean_batch, eigvecs = compute_invariant(batch_pts_s, mask=real_mask)
+            # ── center + PCA-rotate each tile (skipped for periodic-frame models,
+            #    which trained on fixed, unrotated coordinates and are already
+            #    translation-invariant by construction), run the model once ──
+            if self.periodic_frame:
+                x_inv = batch_pts_s
+            else:
+                x_inv, mean_batch, eigvecs = compute_invariant(batch_pts_s, mask=real_mask)
             x_t = torch.tensor(x_inv, dtype=torch.float32, device=self.device)
+            model_kwargs = {'box': None} if self.periodic_frame else {}
             with torch.no_grad():
-                disp = self.model(x_t, rd=self.rd_t).cpu().numpy()
+                disp = self.model(x_t, rd=self.rd_model_t, **model_kwargs).cpu().numpy()
 
             # ── revert to scaled space, take the displacement, unscale ──
-            corrected_s = revert_invariant(x_inv + disp, mean_batch, eigvecs)
+            if self.periodic_frame:
+                corrected_s = x_inv + disp
+            else:
+                corrected_s = revert_invariant(x_inv + disp, mean_batch, eigvecs)
             disp_orig   = (corrected_s - batch_pts_s) / self.scale
 
             # ── each particle keeps the displacement from its one core (non-ghost) tile ──

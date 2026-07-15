@@ -1,0 +1,16 @@
+architecture: violation_weighted_edge_network_v2
+model_file: models/architectures/model9/model9
+
+hidden_dim: 256           # raised from 128: symmetry objective needs more capacity
+edge_depth: 4             # raised from 3 (N=49/batch 32 is far below any VRAM limit)
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * rd = 0.14 (constraint rd, not attention rd)
+
+# What the model attends to, decoupled from the constraint rd (the trainer
+# passes this as the model's rd; the loss keeps the constraint rd = 0.14).
+# 0.286 = 2*dx = h: covers the first two neighbour shells of the lattice, so
+# kernel-gradient asymmetry — mostly carried by pairs ABOVE the constraint rd —
+# is visible to the attention. Part of the checkpoint's calling convention:
+# inference must pass the same value.
+attention_rd: 0.286

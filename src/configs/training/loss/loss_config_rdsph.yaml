@@ -1,0 +1,17 @@
+name: rdsph_loss
+
+# hybrid_loss (periodic distances) + lambda3 * SPH kernel-gradient symmetry term.
+
+params:
+  lambda1: 7.14       # 1 / rd, rd = 0.14
+  lambda1_quad: 0
+  lambda2: 0.0149     # 0.1 * lambda1 / (N-1), N = 49
+
+  # Measured at init on noisy periodic clouds (N=49 lattice, rd=0.14, noise 0.6*rd):
+  #   mean |KG|^2 ~ 0.112,  lambda1 * mean_viol ~ 0.0098,  clean-lattice KG^2 ~ 3e-5
+  # lambda3 = 0.09 puts the symmetry term ~1:1 with the violation term at init.
+  # This is the knob to sweep.
+  lambda3: 0.09
+
+  h_factor: 2.0       # h = h_factor * dx, dx = box / sqrt(N) = lattice spacing
+  box:      1.0       # unit torus

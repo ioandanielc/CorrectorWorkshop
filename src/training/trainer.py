@@ -17,12 +17,16 @@ from utils.logger import create_run_dir, setup_logger, set_logger_eta
 from utils.visualizations.training_visualizations.visualizations import plot_comparison, make_sample_gif
 from training.datagen import PoissonDiskDataset, PackedPoissonDiskDataset, VariableRdPackedPoissonDiskDataset
 from models.architectures.model9.invariance import DataProcessor
-from training.loss import hybrid_loss
+from training.loss import hybrid_loss, sph_loss, rdsph_loss, mean_kg_norm
 
 
 LOSS_FNS = {
     'hybrid_loss': hybrid_loss,
+    'sph_loss':    sph_loss,
+    'rdsph_loss':  rdsph_loss,
 }
+
+SPH_LOSSES = ('sph_loss', 'rdsph_loss')   # kernel-gradient (symmetry) losses
 
 
 def train(train_config_path, dataset_config_path, loss_config_path, model_config_path):
@@ -86,13 +90,21 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
             seed=dataset_cfg['seed'],
             noise_scale_min=dataset_cfg['noise_scale_min'],
             noise_scale_max=dataset_cfg['noise_scale_max'],
+            periodic=dataset_cfg.get('periodic', False),
         )
     processor = DataProcessor()
+
+    # Periodic clouds stay in the unit-torus frame: make_invariant's centering +
+    # PCA rotation would break the box alignment the periodic losses assume.
+    is_periodic = bool(dataset_cfg.get('periodic', False))
+    if is_periodic:
+        logger.info("Periodic clouds: skipping make_invariant (unit-torus frame)")
 
     logger.info(f"Generating validation set ({eval_cfg['validation_size']} clouds)...")
     val_clean = dataset.generate_sample(eval_cfg['validation_size'])
     val_noisy = dataset.noise_sample(val_clean)
     val_rd = dataset.last_rd if is_variable_rd else dataset_cfg['rd']
+    val_rd_tensor = torch.tensor(val_rd, dtype=torch.float32, device=device)
     np.save(run_dir / "validation_set.npy", val_noisy)
     logger.info("Validation set saved")
 
@@ -106,6 +118,11 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     n_params = sum(p.numel() for p in model.parameters())
     logger.info(f"Model built: {n_params:,} parameters")
 
+    # box-aware models (model12) get the periodic box so wrap-seam pairs are visible
+    model_kwargs = {'box': 1.0} if (is_periodic and getattr(model, 'uses_box', False)) else {}
+    if model_kwargs:
+        logger.info("Periodic model geometry: passing box=1.0 to forward()")
+
     optimizer_cls = getattr(optim, train_cfg['optimizer']['name'])
     optimizer = optimizer_cls(model.parameters(), **train_cfg['optimizer']['params'])
 
@@ -114,6 +131,16 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
     loss_fn = LOSS_FNS[loss_cfg['name']]
     rd = None if is_variable_rd else torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
+
+    # Attention radius: what the model "sees". Defaults to the constraint rd;
+    # model_config.attention_rd decouples them (SPH losses: the kernel-gradient
+    # asymmetry lives mostly in pairs ABOVE rd, which violation-gated attention
+    # would otherwise weight zero). The loss always uses the constraint rd.
+    attention_rd = model_cfg.get('attention_rd')
+    rd_model = (torch.tensor(attention_rd, dtype=torch.float32, device=device)
+                if attention_rd is not None else rd)
+    if attention_rd is not None:
+        logger.info(f"Attention rd = {attention_rd} (constraint rd = {dataset_cfg.get('rd')})")
 
     loss_csv = open(run_dir / "loss.csv", "w", buffering=1)   # line-buffered
     loss_csv.write(
@@ -129,23 +156,29 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
     logger.info(f"Starting training for {train_cfg['num_iterations']} iterations")
 
+    best_val_loss = float('inf')
+    best_iteration = None
     iter_timer = time.time()
     for iteration in range(1, train_cfg['num_iterations'] + 1):
         model.train()
 
         clean = dataset.generate_sample(train_cfg['batch_size'])
         noisy = dataset.noise_sample(clean)
-        noisy_processed, _, _ = processor.make_invariant(noisy)
+        if is_periodic:
+            noisy_processed = noisy
+        else:
+            noisy_processed, _, _ = processor.make_invariant(noisy)
         x = torch.tensor(noisy_processed, dtype=torch.float32).to(device)
 
         if is_variable_rd:
             rd = torch.tensor(dataset.last_rd, dtype=torch.float32, device=device)
+            rd_model = rd if attention_rd is None else rd_model
 
         x_current  = x
         total_loss = torch.tensor(0.0, device=device)
         unroll_steps = train_cfg.get('unroll_steps', 1)
         for _ in range(unroll_steps):
-            displacement = model(x_current, rd=rd) if getattr(model, 'uses_rd', False) else model(x_current)
+            displacement = model(x_current, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x_current)
             x_next       = x_current + displacement
             if loss_cfg.get('dynamic_rd_scaling', False):
                 N_cloud      = x_current.shape[1]
@@ -199,14 +232,14 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                     )
 
                 # ── K=1 inference (single pass) ────────────────────────────────
-                disp1      = model(x, rd=rd) if getattr(model, 'uses_rd', False) else model(x)
+                disp1      = model(x, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x)
                 corr1      = x + disp1
                 s1         = _post_stats(corr1, disp1)
 
                 # ── K=unroll_steps inference (multi-pass) ──────────────────────
                 xk = x
                 for _ in range(unroll_steps):
-                    dk  = model(xk, rd=rd) if getattr(model, 'uses_rd', False) else model(xk)
+                    dk  = model(xk, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(xk)
                     xk  = xk + dk
                 sk         = _post_stats(xk, xk - x)   # total displacement from original
 
@@ -223,6 +256,14 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
                 viol_red_k1 = (ill_count_pre - s1['ill_count']) / (ill_count_pre + 1e-9) * 100
                 viol_red_kK = (ill_count_pre - sk['ill_count']) / (ill_count_pre + 1e-9) * 100
+
+                kg_line = ""
+                if loss_cfg['name'] in SPH_LOSSES:
+                    lp = loss_cfg['params']
+                    kg_kwargs = dict(h_factor=lp.get('h_factor', 2.0), box=lp.get('box', 1.0))
+                    kg_line = (f"\n  mean_|KG|        = {mean_kg_norm(x, **kg_kwargs).item():.6f}"
+                               f"  ->  {mean_kg_norm(corr1, **kg_kwargs).item():.6f}"
+                               f"              {mean_kg_norm(xk, **kg_kwargs).item():.6f}")
 
             rd_value = rd.item()
             secs_per_iter = (time.time() - iter_timer) / eval_cfg['log_interval']
@@ -244,6 +285,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 f"  displacement     = {'':10s}     {s1['disp']:.4f} ({s1['disp']/rd_value:.3f}x rd)   "
                 f"{sk['disp']:.4f} ({sk['disp']/rd_value:.3f}x rd)\n"
                 f"  correction_eff   = {'':10s}     {eff1:.4f} ({pct1:.1f}% ceil)         {effk:.4f} ({pctk:.1f}% ceil)"
+                + kg_line
             )
             # CSV: write K=1 columns (primary), plus K=K illegal% and legal% for tracking
             loss_csv.write(
@@ -266,25 +308,79 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
         if iteration % eval_cfg['sample_interval'] == 0:
             _save_sample(model, processor, val_noisy, val_rd, device, run_dir, iteration,
-                         eval_cfg['num_visual_samples'])
+                         eval_cfg['num_visual_samples'], periodic=is_periodic,
+                         rd_model=rd_model, model_kwargs=model_kwargs)
             logger.debug(f"Sample saved at iteration {iteration}")
+
+            val_loss = _evaluate_val_loss(model, processor, val_noisy, val_rd_tensor, rd_model,
+                                          model_kwargs, is_periodic, loss_fn, loss_cfg,
+                                          unroll_steps, train_cfg['batch_size'], device)
+            if val_loss < best_val_loss:
+                best_val_loss, best_iteration = val_loss, iteration
+                torch.save(model.state_dict(), run_dir / "model_best.pt")
+                logger.info(f"New best checkpoint at iter {iteration}: val_loss={val_loss:.6f}")
 
     loss_csv.close()
     torch.save(model.state_dict(), run_dir / "model_final.pt")
     logger.info(f"Training complete. Model saved to {run_dir / 'model_final.pt'}")
+    if best_iteration is not None:
+        logger.info(f"Best checkpoint: iter {best_iteration}  val_loss={best_val_loss:.6f}  "
+                    f"-> {run_dir / 'model_best.pt'}")
 
     gif_path = make_sample_gif(run_dir, fps=10, every_n=1)
     logger.info(f"Evolution GIF saved to {gif_path}")
 
 
-def _save_sample(model, processor, val_noisy, rd_value, device, run_dir, iteration, num_visual_samples):
+def _evaluate_val_loss(model, processor, val_noisy, rd, rd_model, model_kwargs,
+                       periodic, loss_fn, loss_cfg, unroll_steps, batch_size, device):
+    """Deterministic K=unroll_steps loss on the full fixed validation set, chunked
+    to the training batch size. Low-variance alternative to the per-iteration
+    log metrics, which are computed on a fresh random training batch each time."""
+    model.eval()
+    total, n_chunks = 0.0, 0
+    with torch.no_grad():
+        for start in range(0, len(val_noisy), batch_size):
+            chunk = val_noisy[start:start + batch_size]
+            if periodic:
+                processed = chunk
+            else:
+                processed, _, _ = processor.make_invariant(chunk)
+            x_current  = torch.tensor(processed, dtype=torch.float32, device=device)
+            chunk_loss = torch.tensor(0.0, device=device)
+            for _ in range(unroll_steps):
+                displacement = (model(x_current, rd=rd_model, **model_kwargs)
+                                if getattr(model, 'uses_rd', False) else model(x_current))
+                x_next = x_current + displacement
+                if loss_cfg.get('dynamic_rd_scaling', False):
+                    N_cloud = x_current.shape[1]
+                    lp      = loss_cfg['params']
+                    lambda1 = lp['lambda1_coeff'] / rd
+                    lambda2 = lambda1 / (N_cloud - 1) * lp['lambda2_ratio']
+                    chunk_loss = chunk_loss + loss_fn(x_current, x_next, rd, lambda1=lambda1,
+                                                      lambda1_quad=lp.get('lambda1_quad', 0), lambda2=lambda2)
+                else:
+                    chunk_loss = chunk_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
+                x_current = x_next
+            total += chunk_loss.item()
+            n_chunks += 1
+    model.train()
+    return total / n_chunks
+
+
+def _save_sample(model, processor, val_noisy, rd_value, device, run_dir, iteration,
+                 num_visual_samples, periodic=False, rd_model=None, model_kwargs=None):
+    model_kwargs = model_kwargs or {}
     model.eval()
     with torch.no_grad():
         batch = val_noisy[:num_visual_samples]
-        processed, _, _ = processor.make_invariant(batch)
+        if periodic:
+            processed = batch
+        else:
+            processed, _, _ = processor.make_invariant(batch)
         x = torch.tensor(processed, dtype=torch.float32).to(device)
-        rd_tensor = torch.tensor(rd_value, dtype=torch.float32, device=device)
-        displacement = model(x, rd=rd_tensor) if getattr(model, 'uses_rd', False) else model(x)
+        rd_tensor = rd_model if rd_model is not None else torch.tensor(
+            rd_value, dtype=torch.float32, device=device)
+        displacement = model(x, rd=rd_tensor, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x)
         corrected = (x + displacement).cpu().numpy()
 
     plot_comparison(

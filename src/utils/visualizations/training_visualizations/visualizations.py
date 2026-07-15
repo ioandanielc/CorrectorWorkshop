@@ -148,16 +148,35 @@ def plot_comparison(noisy_clouds, corrected_clouds, rd, save_path):
             axes[1, col].set_ylabel('Corrected', fontsize=10, fontweight='bold')
         _draw_cloud(axes[1, col], corrected, rd, dim, bbox, source=noisy)
 
-    fig.tight_layout()
+    # Shared severity colorbar on the far right: violation as a fraction of rd,
+    # 0 = legal, 1 = fully coincident — comparable across figures/iterations.
+    fig.tight_layout(rect=(0, 0, 0.96, 1))
+    cax = fig.add_axes([0.965, 0.15, 0.008, 0.7])
+    sm = plt.cm.ScalarMappable(norm=plt.Normalize(vmin=0.0, vmax=1.0),
+                               cmap=plt.get_cmap('RdYlGn_r'))
+    cbar = fig.colorbar(sm, cax=cax)
+    cbar.set_label(f'violation / rd  (rd = {rd:g})', fontsize=7)
+    cbar.ax.tick_params(labelsize=6, length=2)
+
     fig.savefig(save_path, dpi=100, bbox_inches='tight')
     plt.close(fig)
 
 
 def _draw_cloud(ax, cloud, rd, dim, bbox, source=None):
-    """Draw a point cloud. If source is given, draw displacement arrows source→cloud."""
+    """Draw a point cloud. If source is given, draw displacement arrows source→cloud.
+
+    Points are colored by relative violation severity (rd − nn_dist) / rd on a
+    green→red scale: 0 = legal, 1 = fully coincident points. Illegal points are
+    drawn as 'x', legal as dots.
+    """
     tree = cKDTree(cloud)
     dists, _ = tree.query(cloud, k=2)
-    colors = ['#e74c3c' if d < rd else '#2ecc71' for d in dists[:, 1]]
+    violation = np.clip(rd - dists[:, 1], 0.0, None)
+    illegal = violation > 0
+
+    severity = np.clip(violation / rd, 0.0, 1.0)
+    point_colors = plt.get_cmap('RdYlGn_r')(severity)
+    contour_colors = np.where(illegal, '#e74c3c', '#2ecc71')
 
     xlim, ylim, zlim = bbox
 
@@ -170,10 +189,14 @@ def _draw_cloud(ax, cloud, rd, dim, bbox, source=None):
                       angles='xy', scale_units='xy', scale=1,
                       color='#888888', alpha=0.45, width=0.003,
                       headwidth=4, headlength=4, zorder=2)
-        for point, color in zip(cloud, colors):
+        for point, color in zip(cloud, contour_colors):
             ax.add_patch(patches.Circle(point, radius=rd / 2, fill=False,
                                         linestyle='--', linewidth=0.6, color=color, alpha=0.35))
-        ax.scatter(cloud[:, 0], cloud[:, 1], c=colors, s=15, zorder=3, edgecolors='none')
+        legal = ~illegal
+        ax.scatter(cloud[legal, 0], cloud[legal, 1], c=point_colors[legal],
+                   s=15, zorder=3, edgecolors='none')
+        ax.scatter(cloud[illegal, 0], cloud[illegal, 1], c=point_colors[illegal],
+                   s=25, zorder=3, marker='x', linewidths=1.2)
         ax.set_aspect('equal')
         ax.set_xlim(xlim)
         ax.set_ylim(ylim)
@@ -195,7 +218,11 @@ def _draw_cloud(ax, cloud, rd, dim, bbox, source=None):
                       dx, dy, dz,
                       color='#888888', alpha=0.45, arrow_length_ratio=0.25,
                       linewidth=0.6)
-        ax.scatter(cloud[:, 0], cloud[:, 1], cloud[:, 2], c=colors, s=15, edgecolors='none')
+        legal = ~illegal
+        ax.scatter(cloud[legal, 0], cloud[legal, 1], cloud[legal, 2],
+                   c=point_colors[legal], s=15, edgecolors='none')
+        ax.scatter(cloud[illegal, 0], cloud[illegal, 1], cloud[illegal, 2],
+                   c=point_colors[illegal], s=25, marker='x', linewidths=1.2)
         ax.set_xlim3d(xlim)
         ax.set_ylim3d(ylim)
         ax.set_zlim3d(zlim)

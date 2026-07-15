@@ -1,0 +1,27 @@
+# Sweep variant combining both fixes: AdamW (decoupled weight decay) +
+# num_iterations/T_max 10000 -> 6000. See train_config_sph_adamw.yaml and
+# train_config_sph_short.yaml for the individual rationale.
+batch_size: 32
+num_iterations: 6000
+initialization: xavier_uniform
+device: cuda
+unroll_steps: 5
+
+optimizer:
+  name: AdamW
+  params:
+    lr: 0.001
+    weight_decay: 1.0e-4
+    betas: [0.9, 0.999]
+
+lr_scheduler:
+  name: CosineAnnealingLR
+  params:
+    T_max: 6000
+    eta_min: 1.0e-6
+
+eval:
+  validation_size: 256
+  num_visual_samples: 6
+  log_interval: 100
+  sample_interval: 500

@@ -1,0 +1,12 @@
+points_per_cloud: 49    # 7x7 lattice on the unit torus — spacing 1/7 ≈ 0.143
+dim: 2
+rd: 0.14                # dx ≈ rd: ~83% of max density, matching the SPH data's
+                        # relative concentration (N=2500 at spacing ≈ rd_test)
+seed: 42
+periodic: true          # rd enforced under minimum-image; noise wraps mod 1;
+                        # trainer skips make_invariant (unit-torus frame).
+                        # At this packing clean clouds are a randomly translated
+                        # square lattice (valid configs are near-lattice; dart
+                        # throwing jams at ~60%) — the noise provides disorder.
+noise_scale_min: 0.0    # includes clean clouds — model must learn to be idle
+noise_scale_max: 0.084  # 0.6 * rd — the standard recipe
