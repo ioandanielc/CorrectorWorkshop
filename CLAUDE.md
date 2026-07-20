@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-A PyTorch framework for a **Poisson-disk corrector model**: given a 2D or 3D point cloud that violates the minimum-distance constraint `rd` between all pairs, model9 predicts per-point displacement vectors to produce a valid cloud. Applied to real SPH simulation data (replacing/supplementing the Transport Velocity algorithm) and to MD initial states (repairing too-close pairs before the LS1 solver runs — the `olga_init` experiment).
+A PyTorch framework for a **Poisson-disk corrector model**: given a 2D or 3D point cloud that violates the minimum-distance constraint `rd` between all pairs, a corrector network predicts per-point displacement vectors to produce a valid cloud. Two networks: **model9** (violation-weighted edge net) and **model12** (physics-informed — adds an SPH kernel-gradient-symmetry loss so corrected clouds are valid SPH simulation restarts). Applied to real SPH simulation data, replacing/supplementing the Transport Velocity algorithm.
 
-**This is the `simplify` branch** — stripped down to the model9 train/infer pipeline plus the experiments. The full history (model6-8, model10, model11/variable-rd, sweep scripts, old logs/notebooks) lives on `main`.
+**This is the `sph-use-case` branch** — the 2D SPH experiments only (SPH-trajectory correction + obstruction), branched from `simplify`. The 3D MD-init experiment (`olga_init`) and its `model9_3d_*` checkpoints live on `simplify`; the full model history (model6-8, model10, model11/variable-rd, sweep scripts, old logs/notebooks) lives on `main`. The corrector code still carries the 2D/3D shared bodies, so future 3D SPH work stays possible.
 
 ---
 
@@ -20,18 +20,17 @@ CorrectorWorkshop/
 │   ├── configs/
 │   │   ├── training/            # dataset/ loss/ model/ trainer/ YAML sets + smoke_test/ (fast CPU variants)
 │   │   └── experiments/         # one subfolder per experiment, one YAML per variant
-│   │       ├── sph_tv/          #   grid_6x6.yaml (n100, recommended), grid_10x10.yaml (n50)
+│   │       ├── sph_tv/          #   model9: grid_6x6 (n100, default) / grid_10x10 (n50); model12_{grid,kdtree,grid_then_kdtree}
 │   │       ├── apply_corrector/ #   grid_6x6.yaml (corrector blocks only)
-│   │       ├── obstruction/     #   grid_6x6.yaml (corrector blocks only)
-│   │       └── olga_init/       #   n50/n100 × grid/kdtree/grid_then_kdtree variants
+│   │       └── obstruction/     #   grid_6x6.yaml (corrector blocks only)
 │   ├── models/
-│   │   ├── architectures/model9/
-│   │   │   ├── model9.py        # THE model — violation-weighted edge net; 2D/3D via input_dim
-│   │   │   └── invariance.py    # invariant frame (center + PCA-rotate, NO scaling), applied before every model call
-│   │   └── weights/             # production checkpoints model9_*.pt, tracked in git (own README.md)
+│   │   ├── architectures/
+│   │   │   ├── model9/          # model9.py (violation-weighted edge net; 2D/3D via input_dim) + invariance.py (center + PCA-rotate)
+│   │   │   └── model12/         # model12.py — SPH corrector: L-round message passing + KG-symmetry loss; forward_sparse (whole-cloud)
+│   │   └── weights/             # production checkpoints model9_*.pt + model12_sph_l4.pt, tracked in git (own README.md)
 │   ├── training/
 │   │   ├── trainer.py           # training loop: online data, K-step unrolling, dual eval
-│   │   ├── loss.py              # hybrid_loss: linear violation penalty + displacement regulariser
+│   │   ├── loss.py              # hybrid_loss (model9) + rdsph_loss/sph_loss (model12: + λ3·SPH kernel-gradient symmetry)
 │   │   └── datagen.py           # PoissonDiskDataset + PackedPoissonDiskDataset (online generation)
 │   ├── inference/
 │   │   ├── correctors/
@@ -42,10 +41,9 @@ CorrectorWorkshop/
 │   │   │   ├── tv/tv_corrector.py      # TVCorrector2D / FastTVCorrector2D (cKDTree, ~125x faster) — TV baseline
 │   │   │   └── pure/pure_inference.py  # PureInference2D — bare model9 round trip, N == N_train, no tiling/PBC
 │   │   └── experiments/         # one subfolder per experiment, each with a small README
-│   │       ├── sph_tv/          # SPHTVExperiment — ML corrector vs TV baseline across K values
+│   │       ├── sph_tv/          # SPHTVExperiment (model9 vs TV) + sph_model12_experiment (model12 quality check)
 │   │       ├── apply_corrector/ # correct every SPH timestep, save output (+ h5part scratch tools)
 │   │       ├── obstruction/     # ObstructionExperiment + demo + obstruction.py (masks + ghost fill)
-│   │       ├── olga_init/       # OlgaInitExperiment — 3D MD-init repair, RDF before/after
 │   │       └── pbc_toy/         # standalone synthetic proof of the ghost-buffer approach
 │   └── utils/
 │       ├── config.py, logger.py # config loading, logging
@@ -81,16 +79,15 @@ Full runs: swap in one of the four config sets (one per checkpoint — table in 
 
 ## Production checkpoints
 
-Four deployable checkpoints in `src/models/weights/`, named `model9_<training setup>` (details in `src/models/weights/README.md`):
+Three deployable 2D checkpoints in `src/models/weights/` (details in `src/models/weights/README.md`):
 
-| Checkpoint | Dim | N_train | rd_train | Used by |
-|---|---|---|---|---|
-| **model9_n100_p050** | 2D | ~100 | 0.076 | `src/configs/experiments/sph_tv/grid_6x6.yaml` — primary 2D, use by default |
-| **model9_n50_sparse** | 2D | 50 | 0.05 | `src/configs/experiments/sph_tv/grid_10x10.yaml` |
-| **model9_3d_n50** | 3D | 50 | 0.15 | `src/configs/experiments/olga_init/n50_*.yaml` — primary 3D |
-| **model9_3d_n100** | 3D | 100 | 0.12 | `src/configs/experiments/olga_init/n100_*.yaml` — for denser clouds |
+| Checkpoint | N_train | rd_train | Used by |
+|---|---|---|---|
+| **model9_n100_p050** | ~100 | 0.076 | `src/configs/experiments/sph_tv/grid_6x6.yaml` — primary model9, use by default |
+| **model9_n50_sparse** | 50 | 0.05 | `src/configs/experiments/sph_tv/grid_10x10.yaml` |
+| **model12_sph_l4** | 49 | 0.14 (rd); attention_rd 0.286 | `src/configs/experiments/sph_tv/model12_*.yaml` — physics-informed (SPH KG symmetry) |
 
-Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` differ, will either error or silently produce garbage.
+Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` differ, will either error or silently produce garbage. model12 also has a distinct calling convention (`rd=attention_rd`, `box=`).
 
 ---
 
@@ -112,18 +109,18 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 3. **KDTree corrector**: runs the model only around violations. One sweep: PBC `cKDTree(boxsize)` → violating points worst-first → greedy claiming — a site's neighbourhood is its `total_core` (≈ N_train) nearest points, its `inner_core` most central unclaimed points receive displacements, the outer ring is frozen context → one rectangular batched model call. `apply(points, k)`: k is a **cap** — early stop once clean, sweeps get cheaper as violations shrink. Warns when a site's frozen ring is thinner than rd_test.
 
-4. **Iterative application**: `apply(pts, k=...)` = K passes, diminishing returns. Grid K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory. Measured (2D SPH, N=2500): kdtree k≤10 beats grid K=5 on quality (mean nn 0.0184–0.0185 vs 0.0170–0.0180); grid K=5 then kdtree k≤10 composes best (mean nn ≈ 0.0186–0.0187) — exposed as `corrector: grid_then_kdtree` in olga_init.
+4. **Iterative application**: `apply(pts, k=...)` = K passes, diminishing returns. Grid K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory. Measured (2D SPH, N=2500): kdtree k≤10 beats grid K=5 on quality (mean nn 0.0184–0.0185 vs 0.0170–0.0180); grid K=5 then kdtree k≤10 composes best (mean nn ≈ 0.0186–0.0187) — exposed as `corrector: grid_then_kdtree` in the sph_tv model12 experiment (`model12_grid_then_kdtree.yaml`).
 
 **Interfaces (`src/inference/correctors/base.py`):**
 - `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `TVCorrector2D`/`FastTVCorrector2D`, `PureInference2D`. The grid/kdtree 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
-- `Experiment` — one method `run()`. Implemented by `SPHTVExperiment`, `ObstructionExperiment`, `OlgaInitExperiment`. Experiment-loop settings (`stride`, `k_values`, `corrector` kind…) live on the experiments, not on corrector configs.
+- `Experiment` — one method `run()`. Implemented by `SPHTVExperiment` and `ObstructionExperiment` (the model12 sph_tv script uses the same `experiment.corrector` step-builder pattern). Experiment-loop settings (`stride`, `k_values`, `corrector` kind…) live on the experiments, not on corrector configs.
 
 **Obstructions**: `src/inference/experiments/obstruction/obstruction.py` fills obstacle interiors (ellipse/polygon/gear masks) with ghost particles at spacing `rd` so the corrector pushes real particles away from the boundary; ghosts are dropped after `apply()`.
 
 **Run an experiment** (config schema: README "Configs"; every YAML's header comment shows its run command):
 ```
 .venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_tv_experiment.py src/configs/experiments/sph_tv/grid_6x6.yaml
-.venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n50_kdtree.yaml
+.venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_grid.yaml
 ```
 
 ---
@@ -138,13 +135,13 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 | `mean_nn_dist` | ≥ rd, not >> rd |
 | `correction_eff` — violation removed ÷ displacement | high |
 
-For 3D MD data, `olga_init` reports RDF g(r) + min pair distance + pairs<rd before/after.
+For model12, SPH-restart quality is additionally judged by `mean_kg_norm` (kernel-gradient symmetry, → 0) — the in-repo SPH-consistency proxy.
 
 ---
 
 ## Known rough edges
 
-- `artifacts/inference/experiments/<name>/data/` inputs are not in git: SPH trajectories under `sph_tv/data/`, Olga's `data.npy` under `olga_init/data/`.
+- `artifacts/inference/experiments/<name>/data/` inputs are not in git: the SPH trajectory lives under `sph_tv/data/`.
 - Everything under `artifacts/inference/experiments/*/runs/` and `artifacts/training/` is regenerable run output; delete freely.
 - `src/inference/experiments/apply_corrector/inspector.py` has a hardcoded local path — scratch script, not a reusable tool.
 - Open issue (found via enhanced viz): on lattice-like inputs (e.g. t=0) the inferred domain (max extent) undershoots the true PBC box, pinching the wrap seam into artificial violations — grid corrector degrades mean nn at t=0 (0.0184 → 0.0174); self-heals by t≈300. Fix TBD (pad extent by one nn-spacing?).
@@ -152,7 +149,9 @@ For 3D MD data, `olga_init` reports RDF g(r) + min pair distance + pairs<rd befo
 
 ## Current state
 
-Training is complete on model9 (2D ×2, 3D ×2). Active work is inference-side:
-- **2D SPH**: grid 6×6 + n100 K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%); kdtree and the grid→kdtree composition beat it (numbers above).
-- **3D / olga_init**: DONE on Olga's real data (2026-07-14, results table in the experiment README). Her state: min pair dist 0.163, 477 pairs < 0.85. All variants reach PBC-verified purity at rd 0.6 (10→0 pairs, ~20 particles moved); `n50_kdtree_rd085.yaml` (inner_core 8, k≤25) reaches purity at rd 0.85 (477→0, min 0.8500, 872 moved, g(r) intact) — kdtree needed a thicker frozen ring at that density. Both variants packaged in `artifacts/inference/experiments/olga_init/for_olga/` (npy + self-documenting txt + RDF figures) and sent; awaiting her LS1 equilibration-time comparison (~40 steps expected for rd 0.85 vs ~100 raw).
-- Roadmap: `MixedCorrector` as a first-class corrector (grid→kdtree composition currently lives only in olga_init); domain-inference fix for lattice-like inputs.
+This branch is the **2D SPH use case**. Two experiments in scope: the SPH-trajectory corrector (many timesteps, `sph_tv`) and the obstruction demo.
+
+- **model9 vs TV** (`sph_tv`): grid 6×6 + n100 K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%); kdtree and the grid→kdtree composition beat it (numbers above).
+- **model12 (physics-informed — the active thrust)**: adds `λ3·|KG|²` (SPH kernel-gradient symmetry) so corrected clouds are valid SPH restarts — model9's are not (it blows KG up 3–4.5×, which is why its clouds made bad restarts). The whole-cloud sparse pass (`forward_sparse`) drives disordered-regime KG below the TV baseline, ~50× faster than tiled, and was validated end-to-end by an actual SPH re-simulation. PoC for a physics-informed-ML ("Physics in AI") workshop paper. The KG term is a *soft, training-only* constraint — never enforced at inference.
+- **Obstruction**: to be re-run on this branch.
+- Roadmap: promote the whole-cloud path to a first-class `WholeCloudCorrector2D` (currently scratchpad; `forward_sparse` is committed); `MixedCorrector` for the grid→kdtree composition; domain-inference fix for lattice-like inputs (t=0 undershoot).

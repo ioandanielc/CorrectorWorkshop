@@ -4,8 +4,7 @@
 # Same tiling/kdtree sizing as model12_grid.yaml / model12_kdtree.yaml —
 # see those files for the attention_rd margin reasoning. Grid pass(es) first
 # to clean up broad structure, then kdtree pass(es) to mop up residual
-# violations (mirrors olga_init's grid_then_kdtree variant, the best-composing
-# combination found there for 3D MD-init repair).
+# violations — the best-composing combination measured on 2D SPH data.
 
 model:
   checkpoint: src/models/weights/model12_sph_l4.pt

@@ -1,7 +1,0 @@
-points_per_cloud: 100
-dim: 3
-rd: 0.12    # 100 / (sqrt(2)/rd^3 = 818) ~= 12% of FCC max — same sparseness as the n50 config,
-            # so N is purely the neighbourhood-size axis, not a difficulty change
-seed: 42
-noise_scale_min: 0.0    # includes clean clouds — teaches model to output ~zero when legal
-noise_scale_max: 0.12   # 1.0 * rd — raised from 0.6*rd (see n50 config note)

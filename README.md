@@ -1,12 +1,15 @@
 # Poisson Disk Corrector
 
-Neural net (`model9`) that takes a 2D or 3D point cloud violating a
-minimum-distance constraint `rd` and predicts per-point displacements that fix
-it. Applied to SPH simulation output (as a Transport Velocity replacement) and
-to MD initial states (repairing too-close pairs before the solver runs).
+Neural net that takes a 2D point cloud violating a minimum-distance constraint
+`rd` and predicts per-point displacements that fix it. Two models: `model9`
+(violation-weighted edge net) and `model12` (physics-informed — an SPH
+kernel-gradient-symmetry loss so corrected clouds are valid SPH simulation
+restarts). Applied to SPH simulation output as a Transport Velocity replacement.
 
-This branch is the stripped-down version of the project; the full history
-lives on `main`.
+This is the `sph-use-case` branch — the 2D SPH experiments only (SPH-trajectory
+correction + obstruction), branched from `simplify`. The 3D MD-init experiment
+(`olga_init`) lives on `simplify`; the full model history lives on `main`. The
+corrector code keeps its 2D/3D shared bodies, so future 3D SPH work stays open.
 
 ---
 
@@ -20,11 +23,11 @@ lives on `main`.
   --loss-config    src/configs/training/smoke_test/loss_config.yaml ^
   --model-config   src/configs/training/smoke_test/model_config_9.yaml
 
-# 2D: ML corrector vs TV baseline on the SPH trajectory
+# model9 ML corrector vs TV baseline on the SPH trajectory
 .venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_tv_experiment.py src/configs/experiments/sph_tv/grid_6x6.yaml --timestep 300
 
-# 3D: correct an MD initial state and compare RDFs
-.venv\Scripts\python.exe src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n50_kdtree.yaml
+# model12 physics-informed (SPH kernel-gradient symmetry) corrector on the same trajectory
+.venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_grid.yaml --timestep 300
 ```
 
 Run everything from the project root — all paths in configs and code are
@@ -47,15 +50,15 @@ src/
     training/                 one YAML set per checkpoint (see "Training")
       dataset/  loss/  model/  trainer/  smoke_test/
     experiments/              one subfolder per experiment, one YAML per variant
-      sph_tv/  apply_corrector/  obstruction/  olga_init/
+      sph_tv/  apply_corrector/  obstruction/
   models/
-    architectures/model9/
-      model9.py               the model — violation-weighted edge MLP, tanh clamp (2D/3D via input_dim)
-      invariance.py           model9's invariant frame (center + PCA-rotate, no scaling), applied before every call
-    weights/                  production checkpoints model9_*.pt, tracked in git (see its README.md)
+    architectures/
+      model9/                 model9.py (violation-weighted edge MLP, tanh clamp; 2D/3D via input_dim) + invariance.py (center + PCA-rotate)
+      model12/                model12.py — SPH corrector: L-round message passing + KG-symmetry loss; forward_sparse for whole-cloud
+    weights/                  production checkpoints model9_*.pt + model12_sph_l4.pt, tracked in git (see its README.md)
   training/
     trainer.py                training loop: online data, K-step unrolling, dual eval (K=1 vs K=unroll)
-    loss.py                   hybrid_loss (the only loss function that exists)
+    loss.py                   hybrid_loss (model9) + rdsph_loss/sph_loss (model12) + kernel_gradient/mean_kg_norm
     datagen.py                PoissonDiskDataset + PackedPoissonDiskDataset — online generation, no dataset files
   inference/
     correctors/
@@ -66,10 +69,9 @@ src/
       tv/                     TVCorrector2D / FastTVCorrector2D — Transport Velocity baseline
       pure/                   PureInference2D — bare model round trip, N == N_train, no tiling/PBC
     experiments/              one subfolder per experiment, each with its own README:
-      sph_tv/                 ML corrector vs TV baseline over the SPH trajectory
+      sph_tv/                 model9 vs TV baseline + sph_model12 (physics-informed) over the SPH trajectory
       apply_corrector/        correct every SPH timestep, save the trajectory (+ h5part tools)
       obstruction/            corrector around domain obstacles (gear mask + ghost fill)
-      olga_init/              repair a 3D MD initial state, RDF before/after
       pbc_toy/                synthetic proof the tiling + ghost-buffer approach is correct
   utils/
     config.py, logger.py      config loading, logging
@@ -95,21 +97,20 @@ run from the root.
 
 ## Checkpoints
 
-Four in `src/models/weights/`, named `model9_<training setup>`. Details in
+Three in `src/models/weights/`, all 2D. Details in
 `src/models/weights/README.md`.
 
-| Checkpoint | Dim | Model config | Used by |
+| Checkpoint | Model | Model config | Used by |
 |---|---|---|---|
-| `src/models/weights/model9_n100_p050.pt` | 2D | `src/configs/training/model/model_config_9_n100_p050.yaml` | `src/configs/experiments/sph_tv/grid_6x6.yaml` |
-| `src/models/weights/model9_n50_sparse.pt` | 2D | `src/configs/training/model/model_config_9.yaml` | `src/configs/experiments/sph_tv/grid_10x10.yaml` |
-| `src/models/weights/model9_3d_n50.pt` | 3D | `src/configs/training/model/model_config_9_3d_n50.yaml` | `src/configs/experiments/olga_init/n50_*.yaml` |
-| `src/models/weights/model9_3d_n100.pt` | 3D | `src/configs/training/model/model_config_9_3d_n100.yaml` | `src/configs/experiments/olga_init/n100_*.yaml` |
+| `src/models/weights/model9_n100_p050.pt` | model9 | `src/configs/training/model/model_config_9_n100_p050.yaml` | `src/configs/experiments/sph_tv/grid_6x6.yaml` |
+| `src/models/weights/model9_n50_sparse.pt` | model9 | `src/configs/training/model/model_config_9.yaml` | `src/configs/experiments/sph_tv/grid_10x10.yaml` |
+| `src/models/weights/model12_sph_l4.pt` | model12 | `src/configs/training/model/model_config_12_sph_L4.yaml` | `src/configs/experiments/sph_tv/model12_*.yaml` |
 
 Never cross a checkpoint with another checkpoint's model config — different
 `hidden_dim` / `max_displacement`, will either error or silently produce
-garbage. Defaults: `model9_n100_p050` in 2D, `model9_3d_n50` in 3D
-(`model9_3d_n100` performs identically on sparse data and costs more; it
-exists for denser clouds).
+garbage. Default 2D corrector is `model9_n100_p050`; `model12_sph_l4` is the
+physics-informed option for SPH-restart quality (distinct calling convention —
+`rd=attention_rd`, `box=`).
 
 ---
 
@@ -172,7 +173,9 @@ The model's `input_dim` comes from the dataset config's `dim`, and weight
 ### Loss config (`src/configs/training/loss/`)
 
 ```yaml
-name: hybrid_loss     # the only registered loss
+name: hybrid_loss     # model9's loss; model12 uses rdsph_loss (+ λ3·SPH
+                      # kernel-gradient symmetry) or sph_loss — see
+                      # src/configs/training/loss/loss_config_rdsph*.yaml
 
 params:
   lambda1: 20         # linear violation penalty; calibrate as lambda1·rd = 1
@@ -279,25 +282,25 @@ tv:                    # TVCorrector2D / FastTVCorrector2D baseline
   dt:       0.2        # relaxation factor
 ```
 
-#### OlgaInitExperiment — `data:` extras + `experiment:`
+#### sph_model12 experiment — `experiment:` corrector step-builder
+
+The model12 SPH experiment (`sph_model12_experiment.py`) selects its corrector
+composition via `experiment.corrector`, reading the common + `tiling:` (and
+`kdtree:` for the kdtree paths) blocks. `model:` points at `model12_sph_l4`;
+`attention_rd` is read from the model config, distinct from the constraint
+`rd_train`:
 
 ```yaml
-data:
-  input:   artifacts/inference/experiments/olga_init/data/data.npy   # (N, 6): x y z vx vy vz
-  box:     18.0                                # cubic box edge L
-  rd_test: 0.6                                 # target min pair distance
-
 experiment:
   corrector: grid_then_kdtree   # grid | kdtree | grid_then_kdtree
   k_grid:    5
   k_kdtree:  10                 # cap — stops early once clean
-  device:    cpu
+  stride:    200                # evaluate every stride-th SPH timestep
 ```
 
 No `domain` field for the correctors — they center the input cloud on its
 own centroid and infer the domain from its extent, fresh on every `apply()`
-call. (`data.box` above is used by the experiment's RDF, not by the
-correctors.)
+call.
 
 ### Corrector config dataclasses
 
@@ -317,10 +320,6 @@ GridCorrector2DConfig(       # GridCorrector3DConfig: same fields
 KDTreeCorrector2DConfig(
     total_core = 100,        # sized for model9_n100_p050
     inner_core = 25)
-
-KDTreeCorrector3DConfig(
-    total_core = 50,         # sized for model9_3d_n50
-    inner_core = 12)
 
 PureInference2DConfig(
     rd_test = ...)           # the only required field — checkpoint /
@@ -350,10 +349,10 @@ One trainer, four YAML flags:
 
 ```bash
 .venv\Scripts\python.exe src/training/trainer.py ^
-  --train-config   src/configs/training/trainer/train_config_3d.yaml ^
-  --dataset-config src/configs/training/dataset/dataset_config_3d_n50.yaml ^
-  --loss-config    src/configs/training/loss/loss_config_3d_n50.yaml ^
-  --model-config   src/configs/training/model/model_config_9_3d_n50.yaml
+  --train-config   src/configs/training/trainer/train_config_sph_adamw.yaml ^
+  --dataset-config src/configs/training/dataset/dataset_config_sph.yaml ^
+  --loss-config    src/configs/training/loss/loss_config_rdsph_lam3_0p27.yaml ^
+  --model-config   src/configs/training/model/model_config_12_sph_L4.yaml
 ```
 
 Writes to `artifacts/training/train_run_<timestamp>/` (gitignored — copy
@@ -366,18 +365,16 @@ Each checkpoint has its config set (names relative to their
 |---|---|---|---|---|
 | `model9_n50_sparse` (2D, N=50, rd 0.05) | `dataset_config_3` | `loss_config_5` | `train_config_2` | `model_config_9` |
 | `model9_n100_p050` (2D, packed p=0.5) | `dataset_config_packed` | `loss_config_packed` | `train_config_packed` | `model_config_9_n100_p050` |
-| `model9_3d_n50` (3D, N=50, rd 0.15) | `dataset_config_3d_n50` | `loss_config_3d_n50` | `train_config_3d` | `model_config_9_3d_n50` |
-| `model9_3d_n100` (3D, N=100, rd 0.12) | `dataset_config_3d_n100` | `loss_config_3d_n100` | `train_config_3d` | `model_config_9_3d_n100` |
+| `model12_sph_l4` (2D SPH, N=49 lattice) | `dataset_config_sph` | `loss_config_rdsph_lam3_0p27` | `train_config_sph_adamw` | `model_config_12_sph_L4` |
 
-The two 3D sets differ only in rd/N and the constants derived from them; they
-share `train_config_3d`. A 3D run takes ~20 min (n50) / ~40 min (n100) on an
-RTX 4080S.
+`model12_sph_l4` trains in ~10 min on GPU (10k iters); its trainer config uses
+AdamW plus deterministic val-loss checkpointing (saves `model_best.pt` on every
+validation improvement, alongside `model_final.pt`).
 
-Recipe for scaling the constants to any new rd/N: `lambda1 = 1/rd`,
+Recipe for scaling the model9 constants to any new rd/N: `lambda1 = 1/rd`,
 `lambda2 = 0.1 * lambda1 / (N-1)`, `max_displacement = 1.2 * rd`,
 `noise_scale_max = 1.0 * rd`. Density: `N_max = 2/(sqrt(3)*rd^2)` in 2D,
-`sqrt(2)/rd^3` in 3D — pick rd so N/N_max lands where you want it
-(the 3D checkpoints train at ~12%).
+`sqrt(2)/rd^3` in 3D — pick rd so N/N_max lands where you want it.
 
 ---
 
@@ -389,19 +386,18 @@ own README, its configs under `src/configs/experiments/<name>/`, and its data
 
 | Experiment | What it does | Run |
 |---|---|---|
-| `sph_tv` | ML corrector vs TV baseline over the 2D SPH trajectory, K sweep | `python src/inference/experiments/sph_tv/sph_tv_experiment.py src/configs/experiments/sph_tv/grid_6x6.yaml` |
+| `sph_tv` (model9) | ML corrector vs TV baseline over the 2D SPH trajectory, K sweep | `python src/inference/experiments/sph_tv/sph_tv_experiment.py src/configs/experiments/sph_tv/grid_6x6.yaml` |
+| `sph_tv` (model12) | physics-informed (SPH KG-symmetry) corrector quality check | `python src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_grid.yaml` |
 | `apply_corrector` | correct every SPH timestep, save the corrected trajectory | `python src/inference/experiments/apply_corrector/apply_corrector.py --k 5` |
 | `obstruction` | corrector around a gear obstacle via ghost-particle fill | `python src/inference/experiments/obstruction/obstruction_experiment.py` |
-| `olga_init` | repair a 3D MD initial state (N=5096, L=18), RDF before/after | `python src/inference/experiments/olga_init/olga_init_experiment.py src/configs/experiments/olga_init/n50_kdtree.yaml` |
 | `pbc_toy` | synthetic proof of the tiling + ghost-buffer approach | `python src/inference/experiments/pbc_toy/pbc_toy.py` |
 
-`olga_init` is the current 3D test case: a generative model proposes an LS1
-initial state whose too-close pairs (min distance ~0.08) spike the potential
-energy and cost ~100 extra MD timesteps of equilibration. The experiment
-corrects the positions (velocities untouched), saves the corrected `(N, 6)`
-state, and plots the RDF. `src/configs/experiments/olga_init/` ships one variant
-per checkpoint × corrector (n50/n100 × grid/kdtree/grid_then_kdtree) — run
-them all and compare RDFs and reports.
+The model12 SPH experiment is the physics-informed path: model12 was trained
+with an SPH kernel-gradient-symmetry loss so its corrected clouds work as SPH
+simulation restarts, which model9's do not — model9 destroys kernel-gradient
+symmetry (blows |KG| up 3–4.5×). It reports before/after quality per sampled
+timestep for `corrector: grid | kdtree | grid_then_kdtree`;
+`src/configs/experiments/sph_tv/` ships `model12_{grid,kdtree,grid_then_kdtree}.yaml`.
 
 ---
 
@@ -415,7 +411,7 @@ from the package root. For your own scripts, run from the project root with
 
 ```python
 from inference.correctors import (GridCorrector2D, GridCorrector2DConfig,
-                                  KDTreeCorrector3D, KDTreeCorrector3DConfig)
+                                  KDTreeCorrector2D, KDTreeCorrector2DConfig)
 import numpy as np
 
 # grid — tiles the whole domain, every pass costs the same
@@ -425,23 +421,23 @@ pts       = np.load('artifacts/inference/experiments/sph_tv/data/positions_witho
 corrected = corrector.apply(pts, k=5)                                     # (2500, 2)
 
 # kdtree — model only around violations; k is a cap, stops early once clean
-kd3 = KDTreeCorrector3D(KDTreeCorrector3DConfig(
-    checkpoint='src/models/weights/model9_3d_n50.pt',
-    model_config='src/configs/training/model/model_config_9_3d_n50.yaml',
-    rd_train=0.15, rd_test=0.05))
-corrected = kd3.apply(pts3d, k=10)   # (N, 3) -> (N, 3)
+kd = KDTreeCorrector2D(KDTreeCorrector2DConfig(
+    checkpoint='src/models/weights/model9_n100_p050.pt',
+    model_config='src/configs/training/model/model_config_9_n100_p050.yaml',
+    rd_train=0.076, rd_test=0.02))
+corrected = kd.apply(pts, k=10)   # (2500, 2) -> (2500, 2)
 ```
 
 Grid `k` = number of passes; higher K = more correction, diminishing returns
 (K=3–5 beats TV on the SPH data from t≈300 onwards). KDTree is ~30x faster
 than the grid on sparse violations and reaches better quality on packed data
 at ~5x the per-pass cost; best measured 2D quality is grid K=5 then kdtree
-k≤10 — that composition is `corrector: grid_then_kdtree` in the olga_init
+k≤10 — that composition is `corrector: grid_then_kdtree` in the sph_tv model12
 experiment.
 
-3D gotcha for the grid: ghost overhead is ~2.7x the core count, so choose
-`n_cells` so that **total** (core+ghost) points per tile ≈ N_train, not core
-alone — the shipped olga_init configs show the arithmetic.
+3D gotcha for the grid (for future 3D work): ghost overhead is ~2.7x the core
+count, so choose `n_cells` so that **total** (core+ghost) points per tile ≈
+N_train, not core alone.
 
 Per-apply diagnostics (2D only): `visualization: {enhanced: true}` in the
 YAML (or `enhanced_visualization=True` on the config) saves a 3-panel figure
@@ -469,13 +465,10 @@ artifacts/
         runs/                   exp_<timestamp>/ comparison figures + reports
       apply_corrector/runs/     corrected trajectories (.npy + .txt)
       obstruction/runs/         obstacle experiment figures
-      olga_init/
-        data/                   data.npy — Olga's (N, 6) LS1 state
-        runs/                   <config>_<timestamp>/ corrected state + rdf.png + report
       pbc_toy/                  proof figure
     misc/
       enhanced_viz/             per-apply() diagnostic figures (when enabled)
 ```
 
-Everything under `runs/` is regenerable — delete freely. The two `data/`
-folders hold externally provided inputs — keep those.
+Everything under `runs/` is regenerable — delete freely. The `sph_tv/data/`
+folder holds externally provided inputs — keep those.

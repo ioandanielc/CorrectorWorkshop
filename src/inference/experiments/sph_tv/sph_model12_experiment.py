@@ -10,8 +10,7 @@ square-lattice Poisson-disk clouds — so it reports before/after quality per
 sampled timestep rather than a TV comparison.
 
 The corrector variant (grid / kdtree / grid_then_kdtree) is selected by the
-config file's experiment.corrector field, mirroring the step-builder pattern
-in olga_init_experiment.py.
+config file's experiment.corrector field via a small step-builder.
 
 Usage
 -----

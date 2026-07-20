@@ -1,4 +1,4 @@
-# SPH-loss runs (2D, N=49 periodic lattice, rd=0.14) — mirrors train_config_3d.
+# SPH-loss runs (2D, N=49 periodic lattice, rd=0.14).
 # batch 32 at N=49 -> ~77k pairwise edges, far below the proven VRAM budget.
 batch_size: 32
 num_iterations: 10000
