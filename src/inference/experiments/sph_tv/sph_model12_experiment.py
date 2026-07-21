@@ -36,6 +36,8 @@ sys.path.insert(0, str(Path(__file__).parents[3]))
 from inference.correctors.base import Experiment
 from inference.correctors.grid.corrector import GridCorrector2D, GridCorrector2DConfig
 from inference.correctors.kdtree.kdtree_corrector import KDTreeCorrector2D, KDTreeCorrector2DConfig
+from inference.correctors.wholecloud.wholecloud_corrector import (WholeCloudCorrector2D,
+                                                                  WholeCloudCorrector2DConfig)
 from inference.correctors.common.pbc import min_nn_pbc
 
 
@@ -55,17 +57,23 @@ class SPHModel12Experiment(Experiment):
         self.rd_test   = float(d['rd_test'])
 
         exp = self.raw.get('experiment', {})
-        self.kind     = exp.get('corrector', 'grid')   # grid | kdtree | grid_then_kdtree
+        self.kind     = exp.get('corrector', 'grid')   # grid | kdtree | grid_then_kdtree | wholecloud
         self.k_grid   = int(exp.get('k_grid', 5))
         self.k_kdtree = int(exp.get('k_kdtree', 10))
+        self.k_wc     = int(exp.get('k_wholecloud', 5))
         self.stride   = stride if stride is not None else int(exp.get('stride', 200))
         self.timestep = timestep
-        if self.kind not in ('grid', 'kdtree', 'grid_then_kdtree'):
-            raise ValueError(f"experiment.corrector must be grid | kdtree | grid_then_kdtree, got '{self.kind}'")
+        if self.kind not in ('grid', 'kdtree', 'grid_then_kdtree', 'wholecloud'):
+            raise ValueError('experiment.corrector must be grid | kdtree | grid_then_kdtree '
+                             f"| wholecloud, got '{self.kind}'")
 
     def _build_steps(self):
         """[(name, corrector, k), ...] in application order."""
         steps = []
+        if self.kind == 'wholecloud':
+            steps.append(('wholecloud',
+                          WholeCloudCorrector2D(WholeCloudCorrector2DConfig.from_yaml(self.config_path)),
+                          self.k_wc))
         if self.kind in ('grid', 'grid_then_kdtree'):
             steps.append(('grid',
                           GridCorrector2D(GridCorrector2DConfig.from_yaml(self.config_path)),

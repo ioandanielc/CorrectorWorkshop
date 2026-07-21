@@ -64,7 +64,7 @@ memory.
 |---|---|---|
 | `model9_n100_p050.pt` | `artifacts/training/train_run_2026-05-28_14-53-45/` | `dataset_config_packed` + `loss_config_packed` + `train_config_packed` |
 | `model9_n50_sparse.pt` | `artifacts/training/train_run_2026-05-26_17-34-01/` | `dataset_config_3` + `loss_config_5` + `train_config_2` |
-| `model12_sph_l4.pt` | `artifacts/training/train_run_2026-07-15_11-18-44/` (`model_best.pt`, == `model_final.pt`, iter 10000) | `dataset_config_sph` + `loss_config_rdsph_lam3_0p27` + `train_config_sph_adamw` + `model_config_12_sph_L4` |
+| `model12_sph_l4.pt` | `artifacts/training/train_run_2026-07-15_11-18-44/` (`model_best.pt` — NOT `model_final.pt`; sha256-verified 2026-07-21) | `dataset_config_sph` + `loss_config_rdsph_lam3_0p27` + `train_config_sph_adamw` + `model_config_12_sph_L4` |
 
 Note: the two model9 checkpoints predate the 2026-07-13 data-generation fix
 — they were effectively trained on a single frozen batch (32 and 8 clouds

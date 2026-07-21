@@ -20,7 +20,7 @@ CorrectorWorkshop/
 │   ├── configs/
 │   │   ├── training/            # dataset/ loss/ model/ trainer/ YAML sets + smoke_test/ (fast CPU variants)
 │   │   └── experiments/         # one subfolder per experiment, one YAML per variant
-│   │       ├── sph_tv/          #   model9: grid_6x6 (n100, default) / grid_10x10 (n50); model12_{grid,kdtree,grid_then_kdtree}
+│   │       ├── sph_tv/          #   model9: grid_6x6 (n100, default) / grid_10x10 (n50); model12_{grid,kdtree,grid_then_kdtree,wholecloud}
 │   │       ├── apply_corrector/ #   grid_6x6.yaml (corrector blocks only)
 │   │       └── obstruction/     #   grid_6x6.yaml (corrector blocks only)
 │   ├── models/
@@ -30,7 +30,7 @@ CorrectorWorkshop/
 │   │   └── weights/             # production checkpoints model9_*.pt + model12_sph_l4.pt, tracked in git (own README.md)
 │   ├── training/
 │   │   ├── trainer.py           # training loop: online data, K-step unrolling, dual eval
-│   │   ├── loss.py              # hybrid_loss (model9) + rdsph_loss/sph_loss (model12: + λ3·SPH kernel-gradient symmetry)
+│   │   ├── loss.py              # hybrid_loss (model9) + rdsph_loss/sph_loss (model12: + λ3·SPH kernel-gradient symmetry); KG primitive re-exported from utils/metrics.py
 │   │   └── datagen.py           # PoissonDiskDataset + PackedPoissonDiskDataset (online generation)
 │   ├── inference/
 │   │   ├── correctors/
@@ -39,18 +39,20 @@ CorrectorWorkshop/
 │   │   │   ├── grid/corrector.py       # GridCorrector2D/3D — tiling + ghost buffer + scaling + model (shared ND body)
 │   │   │   ├── kdtree/kdtree_corrector.py  # KDTreeCorrector2D/3D — violation-targeted greedy sweeps, k = cap
 │   │   │   ├── tv/tv_corrector.py      # TVCorrector2D / FastTVCorrector2D (cKDTree, ~125x faster) — TV baseline
+│   │   │   ├── wholecloud/wholecloud_corrector.py  # WholeCloudCorrector2D/3D — one forward_sparse call per pass, no tiles/seams; THE model12 deployment path
 │   │   │   └── pure/pure_inference.py  # PureInference2D — bare model9 round trip, N == N_train, no tiling/PBC
 │   │   └── experiments/         # one subfolder per experiment, each with a small README
-│   │       ├── sph_tv/          # SPHTVExperiment (model9 vs TV) + sph_model12_experiment (model12 quality check)
+│   │       ├── sph_tv/          # SPHTVExperiment (model9 vs TV) + sph_model12_experiment (model12 quality check) + kg_sweep.py (full-trajectory KG/nn metrics -> metrics.csv)
 │   │       ├── apply_corrector/ # correct every SPH timestep, save output (+ h5part scratch tools)
 │   │       ├── obstruction/     # ObstructionExperiment + demo + obstruction.py (masks + ghost fill)
 │   │       └── pbc_toy/         # standalone synthetic proof of the ghost-buffer approach
 │   └── utils/
 │       ├── config.py, logger.py # config loading, logging
+│       ├── metrics.py           # shared KG primitive (quintic kernel, torch, batched) + numpy helpers (mean_kg, nn_dists, mean_nn, illegal_frac)
 │       └── visualizations/
 │           ├── training_visualizations/   # sample plots, evolution GIF, finished-run plots
-│           ├── inference_visualizations/  # comparison (4x5), timeseries, enhanced (3-panel per-apply), tiling
-│           └── misc/                      # empty placeholder
+│           └── inference_visualizations/  # comparison (4x5), timeseries, ml_vs_tv, enhanced (3-panel per-apply), tiling
+├── tests/                       # test_wholecloud.py — WholeCloudCorrector2D must reproduce the sim-validated artifact bit-exactly (needs artifacts on disk)
 ├── artifacts/                   # gitignored — every input and run output
 │   ├── training/                # train_run_<timestamp>/ from the trainer
 │   └── inference/
@@ -112,7 +114,8 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 4. **Iterative application**: `apply(pts, k=...)` = K passes, diminishing returns. Grid K=3–5 outperforms TV from t≈300 onwards on the SPH trajectory. Measured (2D SPH, N=2500): kdtree k≤10 beats grid K=5 on quality (mean nn 0.0184–0.0185 vs 0.0170–0.0180); grid K=5 then kdtree k≤10 composes best (mean nn ≈ 0.0186–0.0187) — exposed as `corrector: grid_then_kdtree` in the sph_tv model12 experiment (`model12_grid_then_kdtree.yaml`).
 
 **Interfaces (`src/inference/correctors/base.py`):**
-- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `TVCorrector2D`/`FastTVCorrector2D`, `PureInference2D`. The grid/kdtree 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
+- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `WholeCloudCorrector2D/3D`, `TVCorrector2D`/`FastTVCorrector2D`, `PureInference2D`. The grid/kdtree/wholecloud 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
+- `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `attention_rd`); requires a model with `forward_sparse` (model12). Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly.
 - `Experiment` — one method `run()`. Implemented by `SPHTVExperiment` and `ObstructionExperiment` (the model12 sph_tv script uses the same `experiment.corrector` step-builder pattern). Experiment-loop settings (`stride`, `k_values`, `corrector` kind…) live on the experiments, not on corrector configs.
 
 **Obstructions**: `src/inference/experiments/obstruction/obstruction.py` fills obstacle interiors (ellipse/polygon/gear masks) with ghost particles at spacing `rd` so the corrector pushes real particles away from the boundary; ghosts are dropped after `apply()`.
@@ -142,8 +145,7 @@ For model12, SPH-restart quality is additionally judged by `mean_kg_norm` (kerne
 ## Known rough edges
 
 - `artifacts/inference/experiments/<name>/data/` inputs are not in git: the SPH trajectory lives under `sph_tv/data/`.
-- Everything under `artifacts/inference/experiments/*/runs/` and `artifacts/training/` is regenerable run output; delete freely.
-- `src/inference/experiments/apply_corrector/inspector.py` has a hardcoded local path — scratch script, not a reusable tool.
+- Everything under `artifacts/inference/experiments/*/runs/` and `artifacts/training/` is regenerable run output; delete freely — EXCEPT `sph_tv/for_sim/` (sim-validated reference states; `tests/test_wholecloud.py` and `kg_sweep.py` read `positions_model12_corrected.npy`), `apply_corrector/runs/positions_corrected_K5.npy` (model9 series in the KG sweep) and the checkpoint-provenance training runs named in `src/models/weights/README.md`.
 - Open issue (found via enhanced viz): on lattice-like inputs (e.g. t=0) the inferred domain (max extent) undershoots the true PBC box, pinching the wrap seam into artificial violations — grid corrector degrades mean nn at t=0 (0.0184 → 0.0174); self-heals by t≈300. Fix TBD (pad extent by one nn-spacing?).
 - The shipped `dataset_config_packed.yaml` (rd=0.05 → N≈231) does not match what `model9_n100_p050` recorded at training time (rd_train 0.076, N≈100) — the config drifted after that run. The 2D checkpoints also predate the 2026-07-13 frozen-seed data-generation fix (see src/models/weights/README.md).
 
@@ -152,6 +154,6 @@ For model12, SPH-restart quality is additionally judged by `mean_kg_norm` (kerne
 This branch is the **2D SPH use case**. Two experiments in scope: the SPH-trajectory corrector (many timesteps, `sph_tv`) and the obstruction demo.
 
 - **model9 vs TV** (`sph_tv`): grid 6×6 + n100 K=5 reaches mean_nn ≈ 0.018 at t=700 vs TV ≈ 0.016 (+13%); kdtree and the grid→kdtree composition beat it (numbers above).
-- **model12 (physics-informed — the active thrust)**: adds `λ3·|KG|²` (SPH kernel-gradient symmetry) so corrected clouds are valid SPH restarts — model9's are not (it blows KG up 3–4.5×, which is why its clouds made bad restarts). The whole-cloud sparse pass (`forward_sparse`) drives disordered-regime KG below the TV baseline, ~50× faster than tiled, and was validated end-to-end by an actual SPH re-simulation. PoC for a physics-informed-ML ("Physics in AI") workshop paper. The KG term is a *soft, training-only* constraint — never enforced at inference.
+- **model12 (physics-informed — the active thrust)**: adds `λ3·|KG|²` (SPH kernel-gradient symmetry) so corrected clouds are valid SPH restarts — model9's are not (it blows KG up ~3.9×: full-sweep disordered mean 1.278 vs raw 0.326). The whole-cloud sparse pass is now a first-class `WholeCloudCorrector2D` (`corrector: wholecloud`, `model12_wholecloud.yaml`), bit-exact against the sim-validated trajectory (tests/), ~20× faster than tiled (~0.26 s vs 5.8 s per N=2500 timestep). Full-trajectory KG sweep (`kg_sweep.py`, 1002 steps, disordered means): raw 0.326 / TV 0.274 / model12_wc **0.128**, KG floor ≈ 0.111. The KG term is a *soft, training-only* constraint — never enforced at inference. PoC for a physics-informed-ML ("Physics in AI") workshop paper.
 - **Obstruction**: to be re-run on this branch.
-- Roadmap: promote the whole-cloud path to a first-class `WholeCloudCorrector2D` (currently scratchpad; `forward_sparse` is committed); `MixedCorrector` for the grid→kdtree composition; domain-inference fix for lattice-like inputs (t=0 undershoot).
+- Roadmap (ON HOLD pending user walkthrough): 3D model12 (needs 3D quintic KG in utils/metrics.py; synthetic data only for now); ablations grouped + λ3=0 control arm; obstruction re-run; `MixedCorrector`; domain-inference fix for lattice-like inputs (t=0 undershoot — the wholecloud corrector's explicit `box` already avoids it).

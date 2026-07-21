@@ -1,0 +1,24 @@
+# SPHModel12Experiment config: whole-cloud sparse pass — THE deployment path.
+#   .venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml
+#
+# One forward_sparse call over the entire N=2500 cloud per pass: no tiles, no
+# ghosts, no seams. ~50x faster than the tiled grid (~0.2s vs ~5.8s/timestep)
+# and equal-or-better KG at every timestep; sim-validated as an SPH restart.
+# data.box is the TRUE periodic box, given explicitly — extent-based domain
+# inference undershoots it on lattice-like frames (see CLAUDE.md rough edges).
+
+model:
+  checkpoint: src/models/weights/model12_sph_l4.pt
+  config:     src/configs/training/model/model_config_12_sph_L4.yaml
+  rd_train:   0.14   # constraint rd (drives coordinate scaling; the edge cutoff
+                     # is the model config's attention_rd, read automatically)
+
+data:
+  without_tv: artifacts/inference/experiments/sph_tv/data/positions_without.npy
+  rd_test:    0.02
+  box:        1.0    # unit torus
+
+experiment:
+  corrector:    wholecloud
+  k_wholecloud: 5
+  stride:       200
