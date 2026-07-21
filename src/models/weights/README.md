@@ -21,13 +21,12 @@ sees the non-violating pairwise asymmetry that drives the SPH
 kernel-gradient symmetry term — trained against `rdsph_loss` (hybrid
 violation + displacement reg + λ3 × kernel-gradient symmetry). Calling
 convention: pass `rd=attention_rd` (not the constraint rd) and `box=`
-(periodic minimum-image geometry) — see model12.py's docstring. All three ML
-correctors (`grid`, `kdtree`, `wholecloud`) carry the box-aware adapter; run
-via `src/configs/experiments/sph_tv/model12_*.yaml`. Note the dense-edge tile
-ceiling: `forward()` materialises `(B, N, N)` edges (N ~ 50-250); the
-`forward_sparse` edge-list path removes it — `WholeCloudCorrector2D` uses it
-for whole-cloud inference (the deployment path, guarded bit-exactly by
-`tests/test_wholecloud.py`).
+(periodic minimum-image geometry) — see model12.py's docstring.
+`WholeCloudCorrector2D` carries the box-aware adapter; run via
+`src/configs/experiments/sph_tv/model12_wholecloud.yaml`. `forward()`
+materialises dense `(B, N, N)` edges (training-scale N only); the
+`forward_sparse` edge-list path removes that ceiling — the corrector uses it
+for whole-cloud inference (guarded bit-exactly by `tests/test_wholecloud.py`).
 
 Final validated metrics (K=5, full 256-cloud fixed validation set):
 viol_reduction 89.6%, illegal_pairs 0.39%, mean|KG| 0.0220 — vs. the

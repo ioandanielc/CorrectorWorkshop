@@ -1,0 +1,14 @@
+# ObstructionExperiment corrector config: whole-cloud model12 corrector.
+# Referenced by ObstructionExperimentConfig.corrector_config
+# (src/inference/experiments/obstruction/obstruction_experiment.py).
+# Corrector blocks only — the experiment overrides rd_test (its own rd),
+# box (its domain) and device at runtime, and generates its own point clouds.
+
+model:
+  checkpoint: src/models/weights/model12_sph_l4.pt
+  config:     src/configs/training/model/model_config_12_sph_L4.yaml
+  rd_train:   0.14
+
+data:
+  rd_test: 0.02   # overridden by ObstructionExperimentConfig.rd
+  box:     1.0    # overridden by ObstructionExperimentConfig.domain

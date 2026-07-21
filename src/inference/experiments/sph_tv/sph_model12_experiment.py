@@ -1,21 +1,18 @@
 """
 sph_model12_experiment.py
 --------------------------
-Validates the model12 SPH corrector (grid / kdtree / grid_then_kdtree /
-wholecloud) against the real SPH trajectory: before/after quality per sampled
-timestep (model12 trains only on synthetic square-lattice Poisson-disk clouds,
-so this is the real-data check). For the full-trajectory KG comparison against
-the raw / TV / model9-era series, see kg_sweep.py.
-
-The corrector variant (grid / kdtree / grid_then_kdtree) is selected by the
-config file's experiment.corrector field via a small step-builder.
+Validates the model12 whole-cloud corrector against the real SPH trajectory:
+before/after quality (mean nn-distance + illegal%) per sampled timestep.
+model12 trains only on synthetic square-lattice Poisson-disk clouds, so this
+is the real-data check. For the full-trajectory KG comparison against the
+raw / TV / model9-era series, see kg_sweep.py.
 
 Usage
 -----
-    .venv\\Scripts\\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_grid.yaml
+    .venv\\Scripts\\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml
 
     # Single timestep (fast check)
-    .venv\\Scripts\\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_grid.yaml --timestep 300
+    .venv\\Scripts\\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml --timestep 300
 """
 import argparse
 import sys
@@ -32,16 +29,14 @@ import yaml
 sys.path.insert(0, str(Path(__file__).parents[3]))
 
 from inference.correctors.base import Experiment
-from inference.correctors.grid.corrector import GridCorrector2D, GridCorrector2DConfig
-from inference.correctors.kdtree.kdtree_corrector import KDTreeCorrector2D, KDTreeCorrector2DConfig
 from inference.correctors.wholecloud.wholecloud_corrector import (WholeCloudCorrector2D,
                                                                   WholeCloudCorrector2DConfig)
-from inference.correctors.common.pbc import min_nn_pbc
+from utils.metrics import nn_dists
 
 
 class SPHModel12Experiment(Experiment):
     """
-    Applies the configured corrector variant to sampled timesteps of the SPH
+    Applies the whole-cloud corrector to sampled timesteps of the SPH
     trajectory and reports mean nn-distance + illegal-pair% before/after.
     """
 
@@ -53,34 +48,12 @@ class SPHModel12Experiment(Experiment):
         d = self.raw['data']
         self.data_path = d.get('without_tv', 'artifacts/inference/experiments/sph_tv/data/positions_without.npy')
         self.rd_test   = float(d['rd_test'])
+        self.box       = float(d.get('box', 1.0))
 
         exp = self.raw.get('experiment', {})
-        self.kind     = exp.get('corrector', 'grid')   # grid | kdtree | grid_then_kdtree | wholecloud
-        self.k_grid   = int(exp.get('k_grid', 5))
-        self.k_kdtree = int(exp.get('k_kdtree', 10))
-        self.k_wc     = int(exp.get('k_wholecloud', 5))
+        self.k        = int(exp.get('k_wholecloud', 5))
         self.stride   = stride if stride is not None else int(exp.get('stride', 200))
         self.timestep = timestep
-        if self.kind not in ('grid', 'kdtree', 'grid_then_kdtree', 'wholecloud'):
-            raise ValueError('experiment.corrector must be grid | kdtree | grid_then_kdtree '
-                             f"| wholecloud, got '{self.kind}'")
-
-    def _build_steps(self):
-        """[(name, corrector, k), ...] in application order."""
-        steps = []
-        if self.kind == 'wholecloud':
-            steps.append(('wholecloud',
-                          WholeCloudCorrector2D(WholeCloudCorrector2DConfig.from_yaml(self.config_path)),
-                          self.k_wc))
-        if self.kind in ('grid', 'grid_then_kdtree'):
-            steps.append(('grid',
-                          GridCorrector2D(GridCorrector2DConfig.from_yaml(self.config_path)),
-                          self.k_grid))
-        if self.kind in ('kdtree', 'grid_then_kdtree'):
-            steps.append(('kdtree',
-                          KDTreeCorrector2D(KDTreeCorrector2DConfig.from_yaml(self.config_path)),
-                          self.k_kdtree))
-        return steps
 
     def run(self) -> None:
         pos_without = np.load(self.data_path)
@@ -88,11 +61,11 @@ class SPHModel12Experiment(Experiment):
         rd = self.rd_test
 
         tag     = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        out_dir = Path('artifacts/inference/experiments/sph_tv/runs') / f'model12_{self.kind}_{tag}'
+        out_dir = Path('artifacts/inference/experiments/sph_tv/runs') / f'model12_wholecloud_{tag}'
         out_dir.mkdir(parents=True)
 
-        steps = self._build_steps()
-        print(f"Corrector: {self.kind}  (" + ', '.join(f'{n} k={k}' for n, _, k in steps) + ')')
+        corrector = WholeCloudCorrector2D(WholeCloudCorrector2DConfig.from_yaml(self.config_path))
+        print(f'Corrector: wholecloud  k={self.k}  box={self.box}')
         print(f'Data: {self.data_path}  T={T}  N={N}  rd_test={rd}')
 
         timesteps = [self.timestep % T] if self.timestep is not None else list(range(0, T, self.stride))
@@ -100,15 +73,13 @@ class SPHModel12Experiment(Experiment):
         ts_list, nn_before, nn_after, ill_before, ill_after, runtimes = [], [], [], [], [], []
         for i, t in enumerate(timesteps):
             pts  = pos_without[t].astype(np.float32)
-            nn_b = min_nn_pbc(pts)
+            nn_b = nn_dists(pts, box=self.box)
 
             t0        = time.perf_counter()
-            corrected = pts
-            for name, corrector, k in steps:
-                corrected = corrector.apply(corrected, k=k)
-            runtime = time.perf_counter() - t0
+            corrected = corrector.apply(pts, k=self.k)
+            runtime   = time.perf_counter() - t0
 
-            nn_a = min_nn_pbc(corrected)
+            nn_a = nn_dists(corrected, box=self.box)
 
             ts_list.append(t)
             nn_before.append(float(nn_b.mean()))
@@ -122,11 +93,11 @@ class SPHModel12Experiment(Experiment):
 
         fig, ax = plt.subplots(figsize=(7, 4.5))
         ax.plot(ts_list, nn_before, 'o-', color='#888888', lw=1.2, ms=3, label='before')
-        ax.plot(ts_list, nn_after,  'o-', color='#1f77b4', lw=1.2, ms=3, label=f'after ({self.kind})')
+        ax.plot(ts_list, nn_after,  'o-', color='#1f77b4', lw=1.2, ms=3, label=f'after (wholecloud k={self.k})')
         ax.axhline(rd, color='#e74c3c', lw=0.8, ls='--', label=f'rd_test={rd}')
         ax.set_xlabel('timestep')
         ax.set_ylabel('mean nn distance')
-        ax.set_title(f'model12 {self.kind}: N={N}')
+        ax.set_title(f'model12 wholecloud: N={N}')
         ax.legend()
         fig.tight_layout()
         fig.savefig(out_dir / 'timeseries.png', dpi=150)
@@ -135,7 +106,7 @@ class SPHModel12Experiment(Experiment):
         with open(out_dir / 'report.txt', 'w') as f:
             f.write(f'config    : {self.config_path}\n')
             f.write(f'data      : {self.data_path}  (T={T}, N={N})\n')
-            f.write(f'corrector : {self.kind}  k_grid={self.k_grid}  k_kdtree={self.k_kdtree}\n')
+            f.write(f'corrector : wholecloud  k={self.k}  box={self.box}\n')
             f.write(f'rd_test   : {rd}\n')
             f.write(f'timesteps : {ts_list}\n')
             f.write(f'runtime   : mean={np.mean(runtimes):.2f}s  total={sum(runtimes):.1f}s\n\n')

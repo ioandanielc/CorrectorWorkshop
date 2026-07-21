@@ -110,8 +110,8 @@ class _WholeCloudCorrectorND(Corrector):
         if not hasattr(self.model, 'forward_sparse'):
             raise TypeError(
                 f'{module_path} has no forward_sparse — the whole-cloud corrector '
-                f'needs the sparse edge-list path (model12); use the grid/kdtree '
-                f'correctors for dense-only models (model9).')
+                f'needs the sparse edge-list path (model12); dense-only models '
+                f'(the removed model9 family) live on the main/simplify branches.')
 
         # The edge cutoff and the rd passed to forward_sparse are the model's
         # attention radius (its calling convention), NOT the constraint rd —

@@ -20,8 +20,8 @@ CorrectorWorkshop/
 │   ├── configs/
 │   │   ├── training/            # dataset/ loss/ model/ trainer/ YAML sets + smoke_test/ (fast CPU variants); one YAML each = the production recipe
 │   │   └── experiments/         # one subfolder per experiment, one YAML per variant
-│   │       ├── sph_tv/          #   model12_{grid,kdtree,grid_then_kdtree,wholecloud}
-│   │       └── obstruction/     #   grid_6x6.yaml (corrector blocks only, retargeted to model12 — untested until the re-run)
+│   │       ├── sph_tv/          #   model12_wholecloud.yaml
+│   │       └── obstruction/     #   wholecloud.yaml (corrector blocks only)
 │   ├── models/
 │   │   ├── architectures/
 │   │   │   └── model12/         # model12.py — SPH corrector: L-round message passing + KG-symmetry loss; forward_sparse (whole-cloud)
@@ -33,25 +33,22 @@ CorrectorWorkshop/
 │   ├── inference/
 │   │   ├── correctors/
 │   │   │   ├── base.py          # Corrector / Experiment ABCs
-│   │   │   ├── common/          # pbc.py (3^dim images), scaling.py (rd_train/rd_test), tiling.py (n_cells^dim tiles)
-│   │   │   ├── grid/corrector.py       # GridCorrector2D/3D — tiling + ghost buffer + scaling + model (shared ND body)
-│   │   │   ├── kdtree/kdtree_corrector.py  # KDTreeCorrector2D/3D — violation-targeted greedy sweeps, k = cap
+│   │   │   ├── common/          # scaling.py (rd_train/rd_test coordinate scaling)
 │   │   │   └── wholecloud/wholecloud_corrector.py  # WholeCloudCorrector2D/3D — one forward_sparse call per pass, no tiles/seams; THE deployment path
 │   │   └── experiments/         # one subfolder per experiment, each with a small README
-│   │       ├── sph_tv/          # sph_model12_experiment (grid/kdtree/grid_then_kdtree/wholecloud) + kg_sweep.py (full-trajectory KG/nn metrics -> metrics.csv)
-│   │       └── obstruction/     # ObstructionExperiment + demo + obstruction.py (masks + ghost fill)
+│   │       ├── sph_tv/          # sph_model12_experiment (wholecloud) + kg_sweep.py (full-trajectory KG/nn metrics -> metrics.csv)
+│   │       └── obstruction/     # ObstructionExperiment (wholecloud + ghost fill) + obstruction.py (masks + fill)
 │   └── utils/
 │       ├── config.py, logger.py # config loading, logging
 │       ├── metrics.py           # shared KG primitive (quintic kernel, torch, batched) + numpy helpers (mean_kg, nn_dists, mean_nn, illegal_frac)
 │       └── visualizations/
-│           ├── training_visualizations/   # sample plots, evolution GIF, finished-run plots
-│           └── inference_visualizations/  # enhanced (3-panel per-apply diagnostics)
+│           └── training_visualizations/   # sample plots, evolution GIF, finished-run plots
 ├── tests/                       # test_wholecloud.py — WholeCloudCorrector2D must reproduce the sim-validated artifact bit-exactly (needs artifacts on disk)
 ├── artifacts/                   # gitignored — every input and run output
 │   ├── training/                # train_run_<timestamp>/ from the trainer
 │   └── inference/
 │       ├── experiments/<name>/  # data/ (external inputs) + runs/ (outputs), per experiment
-│       └── misc/                # enhanced_viz/ diagnostics, one-off figures
+│       └── misc/                # one-off figures
 ├── requirements.txt
 └── README.md                    # quickstart + full structure/config walkthrough
 ```
@@ -95,22 +92,22 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 **Inference (all correctors):**
 
-0. **Domain inference**: the tiled correctors (grid/kdtree) don't take a `domain` config — the input cloud is centered on its own centroid and the domain is the largest axis extent, fresh on every `apply()` call; works regardless of the input coordinate frame. The wholecloud corrector additionally accepts an explicit `data.box` (preferred when the true PBC box is known — see rough edges).
+0. **Domain**: give the true PBC box explicitly via `data.box` when known (the SPH case: 1.0; obstruction: its domain) — extent-based inference (`box: null`) undershoots on lattice-like clouds (see rough edges).
 
-1. **Grid corrector**: split the inferred domain into `n_cells^dim` tiles so each tile has N_tile ≈ N_train. Each tile is extended by `ghost_width = ghost_factor * cell_size` (a fraction of a tile's own size, not of rd_test); all `3^dim` periodic images are checked and images falling in the extended tile become ghosts. Only core (non-ghost) displacements are kept. Correctness requires `ghost_width ≥ rd_test` — the corrector warns if violated. In 3D ghost overhead is ~2.7x core, so pick `n_cells` from **total** (core+ghost) ≈ N_train.
+1. **Whole-cloud sparse pass**: per pass, scale the cloud to the model's training rd, build the PBC edge list (`cKDTree.query_pairs` at `attention_rd`, both directions), one `forward_sparse` call, unscale, wrap. No tiles, no ghosts, no seams; ~0.26 s at N=2500. (The tiled grid/kdtree correctors were removed 2026-07-21 — on `main` if a tiled comparison is ever needed again; their measured numbers are recorded in the kg_sweep artifacts and memory.)
 
-2. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before the invariant transform; divide displacements by `scale` after reverting. Maps violations into the model's training distribution.
+2. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before the model call; divide displacements by `scale` after. Maps violations into the model's training distribution. Verified to extrapolate: obstruction runs at rd_test=0.012 (scale ≈ 11.7) on a bounded scene and converges to ~0.98·rd.
 
-3. **KDTree corrector**: runs the model only around violations. One sweep: PBC `cKDTree(boxsize)` → violating points worst-first → greedy claiming — a site's neighbourhood is its `total_core` (≈ N_train) nearest points, its `inner_core` most central unclaimed points receive displacements, the outer ring is frozen context → one rectangular batched model call. `apply(points, k)`: k is a **cap** — early stop once clean, sweeps get cheaper as violations shrink. Warns when a site's frozen ring is thinner than rd_test.
+3. **Ghost-particle obstacles** (obstruction experiment): the obstacle interior is filled with fixed ghost particles at spacing rd (`obstruction.py`); each pass concatenates ghosts to the real particles, applies the whole-cloud corrector once, and keeps only the real rows — ghosts are re-pinned every pass so the solid never drifts.
 
-4. **Iterative application**: `apply(pts, k=...)` = K passes, diminishing returns. Measured with model12 (2D SPH, N=2500): kdtree and grid_then_kdtree edge out grid alone on mean nn (~0.0182 vs ~0.0178); **wholecloud beats everything on KG and speed** (~0.26 s vs ~5.8 s per timestep) and is the deployment path — grid/kdtree remain as the tiling comparison.
+4. **Iterative application**: `apply(pts, k=...)` = k passes, diminishing returns; k=5 is the validated deployment setting.
 
 **Interfaces (`src/inference/correctors/base.py`):**
-- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `WholeCloudCorrector2D/3D`. (The TV corrector implementation was purged with model9 — the TV comparison uses the precomputed `positions.npy` trajectory.) The 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. All ML correctors require a **box-aware** model (`uses_box`, model12-style) and raise otherwise; `model_file` is required in the model config (no default architecture). `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
-- `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `attention_rd`); requires a model with `forward_sparse`. Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly. (Grid/kdtree keep an add-then-subtract displacement arithmetic on purpose — bit-identical to the historically validated outputs.)
+- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `WholeCloudCorrector2D/3D` (thin `DIM = 2/3` subclasses of a private ND body). Requires a **box-aware** model with `forward_sparse` (`uses_box`, model12-style) and raises otherwise; `model_file` is required in the model config (no default architecture). The config carries `checkpoint` + `model_config` + `rd_train`; everything re-exports from `inference.correctors`. (TV / grid / kdtree implementations were purged — TV comparisons use the precomputed `positions.npy` trajectory; tiled correctors live on `main`.)
+- `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `attention_rd`). Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly.
 - `Experiment` — one method `run()`. Implemented by `ObstructionExperiment`; the sph_tv model12 script uses the same `experiment.corrector` step-builder pattern. Experiment-loop settings (`stride`, `k_*`, `corrector` kind…) live on the experiments, not on corrector configs.
 
-**Obstructions**: `src/inference/experiments/obstruction/obstruction.py` fills obstacle interiors (ellipse/polygon/gear masks) with ghost particles at spacing `rd` so the corrector pushes real particles away from the boundary; ghosts are dropped after `apply()`.
+**Obstructions**: `src/inference/experiments/obstruction/obstruction.py` fills obstacle interiors (ellipse/polygon/gear masks) with ghost particles at spacing `rd` so the corrector pushes real particles away from the boundary; ghosts are re-pinned every pass and dropped from the output.
 
 **Run an experiment** (config schema: README "Configs"; every YAML's header comment shows its run command):
 ```
@@ -139,7 +136,7 @@ SPH-restart quality is additionally judged by `mean_kg_norm` (kernel-gradient sy
 
 - `artifacts/inference/experiments/<name>/data/` inputs are not in git: the SPH trajectory lives under `sph_tv/data/`.
 - Everything under `artifacts/inference/experiments/*/runs/` and `artifacts/training/` is regenerable run output; delete freely — EXCEPT `sph_tv/for_sim/` (sim-validated reference states; `tests/test_wholecloud.py` and `kg_sweep.py` read `positions_model12_corrected.npy`), `apply_corrector/runs/positions_corrected_K5.npy` (model9 series in the KG sweep) and the checkpoint-provenance training runs named in `src/models/weights/README.md`.
-- Open issue: on lattice-like inputs (e.g. t=0) the inferred domain (max extent) undershoots the true PBC box, pinching the wrap seam into artificial violations — affects the tiled correctors (grid/kdtree). The wholecloud corrector avoids it by taking the true box explicitly (`data.box`); measured at t=0 it leaves the cloud essentially untouched (nn 0.0200 → 0.0200) where the grid corrector degraded it.
+- Open issue (only when `data.box` is omitted): extent-based domain inference undershoots the true PBC box on lattice-like inputs, pinching the wrap seam into artificial violations. With the box given explicitly (all shipped configs do) the issue is moot — at t=0 the wholecloud corrector leaves the cloud essentially untouched (nn 0.0200 → 0.0200).
 - `obstruction/grid_6x6.yaml` was retargeted from the removed model9 checkpoint to model12 — not yet re-run/tuned (tiling + ghost_factor unvalidated for this checkpoint).
 
 ## Current state
@@ -147,5 +144,5 @@ SPH-restart quality is additionally judged by `mean_kg_norm` (kernel-gradient sy
 This branch is the **model12 / 2D SPH use case**, production-shaped (2026-07-21): model9 removed, whole-cloud path first-class, results test-guarded and persisted.
 
 - **model12 (physics-informed)**: `λ3·|KG|²` (SPH kernel-gradient symmetry) makes corrected clouds valid SPH restarts — the removed model9's were not (it blows KG up ~3.9×: full-sweep disordered mean 1.278 vs raw 0.326; kept as an artifact-only comparison series). `WholeCloudCorrector2D` (`corrector: wholecloud`, `model12_wholecloud.yaml`) is the deployment path: bit-exact against the sim-validated trajectory (`tests/test_wholecloud.py`), ~20× faster than tiled (~0.26 s vs 5.8 s per N=2500 timestep). Full-trajectory KG sweep (`kg_sweep.py`, 1002 steps, disordered means): raw 0.326 / TV 0.274 / model12_wc **0.128**, KG floor ≈ 0.111. The KG term is a *soft, training-only* constraint — never enforced at inference. PoC for a physics-informed-ML ("Physics in AI") workshop paper.
-- **Obstruction**: config retargeted to model12; re-run pending.
-- Roadmap (ON HOLD pending user walkthrough): 3D model12 (needs 3D quintic KG in utils/metrics.py; synthetic data only for now); ablations grouped + λ3=0 control arm; obstruction re-run; disorder-level ("physical temperature") study; paper/ figure scripts (deferred until the rest is cleared).
+- **Obstruction**: re-run 2026-07-21 with the wholecloud corrector — 6100 real + 832 ghosts, mean nn 0.0076 → 0.0117 (rd 0.012, scale ≈ 11.7, bounded non-periodic scene) in 5 ghost-re-pinned passes. Strong scale-extrapolation evidence.
+- Roadmap (ON HOLD pending user walkthrough): 3D model12 (needs 3D quintic KG in utils/metrics.py; synthetic data only for now); ablations (λ3 re-runs + λ3=0 control arm; sph_loss kept as the pure-symmetry arm — shows illegality+displacement terms are necessary); disorder-level ("physical temperature") study; paper/ figure scripts (deferred until the rest is cleared).

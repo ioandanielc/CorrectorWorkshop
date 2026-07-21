@@ -3,10 +3,9 @@
 The model12 SPH-corrector experiments on the real 2D SPH trajectory (N=2500,
 T=1002, PBC). Two scripts:
 
-**sph_model12_experiment.py** — apply the configured corrector variant
-(`grid` / `kdtree` / `grid_then_kdtree` / `wholecloud`) to sampled timesteps;
-reports mean nn-distance + illegal% before/after. Output:
-`artifacts/inference/experiments/sph_tv/runs/model12_<kind>_<timestamp>/`.
+**sph_model12_experiment.py** — apply the whole-cloud corrector to sampled
+timesteps; reports mean nn-distance + illegal% before/after. Output:
+`artifacts/inference/experiments/sph_tv/runs/model12_wholecloud_<timestamp>/`.
 
 ```bash
 .venv\Scripts\python.exe src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml

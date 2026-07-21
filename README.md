@@ -72,21 +72,18 @@ src/
   inference/
     correctors/
       base.py                 Corrector / Experiment ABCs — every corrector and experiment implements these
-      common/                 pbc.py, scaling.py, tiling.py — shared PBC / rd-scaling / tile geometry
-      grid/                   GridCorrector2D/3D — tiles the whole domain, ghost buffers (tiling comparison)
-      kdtree/                 KDTreeCorrector2D/3D — model only around violations, k = cap w/ early stop
+      common/                 scaling.py — rd_train/rd_test coordinate scaling
       wholecloud/             WholeCloudCorrector2D/3D — one forward_sparse call per pass,
                               no tiles/seams; THE deployment path
     experiments/              one subfolder per experiment, each with its own README:
-      sph_tv/                 sph_model12_experiment (corrector variants) + kg_sweep (full-trajectory metrics)
-      obstruction/            corrector around domain obstacles (gear mask + ghost fill)
+      sph_tv/                 sph_model12_experiment (wholecloud) + kg_sweep (full-trajectory metrics)
+      obstruction/            wholecloud corrector around domain obstacles (gear mask + ghost fill)
   utils/
     config.py, logger.py      config loading, logging
     metrics.py                shared KG primitive (quintic kernel, torch, batched) +
                               numpy helpers: mean_kg, nn_dists, mean_nn, illegal_frac
     visualizations/
       training_visualizations/    sample plots, evolution GIF, finished-run plots
-      inference_visualizations/   enhanced (3-panel per-apply diagnostics)
 
 tests/
   test_wholecloud.py          WholeCloudCorrector2D must reproduce the sim-validated
@@ -240,29 +237,6 @@ data:
 `experiment.device` (below) is also read by every corrector's `from_yaml`
 (default `cpu`).
 
-#### GridCorrector — `tiling:` + `visualization:`
-
-```yaml
-tiling:
-  n_cells:      7      # grid is n_cells^dim; for a KG (symmetry) model size
-                       # tiles from the SPH kernel support (3h), not rd —
-                       # see model12_grid.yaml's header for the sizing argument
-  ghost_factor: 0.45   # ghost_width = ghost_factor * cell_size (fraction of a
-                       # tile, not of rd_test); must give ghost_width ≥ rd_test
-
-visualization:         # optional, 2D only
-  enhanced: true       # save a 3-panel diagnostic figure per apply() call
-  dir: artifacts/inference/misc/enhanced_viz
-```
-
-#### KDTreeCorrector — `kdtree:`
-
-```yaml
-kdtree:                # optional — 2D defaults shown (3D defaults: 50 / 12)
-  total_core: 100      # points per model input
-  inner_core: 25       # most central points that receive displacements
-```
-
 #### WholeCloudCorrector — `data.box`
 
 ```yaml
@@ -274,20 +248,15 @@ data:                  # extends the common data: block
 
 #### sph_model12 experiment — `experiment:` corrector step-builder
 
-`sph_model12_experiment.py` selects its corrector composition via
-`experiment.corrector`, reading the common blocks plus `tiling:` / `kdtree:` /
-`data.box` for the paths that need them. It is the consumer of the SPH
-trajectory path:
+`sph_model12_experiment.py` reads the common blocks plus `data.box`, and is
+the consumer of the SPH trajectory path:
 
 ```yaml
 data:
   without_tv: artifacts/inference/experiments/sph_tv/data/positions_without.npy
 
 experiment:
-  corrector: wholecloud     # grid | kdtree | grid_then_kdtree | wholecloud
-  k_wholecloud: 5           # passes for the wholecloud path
-  k_grid:    5              # passes for the grid path(s)
-  k_kdtree:  10             # cap — stops early once clean
+  k_wholecloud: 5           # correction passes
   stride:    200            # evaluate every stride-th SPH timestep
 ```
 
@@ -300,30 +269,20 @@ Programmatic use). Every ML corrector config carries `checkpoint` /
 Beyond those, with dataclass defaults shown:
 
 ```python
-GridCorrector2DConfig(       # GridCorrector3DConfig: same fields
-    n_cells      = 6,
-    ghost_factor = 1.0,      # dataclass default — the shipped YAMLs use tuned values
-    enhanced_visualization = False,
-    viz_dir      = 'artifacts/inference/misc/enhanced_viz')
-
-KDTreeCorrector2DConfig(
-    total_core = 100,
-    inner_core = 25)
-
 WholeCloudCorrector2DConfig(
     box = None)              # None = infer domain from extent; set the true
                              # PBC box when known (the SPH case: 1.0)
 
 ObstructionExperimentConfig( # standalone experiment config, not a corrector's
-    corrector_config = 'src/configs/experiments/obstruction/grid_6x6.yaml',
+    corrector_config = 'src/configs/experiments/obstruction/wholecloud.yaml',
     rd          = 0.012,
     domain      = 1.0,
     cx          = 0.5,       # obstacle centre
     cy          = 0.5,
     noise_scale = 0.3,       # noise_std = noise_scale * rd
-    k_values    = [1, 3, 5],
+    k           = 5,         # correction passes (ghosts re-pinned each pass)
     seed        = 42,
-    device      = 'cuda')
+    device      = 'cpu')
 ```
 
 ---
@@ -366,9 +325,9 @@ own README, its configs under `src/configs/experiments/<name>/`, and its data
 
 | Experiment | What it does | Run |
 |---|---|---|
-| `sph_tv` (corrector variants) | model12 corrector quality per sampled timestep | `python src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml` |
+| `sph_tv` (wholecloud) | model12 corrector quality per sampled timestep | `python src/inference/experiments/sph_tv/sph_model12_experiment.py src/configs/experiments/sph_tv/model12_wholecloud.yaml` |
 | `sph_tv` (KG sweep) | full-trajectory mean\|KG\|/nn/ill% for raw / TV / model9-K5 / wholecloud → metrics.csv | `python src/inference/experiments/sph_tv/kg_sweep.py` |
-| `obstruction` | corrector around a gear obstacle via ghost-particle fill (retargeted to model12 — re-run pending) | `python src/inference/experiments/obstruction/obstruction_experiment.py` |
+| `obstruction` | wholecloud corrector around a gear obstacle via ghost-particle fill (re-run 2026-07-21: nn 0.0076 → 0.0117 at rd 0.012) | `python src/inference/experiments/obstruction/obstruction_experiment.py` |
 
 Headline result (full 1002-step sweep, disordered regime t ≥ 300, mean|KG| —
 lower = better SPH restart): raw 0.326, TV 0.274, model9-K5 1.278 (the
@@ -387,34 +346,20 @@ from the package root. For your own scripts, run from the project root with
 `src/` on `sys.path` (the shipped experiment scripts do this themselves):
 
 ```python
-from inference.correctors import (WholeCloudCorrector2D, WholeCloudCorrector2DConfig,
-                                  GridCorrector2D, GridCorrector2DConfig)
+from inference.correctors import WholeCloudCorrector2D, WholeCloudCorrector2DConfig
 import numpy as np
 
 pts = np.load('artifacts/inference/experiments/sph_tv/data/positions_without.npy')[300]  # (2500, 2)
 
-# wholecloud — the deployment path: one forward_sparse call per pass, ~0.26s/timestep
+# one forward_sparse call per pass, ~0.26s/timestep at N=2500
 wc = WholeCloudCorrector2D(WholeCloudCorrector2DConfig.from_yaml(
     'src/configs/experiments/sph_tv/model12_wholecloud.yaml'))
 corrected = wc.apply(pts.astype(np.float32), k=5)                # (2500, 2)
-
-# grid — tiled comparison path (~5.8s/timestep at N=2500)
-gc = GridCorrector2D(GridCorrector2DConfig.from_yaml(
-    'src/configs/experiments/sph_tv/model12_grid.yaml'))
-corrected = gc.apply(pts.astype(np.float32), k=5)
 ```
 
-`k` = number of passes; higher K = more correction, diminishing returns.
-KDTree's `k` is a cap — it stops early once clean. Grid/kdtree remain as the
-tiling comparison; wholecloud wins on both KG and speed (no tile seams).
-
-3D gotcha for the grid (for future 3D work): ghost overhead is ~2.7x the core
-count, so choose `n_cells` so that **total** (core+ghost) points per tile ≈
-N_train, not core alone.
-
-Per-apply diagnostics (2D only): `visualization: {enhanced: true}` in the
-YAML (or `enhanced_visualization=True` on the config) saves a 3-panel figure
-per `apply()` to `artifacts/inference/misc/enhanced_viz/`.
+`k` = number of passes; higher k = more correction, diminishing returns (k=5
+is the validated deployment setting). The corrector is dimension-generic —
+`WholeCloudCorrector3D` is the same body with `DIM = 3`.
 
 ---
 
@@ -441,8 +386,7 @@ artifacts/
       apply_corrector/runs/     positions_corrected_K5.npy — the model9-era corrected
                                 trajectory, kept as the KG sweep's comparison series
       obstruction/runs/         obstacle experiment figures
-    misc/
-      enhanced_viz/             per-apply() diagnostic figures (when enabled)
+    misc/                       one-off figures
 ```
 
 Run outputs are regenerable — delete freely, EXCEPT `sph_tv/for_sim/` (test +

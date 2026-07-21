@@ -35,7 +35,7 @@ sys.path.insert(0, str(ROOT / 'src'))
 from utils.metrics import kg_norm, nn_dists
 
 RD_TEST  = 0.02
-H_FACTOR = 2.0   # h = h_factor * dx, dx = 0.02 -> support 3h = 0.12 (see model12_grid.yaml)
+H_FACTOR = 2.0   # h = h_factor * dx, dx = 0.02 -> support 3h = 0.12
 BOX      = 1.0   # unit torus
 
 EXP = ROOT / 'artifacts/inference/experiments'
