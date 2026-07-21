@@ -1,6 +1,8 @@
-# Sweep variant of train_config_sph.yaml: Adam -> AdamW, same weight_decay/lr.
-# Tests whether decoupled weight decay (vs. Adam's L2-into-gradient decay)
-# fixes the late-training regression observed in runs A-F (2026-07-15):
+# The model12_sph_l4 trainer recipe — the AdamW winner of the 2026-07-15
+# optimizer sweep (the Adam arm, train_config_sph.yaml, was purged; its exact
+# config survives in the sweep runs' configs/ snapshots and on main).
+# Why AdamW won — decoupled weight decay (vs. Adam's L2-into-gradient decay)
+# fixed the late-training regression observed in runs A-F (2026-07-15):
 # loss/eval metrics peak ~iter 6000 then worsen by iter 10000 even as LR
 # anneals toward eta_min. Hypothesis: Adam's L2 weight_decay gets renormalized
 # by the shrinking per-parameter variance (v) once task gradients die down,

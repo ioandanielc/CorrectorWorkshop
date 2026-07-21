@@ -54,7 +54,7 @@ training and inference are separate trees.
 src/
   configs/
     training/                 dataset/ loss/ model/ trainer/ + smoke_test/ (fast CPU variants)
-                              loss/ holds the λ3 ablation ladder (lam3 0.03/0.09/0.27/0.90)
+                              — one YAML each: the model12_sph_l4 production recipe
     experiments/              one subfolder per experiment, one YAML per variant
       sph_tv/  obstruction/
   models/
@@ -75,7 +75,6 @@ src/
       common/                 pbc.py, scaling.py, tiling.py — shared PBC / rd-scaling / tile geometry
       grid/                   GridCorrector2D/3D — tiles the whole domain, ghost buffers (tiling comparison)
       kdtree/                 KDTreeCorrector2D/3D — model only around violations, k = cap w/ early stop
-      tv/                     TVCorrector2D / FastTVCorrector2D — Transport Velocity baseline
       wholecloud/             WholeCloudCorrector2D/3D — one forward_sparse call per pass,
                               no tiles/seams; THE deployment path
     experiments/              one subfolder per experiment, each with its own README:
@@ -87,7 +86,7 @@ src/
                               numpy helpers: mean_kg, nn_dists, mean_nn, illegal_frac
     visualizations/
       training_visualizations/    sample plots, evolution GIF, finished-run plots
-      inference_visualizations/   tiling diagnostics + enhanced (3-panel per-apply)
+      inference_visualizations/   enhanced (3-panel per-apply diagnostics)
 
 tests/
   test_wholecloud.py          WholeCloudCorrector2D must reproduce the sim-validated
@@ -182,8 +181,8 @@ params:
   lambda1_quad: 0     # quadratic violation term; 0 in every production config
   lambda2: 0.0149     # displacement regulariser; recipe 0.1·lambda1/(N−1)
   lambda3: 0.27       # violation ↔ KG-symmetry trade-off dial — THE ablation
-                      # axis; ladder in loss_config_rdsph_lam3_{0p03,0p09→base,
-                      # 0p27,0p90}.yaml
+                      # axis; the swept arms (0.03/0.09/0.90) were purged — their
+                      # exact YAMLs live in the kept training runs' configs/ snapshots
   h_factor: 2.0       # h = h_factor·dx, dx = box/sqrt(N) = lattice spacing
   box: 1.0            # unit torus
 ```
@@ -327,9 +326,6 @@ ObstructionExperimentConfig( # standalone experiment config, not a corrector's
     device      = 'cuda')
 ```
 
-TV correctors take plain constructor args (`h_factor`, `nmax`, `dt`) — no
-dataclass.
-
 ---
 
 ## Training
@@ -350,11 +346,11 @@ Writes to `artifacts/training/train_run_<timestamp>/` (gitignored) —
 `model_final.pt` (last iterate); copy the one you want into
 `src/models/weights/` to keep it.
 
-Ablation axes already on disk: λ3 ∈ {0.03, 0.09, 0.27, 0.90}
-(`loss_config_rdsph_lam3_*.yaml` — 0.27 won), L ∈ {3, 4}
-(`model_config_12_sph.yaml` vs `_L4.yaml` — L4 won), Adam vs AdamW
-(`train_config_sph*.yaml` — AdamW won). The winning arms' training runs are
-kept under `artifacts/training/train_run_2026-07-15_*`.
+Ablation axes already explored (winning arm shipped, losing arms purged from
+src/): λ3 ∈ {0.03, 0.09, 0.27, 0.90} — 0.27 won; L ∈ {3, 4} — L4 won; Adam vs
+AdamW — AdamW won. Every arm's exact config set survives in its training run's
+`configs/` snapshot under `artifacts/training/train_run_2026-07-15_*` (kept),
+and on `main`.
 
 Recipe for scaling the constants to any new rd/N: `lambda1 = 1/rd`,
 `lambda2 = 0.1 * lambda1 / (N-1)`, `max_displacement = 1.2 * rd`,

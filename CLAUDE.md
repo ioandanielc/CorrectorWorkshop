@@ -18,7 +18,7 @@ All code lives under `src/`; all generated or external data lives under `artifac
 CorrectorWorkshop/
 ├── src/
 │   ├── configs/
-│   │   ├── training/            # dataset/ loss/ model/ trainer/ YAML sets + smoke_test/ (fast CPU variants); loss/ holds the λ3 ablation ladder
+│   │   ├── training/            # dataset/ loss/ model/ trainer/ YAML sets + smoke_test/ (fast CPU variants); one YAML each = the production recipe
 │   │   └── experiments/         # one subfolder per experiment, one YAML per variant
 │   │       ├── sph_tv/          #   model12_{grid,kdtree,grid_then_kdtree,wholecloud}
 │   │       └── obstruction/     #   grid_6x6.yaml (corrector blocks only, retargeted to model12 — untested until the re-run)
@@ -36,7 +36,6 @@ CorrectorWorkshop/
 │   │   │   ├── common/          # pbc.py (3^dim images), scaling.py (rd_train/rd_test), tiling.py (n_cells^dim tiles)
 │   │   │   ├── grid/corrector.py       # GridCorrector2D/3D — tiling + ghost buffer + scaling + model (shared ND body)
 │   │   │   ├── kdtree/kdtree_corrector.py  # KDTreeCorrector2D/3D — violation-targeted greedy sweeps, k = cap
-│   │   │   ├── tv/tv_corrector.py      # TVCorrector2D / FastTVCorrector2D (cKDTree, ~125x faster) — TV baseline
 │   │   │   └── wholecloud/wholecloud_corrector.py  # WholeCloudCorrector2D/3D — one forward_sparse call per pass, no tiles/seams; THE deployment path
 │   │   └── experiments/         # one subfolder per experiment, each with a small README
 │   │       ├── sph_tv/          # sph_model12_experiment (grid/kdtree/grid_then_kdtree/wholecloud) + kg_sweep.py (full-trajectory KG/nn metrics -> metrics.csv)
@@ -46,7 +45,7 @@ CorrectorWorkshop/
 │       ├── metrics.py           # shared KG primitive (quintic kernel, torch, batched) + numpy helpers (mean_kg, nn_dists, mean_nn, illegal_frac)
 │       └── visualizations/
 │           ├── training_visualizations/   # sample plots, evolution GIF, finished-run plots
-│           └── inference_visualizations/  # tiling diagnostics + enhanced (3-panel per-apply)
+│           └── inference_visualizations/  # enhanced (3-panel per-apply diagnostics)
 ├── tests/                       # test_wholecloud.py — WholeCloudCorrector2D must reproduce the sim-validated artifact bit-exactly (needs artifacts on disk)
 ├── artifacts/                   # gitignored — every input and run output
 │   ├── training/                # train_run_<timestamp>/ from the trainer
@@ -70,7 +69,7 @@ CorrectorWorkshop/
   --model-config   src/configs/training/smoke_test/model_config_12.yaml
 ```
 
-Full run (the `model12_sph_l4` recipe — ~10 min on GPU): `train_config_sph_adamw` + `dataset_config_sph` + `loss_config_rdsph_lam3_0p27` + `model_config_12_sph_L4`. The `loss_config_rdsph_lam3_*.yaml` ladder (0.03/0.09/0.27/0.90) is the λ3 ablation axis. Writes to `artifacts/training/train_run_<timestamp>/` (gitignored — copy the checkpoint into `src/models/weights/` to keep it; `model_best.pt` = best val loss, `model_final.pt` = last iterate).
+Full run (the `model12_sph_l4` recipe — ~10 min on GPU): `train_config_sph_adamw` + `dataset_config_sph` + `loss_config_rdsph_lam3_0p27` + `model_config_12_sph_L4` — the only YAML in each folder. The swept λ3/L/optimizer arms were purged from src/; each arm's exact config set survives in its training run's `configs/` snapshot under `artifacts/training/train_run_2026-07-15_*` and on `main`. Writes to `artifacts/training/train_run_<timestamp>/` (gitignored — copy the checkpoint into `src/models/weights/` to keep it; `model_best.pt` = best val loss, `model_final.pt` = last iterate).
 
 ---
 
@@ -91,7 +90,7 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 **Training:**
 - Data generated **online** per batch — no dataset file on disk. The SPH regime (`periodic: true`) enforces rd under minimum-image on the unit torus; at that packing, clean clouds are a randomly translated square lattice and the noise provides the disorder.
 - No invariant-frame transform: model12 is translation-invariant by construction (it only sees relative positions, `rel = x_j − x_i`) and trains in the fixed unit-torus frame. It is NOT rotation-equivariant — deliberate for a fixed simulation frame (the model9-era center+PCA machinery lives on `main`/`simplify`).
-- `lambda2 = lambda1 / (N−1) / 10` keeps displacement reg a constant fraction of violation penalty regardless of N; `lambda3` is the violation↔KG-symmetry trade-off dial (λ3 ladder in `configs/training/loss/`).
+- `lambda2 = lambda1 / (N−1) / 10` keeps displacement reg a constant fraction of violation penalty regardless of N; `lambda3` is the violation↔KG-symmetry trade-off dial (swept arm configs purged — provenance in the kept run snapshots under `artifacts/training/`).
 - Training uses K-step unrolling (backprop through all K steps). Eval reports both K=1 and K=unroll_steps.
 
 **Inference (all correctors):**
@@ -107,7 +106,7 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 4. **Iterative application**: `apply(pts, k=...)` = K passes, diminishing returns. Measured with model12 (2D SPH, N=2500): kdtree and grid_then_kdtree edge out grid alone on mean nn (~0.0182 vs ~0.0178); **wholecloud beats everything on KG and speed** (~0.26 s vs ~5.8 s per timestep) and is the deployment path — grid/kdtree remain as the tiling comparison.
 
 **Interfaces (`src/inference/correctors/base.py`):**
-- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `WholeCloudCorrector2D/3D`, `TVCorrector2D`/`FastTVCorrector2D`. The 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. All ML correctors require a **box-aware** model (`uses_box`, model12-style) and raise otherwise; `model_file` is required in the model config (no default architecture). `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
+- `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `GridCorrector2D/3D`, `KDTreeCorrector2D/3D`, `WholeCloudCorrector2D/3D`. (The TV corrector implementation was purged with model9 — the TV comparison uses the precomputed `positions.npy` trajectory.) The 2D/3D pairs are thin `DIM = 2/3` subclasses of private ND bodies. All ML correctors require a **box-aware** model (`uses_box`, model12-style) and raise otherwise; `model_file` is required in the model config (no default architecture). `enhanced_visualization` is 2D-only (warned and ignored on 3D). Every ML corrector's config carries its own `checkpoint` + `model_config` + `rd_train`; all correctors and configs re-export from `inference.correctors`.
 - `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `attention_rd`); requires a model with `forward_sparse`. Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly. (Grid/kdtree keep an add-then-subtract displacement arithmetic on purpose — bit-identical to the historically validated outputs.)
 - `Experiment` — one method `run()`. Implemented by `ObstructionExperiment`; the sph_tv model12 script uses the same `experiment.corrector` step-builder pattern. Experiment-loop settings (`stride`, `k_*`, `corrector` kind…) live on the experiments, not on corrector configs.
 

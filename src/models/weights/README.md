@@ -44,9 +44,9 @@ N=2500.) Full history: `[[sph-model12-sweep]]` memory.
 | `model12_sph_l4.pt` | `artifacts/training/train_run_2026-07-15_11-18-44/` (`model_best.pt` — NOT `model_final.pt`; sha256-verified 2026-07-21) | `dataset_config_sph` + `loss_config_rdsph_lam3_0p27` + `train_config_sph_adamw` + `model_config_12_sph_L4` |
 
 `model12_sph_l4` trained with the 2026-07-13 data-generation fix (fresh
-batches). The λ3 sweep arms it was selected from are kept as
-`loss_config_rdsph_lam3_*.yaml` + their training runs under
-`artifacts/training/train_run_2026-07-15_*`.
+batches). The λ3/L/optimizer sweep arms it was selected from survive as their training
+runs' `configs/` snapshots under `artifacts/training/train_run_2026-07-15_*`
+(the arm YAMLs themselves were purged from src/; also on `main`).
 
 Historical (removed from this branch, still on `main`): the model9 2D
 checkpoints `model9_n100_p050` / `model9_n50_sparse` and their configs. Their
