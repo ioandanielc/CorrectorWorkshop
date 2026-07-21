@@ -7,6 +7,5 @@ from .grid.corrector import (GridCorrector2D, GridCorrector2DConfig,
 from .kdtree.kdtree_corrector import (KDTreeCorrector2D, KDTreeCorrector2DConfig,
                                       KDTreeCorrector3D, KDTreeCorrector3DConfig)
 from .tv.tv_corrector import TVCorrector2D, FastTVCorrector2D
-from .pure.pure_inference import PureInference2D, PureInference2DConfig
 from .wholecloud.wholecloud_corrector import (WholeCloudCorrector2D, WholeCloudCorrector2DConfig,
                                               WholeCloudCorrector3D, WholeCloudCorrector3DConfig)

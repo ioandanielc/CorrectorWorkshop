@@ -15,13 +15,11 @@ sys.path.insert(0, str(Path(__file__).parents[1]))   # src/ — run from the pro
 from utils.config import load_train_config, load_dataset_config, load_loss_config, load_model_config
 from utils.logger import create_run_dir, setup_logger, set_logger_eta
 from utils.visualizations.training_visualizations.visualizations import plot_comparison, make_sample_gif
-from training.datagen import PoissonDiskDataset, PackedPoissonDiskDataset, VariableRdPackedPoissonDiskDataset
-from models.architectures.model9.invariance import DataProcessor
-from training.loss import hybrid_loss, sph_loss, rdsph_loss, mean_kg_norm
+from training.datagen import PoissonDiskDataset
+from training.loss import sph_loss, rdsph_loss, mean_kg_norm
 
 
 LOSS_FNS = {
-    'hybrid_loss': hybrid_loss,
     'sph_loss':    sph_loss,
     'rdsph_loss':  rdsph_loss,
 }
@@ -48,62 +46,24 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     device = torch.device(train_cfg['device'])
     logger.info(f"Using device: {device}")
 
-    is_variable_rd = dataset_cfg.get('type') == 'variable_rd_packed'
+    dataset = PoissonDiskDataset(
+        dim=dataset_cfg['dim'],
+        cardinality=dataset_cfg['points_per_cloud'],
+        rd=dataset_cfg['rd'],
+        seed=dataset_cfg['seed'],
+        noise_scale_min=dataset_cfg['noise_scale_min'],
+        noise_scale_max=dataset_cfg['noise_scale_max'],
+        periodic=dataset_cfg.get('periodic', False),
+    )
 
-    if dataset_cfg.get('type', 'standard') == 'packed':
-        dataset = PackedPoissonDiskDataset(
-            dim=dataset_cfg['dim'],
-            packedness=dataset_cfg['packedness'],
-            rd=dataset_cfg['rd'],
-            seed=dataset_cfg['seed'],
-            noise_scale_min=dataset_cfg['noise_scale_min'],
-            noise_scale_max=dataset_cfg['noise_scale_max'],
-        )
-        logger.info(
-            f"Packed dataset: packedness={dataset_cfg['packedness']}, "
-            f"N_target={dataset.n_target}, rd={dataset_cfg['rd']}"
-        )
-    elif is_variable_rd:
-        dataset = VariableRdPackedPoissonDiskDataset(
-            dim=dataset_cfg['dim'],
-            rd_min=dataset_cfg['rd_min'],
-            rd_max=dataset_cfg['rd_max'],
-            packedness=dataset_cfg['packedness'],
-            seed=dataset_cfg['seed'],
-            noise_scale_min_frac=dataset_cfg['noise_scale_min_frac'],
-            noise_scale_max_frac=dataset_cfg['noise_scale_max_frac'],
-            rd_gen=dataset_cfg.get('rd_gen', 0.05),
-            n_min=dataset_cfg.get('n_min', 20),
-            n_max=dataset_cfg.get('n_max', 250),
-            pool_size=dataset_cfg.get('pool_size', 100_000),
-        )
-        logger.info(
-            f"Variable-rd packed dataset: generated at rd_gen={dataset.rd_gen} "
-            f"(N={dataset.n_request}), rescaled to rd in [{dataset_cfg['rd_min']}, "
-            f"{dataset_cfg['rd_max']}] (log-uniform)"
-        )
-    else:
-        dataset = PoissonDiskDataset(
-            dim=dataset_cfg['dim'],
-            cardinality=dataset_cfg['points_per_cloud'],
-            rd=dataset_cfg['rd'],
-            seed=dataset_cfg['seed'],
-            noise_scale_min=dataset_cfg['noise_scale_min'],
-            noise_scale_max=dataset_cfg['noise_scale_max'],
-            periodic=dataset_cfg.get('periodic', False),
-        )
-    processor = DataProcessor()
-
-    # Periodic clouds stay in the unit-torus frame: make_invariant's centering +
-    # PCA rotation would break the box alignment the periodic losses assume.
+    # Periodic clouds live on the unit torus; box-aware models get box=1.0 below.
+    # (model12 is translation-invariant by construction — no frame transform.)
     is_periodic = bool(dataset_cfg.get('periodic', False))
-    if is_periodic:
-        logger.info("Periodic clouds: skipping make_invariant (unit-torus frame)")
 
     logger.info(f"Generating validation set ({eval_cfg['validation_size']} clouds)...")
     val_clean = dataset.generate_sample(eval_cfg['validation_size'])
     val_noisy = dataset.noise_sample(val_clean)
-    val_rd = dataset.last_rd if is_variable_rd else dataset_cfg['rd']
+    val_rd = dataset_cfg['rd']
     val_rd_tensor = torch.tensor(val_rd, dtype=torch.float32, device=device)
     np.save(run_dir / "validation_set.npy", val_noisy)
     logger.info("Validation set saved")
@@ -130,7 +90,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     scheduler = scheduler_cls(optimizer, **train_cfg['lr_scheduler']['params'])
 
     loss_fn = LOSS_FNS[loss_cfg['name']]
-    rd = None if is_variable_rd else torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
+    rd = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
 
     # Attention radius: what the model "sees". Defaults to the constraint rd;
     # model_config.attention_rd decouples them (SPH losses: the kernel-gradient
@@ -164,15 +124,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
         clean = dataset.generate_sample(train_cfg['batch_size'])
         noisy = dataset.noise_sample(clean)
-        if is_periodic:
-            noisy_processed = noisy
-        else:
-            noisy_processed, _, _ = processor.make_invariant(noisy)
-        x = torch.tensor(noisy_processed, dtype=torch.float32).to(device)
-
-        if is_variable_rd:
-            rd = torch.tensor(dataset.last_rd, dtype=torch.float32, device=device)
-            rd_model = rd if attention_rd is None else rd_model
+        x = torch.tensor(noisy, dtype=torch.float32).to(device)
 
         x_current  = x
         total_loss = torch.tensor(0.0, device=device)
@@ -180,15 +132,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
         for _ in range(unroll_steps):
             displacement = model(x_current, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x_current)
             x_next       = x_current + displacement
-            if loss_cfg.get('dynamic_rd_scaling', False):
-                N_cloud      = x_current.shape[1]
-                lp           = loss_cfg['params']
-                lambda1      = lp['lambda1_coeff'] / rd
-                lambda2      = lambda1 / (N_cloud - 1) * lp['lambda2_ratio']
-                total_loss   = total_loss + loss_fn(x_current, x_next, rd, lambda1=lambda1,
-                                                    lambda1_quad=lp.get('lambda1_quad', 0), lambda2=lambda2)
-            else:
-                total_loss   = total_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
+            total_loss   = total_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
             x_current    = x_next.detach()
 
         optimizer.zero_grad()
@@ -307,13 +251,13 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
             corrected = corr1
 
         if iteration % eval_cfg['sample_interval'] == 0:
-            _save_sample(model, processor, val_noisy, val_rd, device, run_dir, iteration,
-                         eval_cfg['num_visual_samples'], periodic=is_periodic,
+            _save_sample(model, val_noisy, val_rd, device, run_dir, iteration,
+                         eval_cfg['num_visual_samples'],
                          rd_model=rd_model, model_kwargs=model_kwargs)
             logger.debug(f"Sample saved at iteration {iteration}")
 
-            val_loss = _evaluate_val_loss(model, processor, val_noisy, val_rd_tensor, rd_model,
-                                          model_kwargs, is_periodic, loss_fn, loss_cfg,
+            val_loss = _evaluate_val_loss(model, val_noisy, val_rd_tensor, rd_model,
+                                          model_kwargs, loss_fn, loss_cfg,
                                           unroll_steps, train_cfg['batch_size'], device)
             if val_loss < best_val_loss:
                 best_val_loss, best_iteration = val_loss, iteration
@@ -331,8 +275,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     logger.info(f"Evolution GIF saved to {gif_path}")
 
 
-def _evaluate_val_loss(model, processor, val_noisy, rd, rd_model, model_kwargs,
-                       periodic, loss_fn, loss_cfg, unroll_steps, batch_size, device):
+def _evaluate_val_loss(model, val_noisy, rd, rd_model, model_kwargs,
+                       loss_fn, loss_cfg, unroll_steps, batch_size, device):
     """Deterministic K=unroll_steps loss on the full fixed validation set, chunked
     to the training batch size. Low-variance alternative to the per-iteration
     log metrics, which are computed on a fresh random training batch each time."""
@@ -341,25 +285,13 @@ def _evaluate_val_loss(model, processor, val_noisy, rd, rd_model, model_kwargs,
     with torch.no_grad():
         for start in range(0, len(val_noisy), batch_size):
             chunk = val_noisy[start:start + batch_size]
-            if periodic:
-                processed = chunk
-            else:
-                processed, _, _ = processor.make_invariant(chunk)
-            x_current  = torch.tensor(processed, dtype=torch.float32, device=device)
+            x_current  = torch.tensor(chunk, dtype=torch.float32, device=device)
             chunk_loss = torch.tensor(0.0, device=device)
             for _ in range(unroll_steps):
                 displacement = (model(x_current, rd=rd_model, **model_kwargs)
                                 if getattr(model, 'uses_rd', False) else model(x_current))
                 x_next = x_current + displacement
-                if loss_cfg.get('dynamic_rd_scaling', False):
-                    N_cloud = x_current.shape[1]
-                    lp      = loss_cfg['params']
-                    lambda1 = lp['lambda1_coeff'] / rd
-                    lambda2 = lambda1 / (N_cloud - 1) * lp['lambda2_ratio']
-                    chunk_loss = chunk_loss + loss_fn(x_current, x_next, rd, lambda1=lambda1,
-                                                      lambda1_quad=lp.get('lambda1_quad', 0), lambda2=lambda2)
-                else:
-                    chunk_loss = chunk_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
+                chunk_loss = chunk_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
                 x_current = x_next
             total += chunk_loss.item()
             n_chunks += 1
@@ -367,24 +299,20 @@ def _evaluate_val_loss(model, processor, val_noisy, rd, rd_model, model_kwargs,
     return total / n_chunks
 
 
-def _save_sample(model, processor, val_noisy, rd_value, device, run_dir, iteration,
-                 num_visual_samples, periodic=False, rd_model=None, model_kwargs=None):
+def _save_sample(model, val_noisy, rd_value, device, run_dir, iteration,
+                 num_visual_samples, rd_model=None, model_kwargs=None):
     model_kwargs = model_kwargs or {}
     model.eval()
     with torch.no_grad():
         batch = val_noisy[:num_visual_samples]
-        if periodic:
-            processed = batch
-        else:
-            processed, _, _ = processor.make_invariant(batch)
-        x = torch.tensor(processed, dtype=torch.float32).to(device)
+        x = torch.tensor(batch, dtype=torch.float32).to(device)
         rd_tensor = rd_model if rd_model is not None else torch.tensor(
             rd_value, dtype=torch.float32, device=device)
         displacement = model(x, rd=rd_tensor, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x)
         corrected = (x + displacement).cpu().numpy()
 
     plot_comparison(
-        noisy_clouds=processed,
+        noisy_clouds=batch,
         corrected_clouds=corrected,
         rd=rd_value,
         save_path=run_dir / "samples" / f"sample_{iteration:06d}.png",

@@ -9,7 +9,7 @@ Usage
 -----
     from inference.correctors.grid.corrector import GridCorrector2D, GridCorrector2DConfig
 
-    cfg = GridCorrector2DConfig.from_yaml('src/configs/experiments/sph_tv/grid_6x6.yaml')
+    cfg = GridCorrector2DConfig.from_yaml('src/configs/experiments/sph_tv/model12_grid.yaml')
     corrector = GridCorrector2D(cfg)
 
     pts_corrected = corrector.apply(pts, k=3)   # (N, 2) -> (N, 2)
@@ -25,7 +25,6 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).parents[3]))
 from utils.config import load_model_config
-from models.architectures.model9.invariance import compute_invariant, revert_invariant
 from ..base import Corrector
 from ..common.tiling import TilingConfig, iter_tiles
 from ..common.pbc import build_ghost_tile
@@ -101,7 +100,6 @@ class _GridCorrectorND(Corrector):
         self.cfg    = cfg
         self.device = torch.device(cfg.device)
         self.scale  = compute_scale(cfg.rd_train, cfg.rd_test)
-        self.rd_t   = torch.tensor(cfg.rd_train, dtype=torch.float32, device=self.device)
         self._viz_count = 0   # numbers the per-apply() enhanced-viz figures
         if cfg.enhanced_visualization and self.DIM != 2:
             import warnings
@@ -111,7 +109,7 @@ class _GridCorrectorND(Corrector):
 
     def _load_model(self):
         model_cfg = load_model_config(self.cfg.model_config)
-        module_path = model_cfg.get('model_file', 'models/architectures/model9/model9')
+        module_path = model_cfg['model_file']   # required — no default architecture
         m = importlib.import_module(module_path.replace('/', '.'))
         self.model = m.CorrectorModel(
             model_cfg, input_dim=self.DIM, initialization='xavier_uniform'
@@ -121,14 +119,18 @@ class _GridCorrectorND(Corrector):
         self.model.to(self.device)
         self.model.eval()
 
-        # Box-aware models (e.g. model12) take a separate attention radius,
-        # distinct from rd_train (constraint rd, which still drives scaling
-        # and ghost-width). They were also trained in a fixed, unrotated
-        # periodic frame, so the PCA-rotation invariant transform below must
-        # be skipped for them — the ghost buffer already resolves periodicity
-        # into flat local coordinates, so box=None is passed at inference
-        # regardless of what the model trained with.
-        self.periodic_frame = getattr(self.model, 'uses_box', False)
+        # Box-aware models (model12) take a separate attention radius, distinct
+        # from rd_train (constraint rd, which still drives scaling and
+        # ghost-width). The ghost buffer already resolves periodicity into flat
+        # local coordinates, so box=None is passed to the model at inference
+        # regardless of what it trained with. Non-box models (the removed
+        # model9 family, which needed the center+PCA invariant frame) are no
+        # longer supported on this branch.
+        if not getattr(self.model, 'uses_box', False):
+            raise TypeError(
+                f'{module_path} is not box-aware — this branch serves model12-style '
+                f'models only (the model9 family and its invariant frame were removed; '
+                f'they live on the main/simplify branches).')
         attention_rd = model_cfg.get('attention_rd', self.cfg.rd_train)
         self.rd_model_t = torch.tensor(attention_rd, dtype=torch.float32, device=self.device)
 
@@ -176,31 +178,20 @@ class _GridCorrectorND(Corrector):
             batch_pts_s    = np.full((n_tiles, max_N, self.DIM), PAD, dtype=np.float32)
             batch_is_core  = np.zeros((n_tiles, max_N), dtype=bool)
             batch_orig_idx = np.zeros((n_tiles, max_N), dtype=np.int32)
-            real_mask      = np.zeros((n_tiles, max_N), dtype=np.float32)
             for i, (pts_ext, is_core, orig_idx) in enumerate(tiles):
                 m = len(pts_ext)
                 batch_pts_s[i, :m]    = pts_ext * self.scale
                 batch_is_core[i, :m]  = is_core
                 batch_orig_idx[i, :m] = orig_idx
-                real_mask[i, :m]      = 1.0
 
-            # ── center + PCA-rotate each tile (skipped for periodic-frame models,
-            #    which trained on fixed, unrotated coordinates and are already
-            #    translation-invariant by construction), run the model once ──
-            if self.periodic_frame:
-                x_inv = batch_pts_s
-            else:
-                x_inv, mean_batch, eigvecs = compute_invariant(batch_pts_s, mask=real_mask)
-            x_t = torch.tensor(x_inv, dtype=torch.float32, device=self.device)
-            model_kwargs = {'box': None} if self.periodic_frame else {}
+            # ── run the model once over all tiles (model12 is translation-
+            #    invariant by construction — no frame transform needed) ──
+            x_t = torch.tensor(batch_pts_s, dtype=torch.float32, device=self.device)
             with torch.no_grad():
-                disp = self.model(x_t, rd=self.rd_model_t, **model_kwargs).cpu().numpy()
-
-            # ── revert to scaled space, take the displacement, unscale ──
-            if self.periodic_frame:
-                corrected_s = x_inv + disp
-            else:
-                corrected_s = revert_invariant(x_inv + disp, mean_batch, eigvecs)
+                disp = self.model(x_t, rd=self.rd_model_t, box=None).cpu().numpy()
+            # add-then-subtract kept deliberately: bit-identical to the
+            # historical (validated) arithmetic, unlike a bare disp / scale
+            corrected_s = batch_pts_s + disp
             disp_orig   = (corrected_s - batch_pts_s) / self.scale
 
             # ── each particle keeps the displacement from its one core (non-ghost) tile ──

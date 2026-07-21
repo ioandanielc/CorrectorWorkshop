@@ -1,13 +1,11 @@
 """
 sph_model12_experiment.py
 --------------------------
-Validates the model12 SPH corrector (grid / kdtree / grid_then_kdtree) against
-the real SPH trajectory. Unlike sph_tv_experiment.py (model9 vs. the TV
-baseline), this is a first-cut correctness/quality check for a brand-new
-model + corrector combination that has never been run against real,
-disordered point data before — model12 was trained only on synthetic
-square-lattice Poisson-disk clouds — so it reports before/after quality per
-sampled timestep rather than a TV comparison.
+Validates the model12 SPH corrector (grid / kdtree / grid_then_kdtree /
+wholecloud) against the real SPH trajectory: before/after quality per sampled
+timestep (model12 trains only on synthetic square-lattice Poisson-disk clouds,
+so this is the real-data check). For the full-trajectory KG comparison against
+the raw / TV / model9-era series, see kg_sweep.py.
 
 The corrector variant (grid / kdtree / grid_then_kdtree) is selected by the
 config file's experiment.corrector field via a small step-builder.

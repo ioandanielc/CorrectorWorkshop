@@ -1,0 +1,13 @@
+# Smoke-test model12: same architecture family as model_config_12_sph_L4 but
+# tiny (H=32, L=2) so the CPU smoke run finishes in seconds. NOT a deployable
+# config — pair only with the smoke_test dataset/loss/trainer set.
+architecture: iterative_message_passing_corrector
+model_file: models/architectures/model12/model12
+
+hidden_dim: 32
+num_layers: 2
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * constraint rd = 0.14
+
+attention_rd: 0.286       # 2*dx = h, same calling convention as the real checkpoints

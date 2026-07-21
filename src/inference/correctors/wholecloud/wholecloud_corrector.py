@@ -97,7 +97,7 @@ class _WholeCloudCorrectorND(Corrector):
 
     def _load_model(self):
         model_cfg = load_model_config(self.cfg.model_config)
-        module_path = model_cfg.get('model_file', 'models/architectures/model9/model9')
+        module_path = model_cfg['model_file']   # required — no default architecture
         m = importlib.import_module(module_path.replace('/', '.'))
         self.model = m.CorrectorModel(
             model_cfg, input_dim=self.DIM, initialization='xavier_uniform'

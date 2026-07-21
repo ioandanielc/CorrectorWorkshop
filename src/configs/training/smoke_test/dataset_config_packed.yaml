@@ -1,7 +1,0 @@
-type: packed
-packedness: 0.3   # lower packedness for smoke test — faster generation, fewer points
-dim: 2
-rd: 0.1           # larger rd = fewer points, much faster
-seed: 42
-noise_scale_min: 0.0
-noise_scale_max: 0.01

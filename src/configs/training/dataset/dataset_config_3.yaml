@@ -1,6 +1,0 @@
-points_per_cloud: 50
-dim: 2
-rd: 0.05
-seed: 42
-noise_scale_min: 0.0    # includes clean clouds — teaches model to output ~zero when legal
-noise_scale_max: 0.03   # 0.6 * rd — heavy but single-pass resolvable
