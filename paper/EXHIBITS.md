@@ -26,6 +26,8 @@ Differences smaller than that are not separable from initialisation noise.
 | loss variant | params | viol_red K5 | illegal% K5 | mean nn | \|KG\| K5 | vs best |
 |---|---|---|---|---|---|---|
 | lam3_0 | 350,594 | 17.6% | 3.32 | 0.1242 | 0.1407 | best |
+| lam2_0 | 350,594 | 0.0% | 4.02 | 0.1003 | 0.2260 | +61% |
+| pure_sph | 350,594 | -19.5% | 4.81 | 0.0762 | 0.3948 | +181% |
 
 ## E4 Packing limit: |KG| K5 by constraint rigidity
 
@@ -38,9 +40,14 @@ Differences smaller than that are not separable from initialisation noise.
 | rung | params | viol_red K5 | illegal% K5 | mean nn | \|KG\| K5 | vs best |
 |---|---|---|---|---|---|---|
 | maxagg | 350,594 | 98.8% | 0.05 | 0.1422 | 0.0106 | best |
+| wmax_s0 | 350,594 | 93.1% | 0.28 | 0.1422 | 0.0159 | +51% |
 | nonorm | 350,594 | 86.8% | 0.53 | 0.1416 | 0.0196 | +86% |
 | baseline | 350,594 | 80.5% | 0.79 | 0.1412 | 0.0245 | +132% |
 | dgcnnmech | 351,638 | 76.6% | 0.94 | 0.1406 | 0.0260 | +147% |
+| knngraph_s1 | 350,594 | 64.4% | 1.43 | 0.1390 | 0.0364 | +245% |
+| noperiod_s2 | 350,594 | 49.0% | 2.05 | 0.1336 | 0.0606 | +474% |
 | nokernel | 351,638 | 0.0% | 4.02 | 0.1003 | 0.2260 | +2041% |
 | knngraph | 350,594 | 0.0% | 4.02 | 0.1003 | 0.2260 | +2041% |
 | noperiod | 350,594 | 0.0% | 4.02 | 0.1003 | 0.2260 | +2041% |
+| knngraph_s2 | 350,594 | 0.0% | 4.02 | 0.1003 | 0.2260 | +2041% |
+| noperiod_s1 | 350,594 | 0.0% | 4.02 | 0.1003 | 0.2260 | +2041% |

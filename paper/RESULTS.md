@@ -18,23 +18,33 @@ shipped checkpoint, and the bridge `baseline` rung, which is bit-identical code)
 **σ ≈ 9% on |KG| (18% range) and ±2 points on violation reduction**. Every arm is n=1
 unless stated, so differences below ~18% on |KG| are not separable from initialisation.
 
-### Claim audit against that spread
+**Two different thresholds, because the two regimes differ.** Synthetic |KG| at N=49 has
+sigma ~9% (18% range) across three identical runs. Trajectory |KG| has a **3.5% range**
+across three identical runs (0.1237 / 0.1230 / 0.1273): averaging over 2500 particles x 15
+timesteps washes out initialisation noise that dominates a 49-particle benchmark. Applying
+the synthetic threshold to deployment comparisons — as an earlier version of this table did
+— is roughly 3x too conservative.
 
-| claim | size | verdict |
-|---|---|---|
-| lambda3=0 vs 0.27, synthetic \|KG\| | 6.5x | **solid** |
-| lambda3=0 vs 0.27, trajectory \|KG\| | 11x | **solid** |
-| model12 vs PointNet | 10x | **solid** |
-| model12 vs GNS, trajectory, matched production | 90% | **solid** |
-| `maxagg` beats model12 on the N=49 benchmark | 2x | **solid** |
-| model12 vs DGCNN, N=49 \|KG\| | 26% | marginal — clears 18%, but only just |
-| `maxagg` loses deployment to model12 | 18% | **borderline — at the threshold** |
-| model12 vs GNS, trajectory, each at best | 4-7% | **NOT separable — do not claim** |
-| `nonorm` vs model12, both regimes | 5-10% | **NOT separable** (consistent with one group) |
+### Claim audit
 
-Everything that carries the paper is in the solid tier. The architecture-ranking details
-are where the noise bites, which is why the deployment result — a 90% gap — is the one to
-lead with.
+| claim | n | size | verdict |
+|---|---|---|---|
+| lambda3=0 vs 0.27, synthetic | 4 v 3 | 6.5x | **solid** |
+| lambda3=0 vs 0.27, trajectory | 1 v 3 | 11x | **solid** |
+| model12 vs PointNet | 1 v 3 | 10x | **solid** |
+| model12 vs GNS, trajectory, matched production | 1 v 1 | 90% | **solid** |
+| N=100 beats N=49 at deployment | 1 v 3 | 31% | **solid** (far outside either threshold) |
+| kernel+additive vs everything else, trajectory | 4 v 7 | no overlap | **solid** |
+| `maxagg` beats model12 on the N=49 benchmark | 3 v 3 | 2x | **solid** |
+| **model12 vs GNS, trajectory, each at best** | **3 v 3** | **no overlap** | **CLAIMABLE** (was "not separable" under the wrong threshold) |
+| **`nonorm` beats model12 at deployment** | **2 v 3** | **no overlap** | **CLAIMABLE** — normalisation slightly *hurts* |
+| model12 vs DGCNN, N=49 | 1 v 3 | 26% | marginal — clears 18%, but only just |
+| `maxagg` loses deployment to model12 | 3 v 3 | 18% | **solid** at the trajectory threshold |
+| DGCNN / knngraph / noperiod "collapse" | 2-of-3, 2-of-4 | — | **NOT claimable — initialisation-dependent** |
+
+Everything carrying the paper is in the solid tier, and the deployment comparisons are
+stronger than the earlier audit suggested because they were being judged against the
+synthetic regime's noise.
 
 ---
 
@@ -197,23 +207,43 @@ whether the fixed geometric kernel is applied to messages:
 | GNS (learned weights + sum) | no | 0.1319 best / 0.2417 production |
 | `maxagg` (max — weight inert) | no | 0.1495 |
 
-The ordering is 0.120–0.127 (kernel active) versus 0.132–0.242 (kernel absent or inert).
-Read against the ±18% seed spread, the tiers are **suggestive, not established**: the
-GNS-production gap (90%) is solid and the `maxagg` gap (18%) sits exactly at the
-threshold, but GNS-at-best (0.1319) is only 4% from model12 and is not separable. So the
-honest statement is:
+Across **eleven** deployment runs the separation is clean, and it is the *conjunction* of
+the fixed kernel with additive aggregation that separates — not either alone:
 
-> **The fixed, distance-shaped kernel is scale-free by construction, and every arm that
-> keeps it transfers to N=2500 while the two that discard it do worse — decisively in one
-> case, marginally in the other.**
+| fixed kernel **and** additive aggregation | \|KG\| | anything else | \|KG\| |
+|---|---|---|---|
+| `nonorm` s2 (kernel + sum) | **0.1177** | GNS (learned + sum) | 0.1319, 0.1427 |
+| `nonorm` unseeded (kernel + sum) | **0.1204** | `maxagg` (inert + max) | 0.1434, 0.1495 |
+| model12 noise1.0 (kernel + wsum) | **0.1237** | `nokernel` (learned + wsum) | 0.1486, 0.1703 |
+| model12 production (kernel + wsum) | **0.1269** | **`wmax` (kernel + max)** | **0.1538** |
 
-Aggregation itself does not appear to matter (`nonorm` and model12 differ by 5%, inside
-the noise), which is a useful null result: it rules out the aggregation operator as the
-transfer mechanism even though it cannot positively confirm the kernel.
+Highest in the good group (0.1269) is below the lowest in the other (0.1319): no overlap.
+
+**Why the conjunction and not just the kernel.** `wmax` keeps the kernel — weights are
+applied to each message *before* the max — and still deploys badly. `nonorm` keeps the
+kernel with a plain sum and deploys best. So neither component alone accounts for it. That
+matches the mathematics: **|KG| is a weighted sum of kernel gradients**, so an architecture
+that reproduces it needs both the distance weighting and the summation. Max destroys the
+sum; a learned gate destroys the weighting; either is fatal.
+
+**Two single-mechanism rungs pin it down.** `nokernel` is model12 with only the kernel
+swapped for a learned gate (both seeds worse: 0.1486, 0.1703). `wmax` is model12 with only
+the aggregation swapped for a weighted max (0.1538). Changing either one, and nothing
+else, moves the arm out of the good group.
+
+The penalty also grows with deployment scale — `nokernel` is ~20% worse than baseline at
+N=49 (0.0267 vs 0.0223) and 20–38% worse at N=2500 — which is the signature of a transfer
+mechanism rather than a capacity difference.
+
+An earlier version of this section attributed transfer to per-particle normalisation
+(refuted by `nonorm`), and a later one to the fixed kernel alone (refuted by `wmax`). Both
+are retracted; this version is the first to rest on two independent single-mechanism
+ablations rather than on a multi-way comparison.
 
 An earlier version of this document attributed transfer to per-particle normalisation and
-presented it as predicted-then-confirmed. `nonorm` refutes that directly and it is
-retracted. Establishing the kernel claim properly would need ~3 seeds per arm.
+presented it as predicted-then-confirmed. `nonorm` refutes that directly and it was
+retracted; this section replaces it, and unlike the retracted version it rests on a
+single-mechanism ablation with seeds rather than on a multi-way architecture comparison.
 
 **The mechanism was predicted before the trajectory run.** model12 normalises messages
 per particle, so node states are independent of neighbour count and transfer from N=49 to

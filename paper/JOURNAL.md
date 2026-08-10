@@ -10,6 +10,121 @@ interrupt must not depend on it — or on conversation history.
 
 ## Observations log (newest first — read this for "what do we know")
 
+### 2026-08-10 21:50 — ALL RUNS COMPLETE. Final bridge results, and a prediction that failed
+- **`noperiod` is 2/3 collapse, NOT 3/3.** Seed 2 trained (49.0% viol_red, |KG| 0.0606).
+  An hour ago I predicted 3/3 on the reasoning that without minimum image the wrap-seam
+  geometry is incoherent. Wrong — same outcome as DGCNN. **Not claimable.** What the one
+  trained seed does show is that dropping PBC is costly but not fatal at N=49: |KG| 0.0606
+  against a baseline of 0.0223, roughly 2.7x worse.
+- **`knngraph` is 2/3 collapse**; the seed that trained reached 64.4% with |KG| 0.0364,
+  clearly worse than baseline. It **cannot be deployed at all** — `forward_sparse` raises
+  for `graph='knn'` by design, because a feature-space graph rebuilt each round has no
+  fixed edge list. Same structural limitation as DGCNN, reached independently.
+- Final collapse tally across the session: lambda3=0 **4/4** (claimable), dgcnn@noise1.0
+  2/4, knngraph 2/3, noperiod 2/3, nokernel 1/3, wmax 1/2, cutoff_3p0 1/1. Only lambda3=0
+  is deterministic; every other collapse is initialisation-dependent, which is why only
+  that one is claimed.
+
+### 2026-08-10 21:50 — AUDIT CORRECTION: trajectory metrics are ~3x more stable than synthetic
+All session I applied a single uncertainty (sigma ~9% on |KG|, measured from three N=49
+synthetic runs) to BOTH synthetic and trajectory comparisons. That was wrong. Three
+model12 runs scored on the trajectory give **0.1237 / 0.1230 / 0.1273 — a 3.5% range**.
+
+Deployment |KG| averages over 2500 particles x 15 timesteps, so it washes out the
+initialisation noise that dominates a 49-particle benchmark. **Trajectory comparisons need
+a ~3.5% threshold, not 9%**, and two verdicts issued under the loose threshold flip:
+
+| comparison | n | model12 | other | verdict |
+|---|---|---|---|---|
+| model12 vs GNS @ noise1.0 | 3 v 3 | 0.1230-0.1273 | 0.1319-0.1427 | **CLAIMABLE — no overlap** |
+| model12 vs `nonorm` | 3 v 2 | 0.1230-0.1273 | 0.1177-0.1204 | **`nonorm` is BETTER — no overlap** |
+
+The second is a genuine (small) finding rather than a null: per-particle normalisation
+slightly *hurts* at deployment. It does not disturb the mechanism claim — both arms keep
+the fixed kernel and additive aggregation, and both sit in the good group — but the earlier
+"they differ by 5%, inside the noise" statement is superseded.
+
+### 2026-08-10 21:00 — BEST DEPLOYMENT RESULT: train at N=100, deploy at 0.0871
+model12 trained at N=100 (reach/box 0.80 instead of 1.14, deploy scale 4.9 instead of 7.0)
+scored on the real trajectory: **|KG| 0.3331 -> 0.0871**, illegal 99.4 -> **77.3%**, both
+the best of the day.
+
+Against the N=49 checkpoints: 0.0871 vs 0.1237 (noise1.0) and 0.1269 (production) — a
+**31% improvement**, and 3.1x better than Transport Velocity's 0.274. In-distribution it
+also reads |KG| 0.0090 at N=100 versus ~0.0223 at N=49.
+
+Training nearer the deployment cardinality substantially helps. This arm was nearly cut as
+"a new question at n=1" and turned out to be the single largest improvement available. It
+is still n=1 — a second seed is the obvious next run — but the margin (31%) is far outside
+the ~9% seed spread.
+
+### 2026-08-10 21:00 — mechanism REFINED: kernel AND additive aggregation, not kernel alone
+`wmax` (weighted max — the kernel is applied to each message *before* the max, so the
+kernel survives and only the aggregation operator changes) deploys at **0.1538**, inside
+the "kernel absent" range. The clean kernel-only grouping recorded at 19:50 is therefore
+**too loose and is superseded**.
+
+Regrouping by the conjunction, across eleven runs:
+
+| fixed kernel AND additive agg | | anything else | |
+|---|---|---|---|
+| nonorm s2 (kernel+sum) | 0.1177 | gns (learned+sum) | 0.1319, 0.1427 |
+| nonorm (kernel+sum) | 0.1204 | maxagg (inert+max) | 0.1434, 0.1495 |
+| model12 n1.0 (kernel+wsum) | 0.1237 | nokernel (learned+wsum) | 0.1486, 0.1703 |
+| model12 prod (kernel+wsum) | **0.1269** | **wmax (kernel+max)** | **0.1538** |
+
+Still no overlap (0.1269 < 0.1319). Two single-mechanism rungs now pin it: `nokernel`
+changes only the weighting and lands outside; `wmax` changes only the aggregation and
+lands outside.
+
+**This is the better claim and it matches the mathematics**: |KG| is a weighted SUM of
+kernel gradients, so reproducing it needs both the distance weighting and the summation.
+Max destroys the sum, a learned gate destroys the weighting, either alone is fatal.
+
+Also corrects the "aggregation does not matter" line from 19:50, which rested on nonorm vs
+model12 — both additive. Third revision of this mechanism claim today (normalisation ->
+kernel -> kernel+additive); each revision came from adding a rung that isolated one more
+thing, which is the argument for single-mechanism ablations over multi-way comparisons.
+
+### 2026-08-10 21:00 — cutoff_rd sweep: 1.5x spacing is indistinguishable, 3.0x collapsed
+`cutoff_1p5` (kernel support 1.5 spacings instead of 2.0): viol_red 81.1%, |KG| 0.0225,
+nn_CV 2.1% — inside the seed spread of the baseline (0.0207-0.0245). Narrowing the kernel
+by 25% changes nothing measurable at N=49. `cutoff_3p0` collapsed (n=1, uninterpretable).
+Weak evidence that the exact kernel width is not critical, unlike its presence.
+
+### 2026-08-10 19:50 — ESTABLISHED: the fixed kernel is what transfers (was "suggestive")
+Seeding the collapsed `nokernel` rung made it readable — seeds 2 and 3 both trained
+(83.9% / 82.4%, |KG| 0.0269 / 0.0266) where the unseeded run had collapsed. That rung is
+the decisive one: model12 with **only** the fixed kernel swapped for a learned scalar
+gate, everything else identical.
+
+Deployment (trajectory |KG|, N=2500, t>=300), grouped by whether the fixed kernel is
+actually applied to messages:
+
+| kernel active | | kernel absent / inert | |
+|---|---|---|---|
+| nonorm s2 | **0.1177** | gns unseeded | 0.1319 |
+| nonorm unseeded | **0.1204** | gns s1 | 0.1427 |
+| model12 noise1.0 | **0.1237** | maxagg s1 | 0.1434 |
+| model12 production | **0.1269** | maxagg unseeded | 0.1495 |
+| | | **nokernel s2** | **0.1486** |
+| | | **nokernel s3** | **0.1703** |
+
+**No overlap** — highest kernel-active 0.1269 < lowest kernel-absent 0.1319. Means 0.122
+vs 0.148 (21% penalty). Ten runs, four architectures, three aggregation schemes.
+
+The penalty also GROWS with deployment scale: nokernel is ~20% worse than baseline at
+N=49 (0.0267 vs 0.0223) and 20-38% worse at N=2500. That is the signature of a transfer
+mechanism rather than a capacity difference.
+
+Upgraded from "suggestive" to established in RESULTS.md. Unlike the retracted
+normalisation claim, this one rests on a **single-mechanism ablation with seeds**, not on
+a multi-way architecture comparison where several things differ at once — which is
+precisely why the earlier version was wrong.
+
+Aggregation is ruled out: nonorm (sum) vs model12 (weighted mean) differ by 5%, inside
+the noise, and both sit in the kernel-active group.
+
 ### 2026-08-10 16:05 — ERROR: PointNet CAN run at N=2500; only DGCNN cannot
 Measured: PointNet processes a 2500-point cloud in **6 ms**. It has no pairwise term at
 all — per-point encoder then one global max-pool — so cost is O(N*H), not O(N^2). The
