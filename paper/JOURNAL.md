@@ -10,6 +10,45 @@ interrupt must not depend on it — or on conversation history.
 
 ## Observations log (newest first — read this for "what do we know")
 
+### 2026-08-10 16:05 — ERROR: PointNet CAN run at N=2500; only DGCNN cannot
+Measured: PointNet processes a 2500-point cloud in **6 ms**. It has no pairwise term at
+all — per-point encoder then one global max-pool — so cost is O(N*H), not O(N^2). The
+claim "the dense-only baselines cannot process 2500 points" appeared in
+`ARCHITECTURES.md`, `RESULTS.md` and a figure caption, and was inferred from the word
+"dense" rather than measured. Corrected in both documents.
+
+**DGCNN** is the one that genuinely cannot scale: its kNN graph is an N x N distance
+matrix rebuilt in feature space every round, so there is no fixed edge list to exploit.
+
+This is the same failure mode as the 3x-cost claim and the KG floor: a number or property
+carried over from one regime and asserted in another without measurement. Third instance
+today. PointNet on the trajectory is now a cheap and worthwhile data point (expected: it
+does nothing, making the no-locality floor visible on real data too).
+
+### 2026-08-10 16:10 — tooling hardening (the day's rework, made cheaper next time)
+- **Collapse detector** in `trainer.py`: logs `bulk_drift` every eval and warns when >50%
+  of displacement is bulk translation. Gated to start after 25% of the schedule, because
+  an untrained model is near-uniform too and an always-firing detector is useless. The
+  warning compares against `max_disp * sqrt(D)`, the true saturation norm — `max_disp`
+  alone bounds each COMPONENT, which is why measured displacements exceeded it all day.
+- **Default `seed: 0`** in the production trainer config. This recipe has a ~50/50
+  degenerate mode; leaving runs unseeded made every one a coin flip and irreproducible.
+  Noted in the config that the shipped checkpoint predates this and was trained unseeded.
+- **`tests/test_sparse_paths.py`** — 18 checks across 6 architectures x 3 cardinalities,
+  all passing. `gns` and `model12_ablate` had gained sparse deployment paths with their
+  equivalence verified only in throwaway scripts; now guarded in-repo alongside
+  `test_wholecloud.py`. Confirms again that `ablate/baseline` is bit-identical to model12.
+- **`watch_arms.py` DEAD detection** — a killed run leaves a log that simply stops and
+  used to read as RUNNING forever. It misled me once today (the killed gns/rd1.00 rung).
+  Now flags `DEAD(<minutes>)` when the log has not grown for 5 minutes.
+- **`wmax` aggregation** added to `model12_ablate`: weighted max, so the kernel survives
+  and only the aggregation operator changes. This is the clean single-change counterpart
+  to `maxagg`, which silently also removed the weighting and confounded two mechanisms.
+- New configs: `loss_config_rdsph_lam2_0.yaml` (4th loss cell),
+  `ablations/cutoff/model_config_cutoff_{1p5,3p0}.yaml` (kernel width, never ablated —
+  confound stated in the header: reach = L*cutoff moves with it),
+  `bridge/model_config_bridge_wmax.yaml`.
+
 ### 2026-08-10 16:20 — seed spread is LARGER than assumed; claim audit performed
 The bridge `baseline` rung is bit-identical to production model12, giving a third
 independent sample of the same recipe:
@@ -565,20 +604,28 @@ which also rules out an implementation fault since the same code path works at l
 
 ## Next action
 
-**Wait on the seed replications (6 runs) — they decide whether the two collapse results
-are claimable.** Apply the pre-agreed rule: 3/3 collapse = claimable; any seed training
-normally = initialisation artifact, do not claim.
+**Two training chains are RUNNING (launched ~16:00, ~2.5 h of GPU between them).** This
+is the agreed final block of work for the day; nothing new should be added after it.
 
-Then, in priority order:
-1. Score every finished arm into `paper/results.csv` (`score_arm.py --arm arch_<model>_n49_noise<r>`)
-   and rebuild exhibits.
-2. Bridge rungs (7 configs ready at `src/configs/training/ablations/bridge/`).
-3. Cardinality ladder 49/100/196 — the KG-floor readout, needed for the limitations section.
-4. User decision still open: N=100 baseline block (~8 h with five architectures).
+Chain 1 `bkv29tadp` — seeds, to move claims off n=1:
+  gns @ noise1.0 seeds 1,2 · nonorm seeds 1,2 · maxagg seeds 1,2
+Chain 2 `b5i3hyw0c` — new arms:
+  lambda2=0 · cutoff_rd 1.5x and 3.0x spacing · wmax seeds 0,1 · model12 @ N=100
+
+When they land, in order:
+1. Score every new arm (`score_arm.py`), including **trajectory** scoring for nonorm,
+   maxagg, wmax and N=100 — the deployment number is the one that matters.
+2. Re-check the claim audit in `RESULTS.md` against the new n=3 evidence; the fixed-kernel
+   mechanism should move from "suggestive" to established or be dropped.
+3. Rebuild exhibits, commit, push. **Then stop for the day.**
+
+Still owed and NOT scheduled: PointNet on the trajectory (it can run — see the correction
+below), pure-sph arm re-scored with current tooling, obstruction experiment scored with
+the new metrics, reproducibility script, k-curve and benchmark-vs-deployment figures,
+CLAUDE.md de-staling.
 
 Note on concurrency: measured contention makes model12 2.3x slower (0.073 -> 0.167
-s/iter), so extra chains are net-negative on total throughput — only oversubscribe for
-short, high-value runs (as was done for the lambda3=0 control).
+s/iter), so two chains cost ~13% total throughput. Accepted here to fit the time budget.
 
 ---
 
@@ -608,8 +655,18 @@ short, high-value runs (as was done for the lambda3=0 control).
 | 4 | Ladder scored on real trajectory (KG floor readout) | todo |
 | 5 | `model12_ablate.py` with component flags | todo |
 | 5 | 5 bridge-rung runs @ N=49 | todo |
-| 6 | Exhibit scripts | todo |
-| 6 | Main-body exhibits + appendix | todo |
+| 6 | Exhibit scripts | done |
+| 6 | Main-body exhibits + appendix | done (4 exhibits, 40 rows) |
+| + | Seeds: lambda3=0 (4/4), dgcnn (2/4 bimodal) | done |
+| + | Bridge 7 rungs (4 usable, 3 collapsed at n=1) | done |
+| + | Deployment: GNS + maxagg + nonorm + lambda3=0 on trajectory | done |
+| + | k-sweep k=1..40; deployment cost; structural metrics | done |
+| + | Tooling: collapse detector, default seed, sparse tests, DEAD detection | done |
+| + | Chain 1: gns/nonorm/maxagg seeds | running |
+| + | Chain 2: lambda2=0, cutoff sweep, wmax, N=100 | running |
+| + | PointNet on trajectory; pure-sph re-score; obstruction scoring | todo |
+| + | Repro script; k-curve + benchmark-vs-deployment figures | todo |
+| + | CLAUDE.md de-staling (holds 2 retracted claims) | todo |
 
 Legend: `todo` | `running` | `done` | `failed` | `blocked`
 

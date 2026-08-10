@@ -209,7 +209,12 @@ neighbourhoods, at the same position modulo the global feature, get the same
 displacement.
 
 **Pros**: trivially permutation-equivariant, cheapest here (0.025 s/iter), and the
-correct *control* — it isolates "capacity" from "geometry".
+correct *control* — it isolates "capacity" from "geometry". Also the only baseline that
+scales trivially: with no pairwise term the cost is O(N·H), so it runs a 2500-point cloud
+in 6 ms. (An earlier version of this document lumped it with DGCNN as unable to process
+N=2500. That was inferred from "dense" rather than measured, and is wrong — **DGCNN** is
+the one that cannot scale, because its kNN graph is an N×N matrix rebuilt in feature
+space every round.)
 
 **Cons**: structurally incapable of the task. With no pairwise term there is also
 nowhere for the minimum image to apply, so it sees raw coordinates on the torus.

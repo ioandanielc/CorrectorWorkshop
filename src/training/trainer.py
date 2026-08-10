@@ -211,6 +211,28 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 corr1      = x + disp1
                 s1         = _post_stats(corr1, disp1)
 
+                # Degenerate-solution guard. Every loss term depends only on RELATIVE
+                # positions, so a uniform translation is invisible to all of them: the
+                # violation and KG metrics read "unchanged" while the cloud slides
+                # bodily. Runs that fall into it (a tanh saturation trap) train to the
+                # last iteration and look merely bad rather than broken, so the drift
+                # fraction is logged explicitly — it is the only signal that separates
+                # "learned little" from "learned nothing and is translating".
+                bulk  = disp1.mean(dim=1, keepdim=True)
+                drift = (bulk.norm(dim=-1).mean()
+                         / (disp1.norm(dim=-1).mean() + 1e-12)).item()
+                # An untrained model is near-uniform too, so warning before the model has
+                # had a chance to learn would fire on every run. Only complain once a
+                # quarter of the schedule has passed.
+                if drift > 0.5 and iteration >= 0.25 * train_cfg['num_iterations']:
+                    # tanh bounds each COMPONENT, so a saturated displacement has norm
+                    # max_disp * sqrt(D) — that is the value to compare against.
+                    sat = getattr(model, 'max_disp', float('nan')) * (x.shape[-1] ** 0.5)
+                    logger.warning(
+                        f"DEGENERATE at iter {iteration}: {100*drift:.0f}% of displacement is "
+                        f"bulk translation (|disp| {s1['disp']:.4f}, saturation would be "
+                        f"{sat:.4f}). The model is moving the cloud, not correcting it.")
+
                 # ── K=unroll_steps inference (multi-pass) ──────────────────────
                 xk = x
                 for _ in range(unroll_steps):
@@ -259,7 +281,8 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
                 f"  mean_nn_dist     = {mean_nn_pre:.6f}  ->  {s1['mean_nn']:.6f}              {sk['mean_nn']:.6f}\n"
                 f"  displacement     = {'':10s}     {s1['disp']:.4f} ({s1['disp']/rd_value:.3f}x rd)   "
                 f"{sk['disp']:.4f} ({sk['disp']/rd_value:.3f}x rd)\n"
-                f"  correction_eff   = {'':10s}     {eff1:.4f} ({pct1:.1f}% ceil)         {effk:.4f} ({pctk:.1f}% ceil)"
+                f"  correction_eff   = {'':10s}     {eff1:.4f} ({pct1:.1f}% ceil)         {effk:.4f} ({pctk:.1f}% ceil)\n"
+                f"  bulk_drift       = {'':10s}     {100*drift:.0f}% of displacement (>50% = degenerate)"
                 + kg_line
             )
             # CSV: write K=1 columns (primary), plus K=K illegal% and legal% for tracking

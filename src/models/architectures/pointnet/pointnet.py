@@ -66,3 +66,13 @@ class CorrectorModel(nn.Module):
         g = h.max(dim=1, keepdim=True).values                # (B, 1, H) permutation-invariant
         h = torch.cat([h, g.expand(-1, x.shape[1], -1)], -1)  # (B, N, 2H)
         return torch.tanh(self.head(h)) * self.max_disp
+
+    def forward_sparse(self, x, edge_index, rd=None, box=None):
+        """Whole-cloud path. `edge_index` is accepted and ignored — there is no pairwise
+        term to sparsify, and cost is already O(N*H), so a 2500-point cloud runs in ~6 ms.
+
+        Exists so the architecture can be deployed through WholeCloudCorrector2D like the
+        others. Being able to run at scale is not the same as being useful at scale: this
+        model has no notion of which points are near it.
+        """
+        return self.forward(x.unsqueeze(0), rd=rd, box=box)[0]

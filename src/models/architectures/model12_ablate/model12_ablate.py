@@ -44,7 +44,7 @@ class CorrectorModel(nn.Module):
         self.periodic = model_config.get('periodic', True)
         for name, val, allowed in (('graph', self.graph, ('radius', 'knn')),
                                    ('weight', self.weight, ('kernel', 'learned')),
-                                   ('aggregation', self.agg, ('wsum', 'sum', 'max'))):
+                                   ('aggregation', self.agg, ('wsum', 'sum', 'max', 'wmax'))):
             if val not in allowed:
                 raise ValueError(f'{name}={val!r} not in {allowed}')
 
@@ -115,9 +115,17 @@ class CorrectorModel(nn.Module):
             feat = torch.cat([h[dst], h[src], geo], dim=-1)
             e = edge_mlp(feat)
 
-            if self.agg == 'max':
+            if self.agg in ('max', 'wmax'):
+                em = e
+                if self.agg == 'wmax':
+                    if self.weight == 'kernel':
+                        q = (dist / rd).clamp(max=1.0)
+                        w = (1.0 - q ** 2) ** 2
+                    else:
+                        w = torch.sigmoid(self.weight_mlps[i](feat).squeeze(-1))
+                    em = w.unsqueeze(-1) * e
                 msg = x.new_full((N, self.hidden_dim), float('-inf')).scatter_reduce_(
-                    0, dst.unsqueeze(-1).expand(-1, self.hidden_dim), e,
+                    0, dst.unsqueeze(-1).expand(-1, self.hidden_dim), em,
                     reduce='amax', include_self=True)
                 msg = torch.nan_to_num(msg, neginf=0.0)
             else:
@@ -177,12 +185,21 @@ class CorrectorModel(nn.Module):
                 fd = dist
             member = self._membership(fd, h, eye, rd)
 
-            if self.agg == 'max':
-                # NOTE: `weight` is inert here — a max over neighbours has nowhere to
-                # apply a per-edge scalar. So aggregation='max' changes TWO things at
-                # once (sum -> max, and weighting removed), unlike the other rungs which
-                # each change one. Read this rung accordingly.
-                msg = e.masked_fill(~member.unsqueeze(-1), float('-inf')).max(dim=2).values
+            if self.agg in ('max', 'wmax'):
+                # 'max': `weight` is inert — a plain max has nowhere to apply a per-edge
+                # scalar, so this rung changes TWO things (sum -> max AND weighting
+                # removed). 'wmax' scales each message by the weight before the max, so
+                # the kernel survives and only the aggregation operator changes — the
+                # clean single-change comparison against 'wsum'.
+                em = e
+                if self.agg == 'wmax':
+                    if self.weight == 'kernel':
+                        q = (dist / rd).clamp(max=1.0)
+                        w = (1.0 - q ** 2) ** 2
+                    else:
+                        w = torch.sigmoid(self.weight_mlps[i](feat).squeeze(-1))
+                    em = w.unsqueeze(-1) * e
+                msg = em.masked_fill(~member.unsqueeze(-1), float('-inf')).max(dim=2).values
                 msg = torch.nan_to_num(msg, neginf=0.0)   # isolated nodes get no message
             else:
                 if self.weight == 'kernel':

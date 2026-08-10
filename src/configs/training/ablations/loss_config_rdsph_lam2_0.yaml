@@ -1,0 +1,28 @@
+name: rdsph_loss
+
+# ABLATION ARM (lambda2 = 0): no displacement regulariser.
+#
+# The fourth cell of the loss 2x2, and newly interesting: the degenerate solution
+# seen across this suite is a SATURATED UNIFORM TRANSLATION, which the loss cannot
+# see (every term depends only on relative positions) and which only the lambda2
+# displacement penalty pushes back on. Removing lambda2 removes that push entirely.
+# Two opposite predictions, and this run distinguishes them:
+#   - collapse becomes MORE likely, since nothing penalises bulk motion; or
+#   - collapse becomes LESS likely, if the saturation trap is entered because
+#     lambda2 fights the violation gradient once the easy violations are cleared.
+#
+# Run (production recipe, only the loss swapped):
+#   .venv\Scripts\python.exe src/training/trainer.py ^
+#     --train-config   src/configs/training/trainer/train_config_sph_adamw.yaml ^
+#     --dataset-config src/configs/training/dataset/dataset_config_sph.yaml ^
+#     --loss-config    src/configs/training/ablations/loss_config_rdsph_lam2_0.yaml ^
+#     --model-config   src/configs/training/model/model_config_12_sph_L4.yaml
+
+params:
+  lambda1: 7.14       # 1 / rd, rd = 0.14
+  lambda1_quad: 0
+  lambda2: 0.0        # the ablated term
+  lambda3: 0.27
+
+  h_factor: 2.0
+  box:      1.0

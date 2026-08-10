@@ -14,6 +14,15 @@ initialization: xavier_uniform
 device: cuda
 unroll_steps: 5
 
+# Torch seed for model initialisation. Set because this recipe has a degenerate
+# mode — roughly half of some architecture variants collapse into a saturated
+# uniform translation, and which one you get depends only on the init. Leaving it
+# unseeded makes every run a coin flip and makes results irreproducible. Override
+# per run with --seed to sample the distribution deliberately.
+# NOTE: the shipped model12_sph_l4.pt predates this and was trained unseeded, so
+# re-running will not reproduce that exact checkpoint (it never would have).
+seed: 0
+
 optimizer:
   name: AdamW
   params:

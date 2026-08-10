@@ -1,0 +1,22 @@
+﻿# Architecture bridge rung: wmax.
+# Weighted MAX: each message is scaled by the fixed (1-q^2)^2 SPH kernel before the
+# max, so the kernel survives and ONLY the aggregation operator changes relative to
+# the baseline. This is the clean single-change counterpart to the `maxagg` rung,
+# which silently also removed the weighting (a plain max has nowhere to put a
+# per-edge scalar) and therefore confounded two mechanisms.
+#
+# Parameter-matched to model12 (350,594); run with the production dataset/loss/trainer.
+architecture: model12_ablate
+model_file: models/architectures/model12_ablate/model12_ablate
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+cutoff_rd: 0.286
+
+graph: radius
+weight: kernel
+aggregation: wmax
+periodic: true

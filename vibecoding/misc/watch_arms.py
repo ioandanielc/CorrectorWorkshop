@@ -100,16 +100,25 @@ def main():
         if m:
             name += f'/seed{m.group(1)}'
         blk = latest_block(text, args.at)
+        # a killed run leaves a log that simply stops; without this it reads as RUNNING
+        # forever and misrepresents what is actually on the GPU
+        stale_s = (datetime.now().timestamp() - log.stat().st_mtime)
         done = 'Training complete' in text
         if blk is None:
             print(f'{name:42s} {"-":>6s} {"-":>5s} {"":>9s} {"":>7s} {"":>7s} '
                   f'{"":>8s} {"":>7s}  {"starting"}')
             continue
         it, sec, v = blk
+        if done:
+            state = 'done'
+        elif stale_s > 300:
+            state = f'DEAD({stale_s / 60:.0f}m)'   # killed or hung: log stopped growing
+        else:
+            state = 'RUNNING'
         print(f'{name:42s} {it:6d} {sec:5.3f} {v.get("viol_red", float("nan")):8.1f}% '
               f'{v.get("illegal", float("nan")):7.2f} {v.get("nn", float("nan")):7.4f} '
               f'{v.get("kg_pre", float("nan")):8.4f} {v.get("kg", float("nan")):7.4f}  '
-              f'{"done" if done else "RUNNING"}  {run.name}')
+              f'{state}  {run.name}')
 
 
 if __name__ == '__main__':

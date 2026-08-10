@@ -94,7 +94,7 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 0. **Domain**: give the true PBC box explicitly via `data.box` when known (the SPH case: 1.0; obstruction: its domain) — extent-based inference (`box: null`) undershoots on lattice-like clouds (see rough edges).
 
-1. **Whole-cloud sparse pass**: per pass, scale the cloud to the model's training rd, build the PBC edge list (`cKDTree.query_pairs` at `cutoff_rd`, both directions), one `forward_sparse` call, unscale, wrap. No tiles, no ghosts, no seams; ~0.26 s at N=2500. (The tiled grid/kdtree correctors were removed 2026-07-21 — on `main` if a tiled comparison is ever needed again; their measured numbers are recorded in the kg_sweep artifacts and memory.)
+1. **Whole-cloud sparse pass**: per pass, scale the cloud to the model's training rd, build the PBC edge list (`cKDTree.query_pairs` at `cutoff_rd`, both directions), one `forward_sparse` call, unscale, wrap. No tiles, no ghosts, no seams; measured 0.189 s/timestep on CPU and 0.049 s on CUDA at N=2500, k=5. (The tiled grid/kdtree correctors were removed 2026-07-21 — on `main` if a tiled comparison is ever needed again; their measured numbers are recorded in the kg_sweep artifacts and memory.)
 
 2. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before the model call; divide displacements by `scale` after. Maps violations into the model's training distribution. Verified to extrapolate: obstruction runs at rd_test=0.012 (scale ≈ 11.7) on a bounded scene and converges to ~0.98·rd.
 
@@ -143,6 +143,40 @@ SPH-restart quality is additionally judged by `mean_kg_norm` (kernel-gradient sy
 
 This branch is the **model12 / 2D SPH use case**, production-shaped (2026-07-21): model9 removed, whole-cloud path first-class, results test-guarded and persisted.
 
-- **model12 (physics-informed)**: `λ3·|KG|²` (SPH kernel-gradient symmetry) makes corrected clouds valid SPH restarts — the removed model9's were not (it blows KG up ~3.9×: full-sweep disordered mean 1.278 vs raw 0.326; kept as an artifact-only comparison series). `WholeCloudCorrector2D` (`corrector: wholecloud`, `model12_wholecloud.yaml`) is the deployment path: bit-exact against the sim-validated trajectory (`tests/test_wholecloud.py`), ~20× faster than tiled (~0.26 s vs 5.8 s per N=2500 timestep). Full-trajectory KG sweep (`kg_sweep.py`, 1002 steps, disordered means): raw 0.326 / TV 0.274 / model12_wc **0.128**, KG floor ≈ 0.111. The KG term is a *soft, training-only* constraint — never enforced at inference. PoC for a physics-informed-ML ("Physics in AI") workshop paper.
+- **model12 (physics-informed)**: `λ3·|KG|²` (SPH kernel-gradient symmetry) makes corrected clouds valid SPH restarts — the removed model9's were not (it blows KG up ~3.9×: full-sweep disordered mean 1.278 vs raw 0.326; kept as an artifact-only comparison series). `WholeCloudCorrector2D` (`corrector: wholecloud`, `model12_wholecloud.yaml`) is the deployment path: bit-exact against the sim-validated trajectory (`tests/test_wholecloud.py`). Full-trajectory KG sweep (`kg_sweep.py`, 1002 steps, disordered means): raw 0.326 / TV 0.274 / model12_wc **0.128** at k=5. The KG term is a *soft, training-only* constraint — never enforced at inference. PoC for a physics-informed-ML ("Physics in AI") workshop paper.
 - **Obstruction**: re-run 2026-07-21 with the wholecloud corrector — 6100 real + 832 ghosts, mean nn 0.0076 → 0.0117 (rd 0.012, scale ≈ 11.7, bounded non-periodic scene) in 5 ghost-re-pinned passes. Strong scale-extrapolation evidence.
-- Roadmap (ON HOLD pending user walkthrough): 3D model12 (needs 3D quintic KG in utils/metrics.py; synthetic data only for now); ablations (λ3 re-runs + λ3=0 control arm; sph_loss kept as the pure-symmetry arm — shows illegality+displacement terms are necessary); disorder-level ("physical temperature") study; paper/ figure scripts (deferred until the rest is cleared).
+
+### 2026-08-10 — ablation suite for the workshop paper (`paper/`)
+
+**Read `paper/RESULTS.md` first** for what is established, `paper/JOURNAL.md` for the run
+log and the claim-by-claim audit. Four claims that used to live in this file were retracted
+by measurement that day; do not re-import them from memory or older docs:
+
+| retracted | replaced by |
+|---|---|
+| "KG floor ≈ 0.111" | an artifact of k=5. |KG| falls monotonically to 0.0675 by k=40 with no floor; k=1 is *worse than no correction*; illegal% bottoms at k=8 |
+| "~0.26 s / ~20× faster than tiled" | measured deployment cost, N=2500, k=5: **0.189 s/step CPU, 0.049 s/step CUDA** |
+| "model12 is 3× cheaper than GNS" | that is dense *training* at N=49; at deployment it is 1.13× CPU / 1.39× CUDA |
+| "per-particle normalisation drives size transfer" | the `nonorm` rung removes it and transfers *better*; the fixed kernel is the candidate mechanism, and is marked suggestive rather than established |
+
+Headline additions: the λ3=0 ablation **reproduces model9's failure on the real trajectory**
+(|KG| 1.471 vs raw 0.331) and collapses in 4/4 seeds; and the small-N synthetic benchmark
+**misranks architectures against deployment** — GNS and the `maxagg` bridge rung both beat
+model12 at N=49 and both lose at N=2500.
+
+New in the tree: `paper/` (results, journal, architecture report, exhibits),
+`src/configs/training/ablations/` (architecture, bridge, cardinality, packing, cutoff),
+`src/inference/experiments/ablations/` (`score_arm.py`, `build_exhibits.py`),
+four baseline architectures (`pointnet`, `pointnet2`, `dgcnn`, `gns`) plus
+`model12_ablate` (component flags; its baseline rung is bit-identical to `model12`),
+and `tests/test_sparse_paths.py`.
+
+**Traps this branch now guards against**: the trainer has a degenerate mode — roughly half
+of some architecture variants collapse into a *saturated uniform translation*, which every
+loss term is blind to (they all depend only on relative positions) and which |KG| and
+illegal% both report as "unchanged". `trainer.py` logs `bulk_drift` and warns above 50%.
+The trainer is now seeded (`seed: 0`) because that mode is initialisation-dependent, so
+unseeded runs were coin flips. **A single collapsed run means nothing — collapse claims
+need ≥3 seeds.**
+
+- Roadmap: 3D model12 (needs 3D quintic KG in utils/metrics.py; synthetic data only for now); disorder-level ("physical temperature") study; re-simulating at k>5 to validate the better operating point (external solver); paper prose.

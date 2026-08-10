@@ -57,6 +57,13 @@ model12 is best or tied-best in every comparison, ~90% better than GNS at matche
 production settings, and 2.2x better than the classical TV baseline. DGCNN and PointNet
 cannot run here at all — no sparse path.
 
+Correction: that applies to **DGCNN only**. PointNet has no pairwise term at all — a
+per-point encoder and one global max-pool, so cost is O(N·H) — and runs a 2500-point
+cloud in 6 ms. An earlier version of this document said "the dense-only baselines cannot
+process 2500 points", which was inferred from "dense" rather than measured. DGCNN is the
+one that genuinely cannot scale: its kNN graph is an N×N distance matrix rebuilt every
+round, in feature space, so there is no fixed edge list to exploit.
+
 **Structural regularity** is the measure that matches what the figures show: nn CV, the
 spread of neighbour spacing relative to its mean. model12 is 3.5x more uniform than TV
 and 6.7x more uniform than raw. For an SPH restart this is what "well conditioned" means.
@@ -103,11 +110,24 @@ and legality can be traded. Quote k=5 for the validated claim and say so.
 
 The strongest ablation result. Both scored from `model_best.pt`:
 
-| arm | viol_red | \|KG\| | nn CV |
-|---|---|---|---|
-| lambda3 = 0.27 (full) | **82.9%** | **0.0216** | **2.3%** |
-| lambda3 = 0 (physics off) | 17.6% | 0.1407 | 13.5% |
-| lambda1 = lambda2 = 0 (pure symmetry, 2026-07-22) | — | real-data KG 0.357, *worse than raw 0.326* | — |
+All four cells scored with the same tooling (periodic metrics, fixed clouds, `model_best`):
+
+| loss variant | N=49 viol_red | N=49 \|KG\| | nn CV | knn_keep | **trajectory \|KG\|** |
+|---|---|---|---|---|---|
+| full (lambda1, lambda2, lambda3) | **82.9%** | **0.0216** | **2.3%** | 0.661 | **0.127** |
+| lambda3 = 0 (physics off) | 17.6% | 0.1407 | 13.5% | 0.701 | 1.471 |
+| lambda1 = lambda2 = 0 (pure symmetry) | **-19.5%** | 0.3948 | 46.3% | **0.132** | **3.009** |
+| lambda2 = 0 (no displacement reg) | pending | | | | |
+
+Both single-term ablations are catastrophic on the real task and in *different* ways.
+Without the physics term the corrector reproduces model9's failure (1.471). Without the
+rd terms it is far worse still (3.009, 9x raw) and it shreds the arrangement — knn_keep
+0.132 means only 13% of each particle's neighbours survive. **Neither objective alone is
+usable; the combination is what works.**
+
+Note: the pure-symmetry arm was previously quoted at real-data KG 0.357 from a July
+measurement. Re-scored with the current periodic tooling it is 3.009. The old figure was
+produced differently and had been carried forward uncritically; this table supersedes it.
 
 **On the real trajectory the ablation reproduces the historical failure mode.** Deployed
 on N=2500, t >= 300:

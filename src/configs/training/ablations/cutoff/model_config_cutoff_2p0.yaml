@@ -1,0 +1,14 @@
+# cutoff_rd sweep: 2.0 * spacing — production setting (= h, the SPH smoothing length).
+# Kernel support 0.285714; reach = 4 * cutoff = 1.1429 (1.14 of the unit box).
+# CONFOUND: reach moves with the width, since reach = L * cutoff_rd.
+# Separating the two needs L adjusted to hold reach constant — not run.
+architecture: iterative_message_passing_corrector
+model_file: models/architectures/model12/model12
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+
+cutoff_rd: 0.285714
