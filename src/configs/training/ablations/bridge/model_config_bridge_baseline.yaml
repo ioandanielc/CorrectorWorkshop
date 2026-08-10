@@ -1,0 +1,20 @@
+# Architecture bridge rung: baseline.
+# Production model12, reached through the ablation code path. Verified
+# bit-identical to models/architectures/model12/model12.py.
+#
+# Parameter-matched to model12 (350,594) within 0.3%; run with the
+# production dataset/loss/trainer configs so only the mechanism differs.
+architecture: model12_ablate
+model_file: models/architectures/model12_ablate/model12_ablate
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+cutoff_rd: 0.286
+
+graph: radius
+weight: kernel
+aggregation: wsum
+periodic: true

@@ -1,0 +1,23 @@
+# Architecture ablation: DGCNN baseline (the fair strong baseline).
+# Parameter-matched to model12 L4 hd128 (350,594): hidden_dim 177 -> 348,692 (-0.54%);
+# k does not affect the parameter count.
+#
+# Differs from model12 in exactly three components — kNN graph instead of a radius
+# graph, learned edge weights instead of the fixed (1-q^2)^2 SPH kernel, and max
+# instead of kernel-weighted sum. Periodicity is deliberately NOT one of them: the
+# first round's neighbour search and relative positions use the minimum image.
+architecture: dgcnn_corrector
+model_file: models/architectures/dgcnn/dgcnn
+
+hidden_dim: 177
+num_layers: 4             # same number of message-passing rounds as model12 L4
+k: 12                     # ~= the population of model12's radius graph: a disc of
+                          # radius cutoff_rd = 2 spacings holds pi*2^2 ~ 12.6 lattice
+                          # neighbours, so the two see comparably sized neighbourhoods
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * constraint rd = 0.14, same bound as model12
+
+# Passed by the trainer (uses_rd = True is what makes it pass `box` too) and ignored:
+# a kNN graph has no cutoff, and giving it one would stop it being DGCNN.
+cutoff_rd: 0.286

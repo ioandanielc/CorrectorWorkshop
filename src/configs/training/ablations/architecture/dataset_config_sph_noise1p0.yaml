@@ -1,0 +1,11 @@
+# Architecture ablation, HARDER-DATA condition: N=49, noise raised 0.6*rd -> 1.0*rd.
+# Identical to dataset/dataset_config_sph.yaml except noise_scale_max. Displacements
+# now routinely exceed the constraint distance itself, so a corrector cannot succeed
+# by nudging — it has to reorganise neighbourhoods.
+points_per_cloud: 49
+dim: 2
+rd: 0.14
+seed: 42
+periodic: true
+noise_scale_min: 0.0
+noise_scale_max: 0.14     # 1.0 * rd (production recipe uses 0.6 * rd = 0.084)

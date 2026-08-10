@@ -1,0 +1,11 @@
+# Packing sweep, rd/spacing = 1.00 (spacing = 1/7 = 0.142857).
+# Clean-lattice jitter 0.00000; 4.6% of input pairs illegal.
+# PACKING LIMIT: jitter is exactly 0, so the only feasible configuration
+# is the exact lattice, whose KG is exactly 0. Maximum coordination demand.
+points_per_cloud: 49
+dim: 2
+rd: 0.142857
+seed: 42
+periodic: true
+noise_scale_min: 0.0
+noise_scale_max: 0.085714   # 0.6 * rd, constant relative disorder

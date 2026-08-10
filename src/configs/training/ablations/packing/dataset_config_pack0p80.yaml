@@ -1,0 +1,9 @@
+# Packing sweep, rd/spacing = 0.80 (spacing = 1/7 = 0.142857).
+# Clean-lattice jitter 0.01429; 1.8% of input pairs illegal.
+points_per_cloud: 49
+dim: 2
+rd: 0.114286
+seed: 42
+periodic: true
+noise_scale_min: 0.0
+noise_scale_max: 0.068572   # 0.6 * rd, constant relative disorder

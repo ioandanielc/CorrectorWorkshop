@@ -1,0 +1,13 @@
+# Cardinality ablation, N=100 arm (baseline: model/model_config_12_sph_L4.yaml, N=49).
+# Architecture identical — only the two length scales rescale with the lattice
+# spacing 0.10, so the model sees the same geometry in spacing units.
+architecture: iterative_message_passing_corrector
+model_file: models/architectures/model12/model12
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.1176   # 1.2 * rd = 0.098
+
+cutoff_rd: 0.20            # 2 * spacing = h; reach = 4 * 0.20 = 0.80 of the box

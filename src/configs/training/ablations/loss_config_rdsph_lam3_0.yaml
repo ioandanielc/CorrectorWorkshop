@@ -1,0 +1,29 @@
+name: rdsph_loss
+
+# ABLATION ARM (lambda3 = 0): the physics-off control.
+#
+# Identical to the production loss_config_rdsph_lam3_0p27.yaml with the SPH
+# kernel-gradient symmetry term switched off, leaving violation + displacement
+# regularisation only. This is the arm that answers "does the physics-informed
+# term do anything, or would an ordinary Poisson-disk corrector have sufficed" —
+# the control the loss ablation was missing.
+#
+# Its counterpart at the other extreme is ablations/loss_config_sph.yaml
+# (lambda1 = lambda2 = 0, pure symmetry), which is already known to be worse than
+# doing nothing on real data (KG 0.357 vs raw 0.326).
+#
+# Run (production recipe, only the loss swapped):
+#   .venv\Scripts\python.exe src/training/trainer.py ^
+#     --train-config   src/configs/training/trainer/train_config_sph_adamw.yaml ^
+#     --dataset-config src/configs/training/dataset/dataset_config_sph.yaml ^
+#     --loss-config    src/configs/training/ablations/loss_config_rdsph_lam3_0.yaml ^
+#     --model-config   src/configs/training/model/model_config_12_sph_L4.yaml
+
+params:
+  lambda1: 7.14       # 1 / rd, rd = 0.14
+  lambda1_quad: 0
+  lambda2: 0.0149     # 0.1 * lambda1 / (N-1), N = 49
+  lambda3: 0.0        # the ablated term
+
+  h_factor: 2.0       # unused at lambda3 = 0; kept so the config shape matches
+  box:      1.0

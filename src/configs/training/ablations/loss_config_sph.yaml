@@ -1,0 +1,22 @@
+name: sph_loss
+
+# ABLATION ARM (pure symmetry): restored verbatim from commit f9e5ad0
+# (src/configs/training/loss/loss_config_sph.yaml, removed in b3eceac) for the
+# "does the rd part help" ablation — pure KG term vs the production rdsph loss.
+#
+# Pure SPH symmetry loss: L = lambda_sph * mean_i |KG_i|^2, forcing the
+# quintic-spline kernel-gradient sum (Morris 1997, periodic) toward zero.
+# No violation term — rd only shapes what the model attends to.
+#
+# Run (pairs with the production recipe, only the loss swapped):
+#   .venv\Scripts\python.exe src/training/trainer.py ^
+#     --train-config   src/configs/training/trainer/train_config_sph_adamw.yaml ^
+#     --dataset-config src/configs/training/dataset/dataset_config_sph.yaml ^
+#     --loss-config    src/configs/training/ablations/loss_config_sph.yaml ^
+#     --model-config   src/configs/training/model/model_config_12_sph_L4.yaml
+
+params:
+  lambda_sph: 1.0
+  lambda2:    0.0     # optional displacement regulariser; 0 = pure kernel term
+  h_factor:   2.0     # h = h_factor * dx, dx = box / sqrt(N)  (reference: h ~ 2*dx)
+  box:        1.0     # unit torus — matches periodic: true in the dataset config

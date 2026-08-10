@@ -1,0 +1,22 @@
+# Architecture bridge rung: dgcnnmech.
+# All three mechanisms swapped at once = DGCNN's mechanism set inside
+# model12's code path. Bridges to the real DGCNN baseline and shows
+# whether the rungs compose.
+#
+# Parameter-matched to model12 (350,594) within 0.3%; run with the
+# production dataset/loss/trainer configs so only the mechanism differs.
+architecture: model12_ablate
+model_file: models/architectures/model12_ablate/model12_ablate
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+cutoff_rd: 0.286
+
+graph: knn
+weight: learned
+aggregation: max
+periodic: true
+k: 12                     # matched to the measured radius-graph degree 11.6

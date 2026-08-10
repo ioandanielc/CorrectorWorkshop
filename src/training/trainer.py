@@ -27,8 +27,11 @@ LOSS_FNS = {
 SPH_LOSSES = ('sph_loss', 'rdsph_loss')   # kernel-gradient (symmetry) losses
 
 
-def train(train_config_path, dataset_config_path, loss_config_path, model_config_path):
+def train(train_config_path, dataset_config_path, loss_config_path, model_config_path,
+          seed=None):
     train_cfg = load_train_config(train_config_path)
+    if seed is not None:
+        train_cfg['seed'] = seed
     dataset_cfg = load_dataset_config(dataset_config_path)
     loss_cfg = load_loss_config(loss_config_path)
     model_cfg = load_model_config(model_config_path)
@@ -68,6 +71,14 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     np.save(run_dir / "validation_set.npy", val_noisy)
     logger.info("Validation set saved")
 
+    # Seeds only torch, so model INITIALISATION varies while the data sequence stays
+    # fixed by the dataset config's own seed — which is what isolates "is this result
+    # an initialisation artifact" from "is this result a property of the recipe".
+    # Absent = unseeded, the historical behaviour of every run before 2026-08-10.
+    if train_cfg.get('seed') is not None:
+        torch.manual_seed(int(train_cfg['seed']))
+        logger.info(f"Torch seed: {train_cfg['seed']} (init only; data seed is the dataset config's)")
+
     model_module = importlib.import_module(model_cfg['model_file'].replace('/', '.'))
     CorrectorModel = model_module.CorrectorModel
     model = CorrectorModel(
@@ -92,15 +103,15 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
     loss_fn = LOSS_FNS[loss_cfg['name']]
     rd = torch.tensor(dataset_cfg['rd'], dtype=torch.float32, device=device)
 
-    # Attention radius: what the model "sees". Defaults to the constraint rd;
-    # model_config.attention_rd decouples them (SPH losses: the kernel-gradient
-    # asymmetry lives mostly in pairs ABOVE rd, which violation-gated attention
+    # Cutoff radius: what the model "sees". Defaults to the constraint rd;
+    # model_config.cutoff_rd decouples them (SPH losses: the kernel-gradient
+    # asymmetry lives mostly in pairs ABOVE rd, which a violation-gated cutoff
     # would otherwise weight zero). The loss always uses the constraint rd.
-    attention_rd = model_cfg.get('attention_rd')
-    rd_model = (torch.tensor(attention_rd, dtype=torch.float32, device=device)
-                if attention_rd is not None else rd)
-    if attention_rd is not None:
-        logger.info(f"Attention rd = {attention_rd} (constraint rd = {dataset_cfg.get('rd')})")
+    cutoff_rd = model_cfg.get('cutoff_rd')
+    rd_model = (torch.tensor(cutoff_rd, dtype=torch.float32, device=device)
+                if cutoff_rd is not None else rd)
+    if cutoff_rd is not None:
+        logger.info(f"Cutoff rd = {cutoff_rd} (constraint rd = {dataset_cfg.get('rd')})")
 
     loss_csv = open(run_dir / "loss.csv", "w", buffering=1)   # line-buffered
     loss_csv.write(
@@ -116,27 +127,47 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
     logger.info(f"Starting training for {train_cfg['num_iterations']} iterations")
 
+    batch_size   = train_cfg['batch_size']
+    unroll_steps = train_cfg.get('unroll_steps', 1)
+    # Dense edges are (B, N, N, ·): memory grows as batch_size * N^2. micro_batch_size
+    # splits a batch into chunks that fit, leaving the effective batch — and so the
+    # gradient noise — identical across cardinalities. Unset = one chunk = batch_size.
+    micro_batch_size = int(train_cfg.get('micro_batch_size', batch_size))
+    if micro_batch_size < batch_size:
+        logger.info(f"Gradient accumulation: {batch_size} = "
+                    f"{-(-batch_size // micro_batch_size)} x micro-batch {micro_batch_size}")
+
     best_val_loss = float('inf')
     best_iteration = None
     iter_timer = time.time()
     for iteration in range(1, train_cfg['num_iterations'] + 1):
         model.train()
 
-        clean = dataset.generate_sample(train_cfg['batch_size'])
+        clean = dataset.generate_sample(batch_size)
         noisy = dataset.noise_sample(clean)
         x = torch.tensor(noisy, dtype=torch.float32).to(device)
 
-        x_current  = x
-        total_loss = torch.tensor(0.0, device=device)
-        unroll_steps = train_cfg.get('unroll_steps', 1)
-        for _ in range(unroll_steps):
-            displacement = model(x_current, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x_current)
-            x_next       = x_current + displacement
-            total_loss   = total_loss + loss_fn(x_current, x_next, rd, **loss_cfg['params'])
-            x_current    = x_next.detach()
-
+        # Each unrolled step is detached from the next, so its loss is an independent
+        # function of the parameters and sum_k backward(L_k) == backward(sum_k L_k).
+        # Backpropagating inside the loop frees each step's activations immediately
+        # instead of holding all unroll_steps graphs at once. Every micro-batch
+        # contributes its share of the batch mean, so the accumulated gradient is the
+        # full-batch gradient.
         optimizer.zero_grad()
-        total_loss.backward()
+        total_loss = 0.0
+        for start in range(0, batch_size, micro_batch_size):
+            xb    = x[start:start + micro_batch_size]
+            share = xb.shape[0] / batch_size
+
+            x_current = xb
+            for _ in range(unroll_steps):
+                displacement = model(x_current, rd=rd_model, **model_kwargs) if getattr(model, 'uses_rd', False) else model(x_current)
+                x_next       = x_current + displacement
+                step_loss    = loss_fn(x_current, x_next, rd, **loss_cfg['params']) * share
+                step_loss.backward()
+                total_loss  += step_loss.item()
+                x_current    = x_next.detach()
+
         optimizer.step()
         scheduler.step()
 
@@ -219,7 +250,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
 
             logger.info(
                 f"iter={iteration:6d}  {secs_per_iter:.3f}s/iter  lr={current_lr:.2e}  "
-                f"loss={total_loss.item():.6f}\n"
+                f"loss={total_loss:.6f}\n"
                 f"  {'':20s}  {'K=1 (deploy)':>22s}   {'K='+str(unroll_steps)+' (train)':>22s}\n"
                 f"  mean_violation   = {mean_viol_pre:.6f}  ->  {s1['mean_viol']:.6f}              {sk['mean_viol']:.6f}\n"
                 f"  illegal_pairs    = {ill_pct_pre:.2f}%      ->  {s1['ill_pct']:.2f}%                 {sk['ill_pct']:.2f}%\n"
@@ -233,7 +264,7 @@ def train(train_config_path, dataset_config_path, loss_config_path, model_config
             )
             # CSV: write K=1 columns (primary), plus K=K illegal% and legal% for tracking
             loss_csv.write(
-                f"{iteration},{total_loss.item():.6f},{current_lr:.2e},"
+                f"{iteration},{total_loss:.6f},{current_lr:.2e},"
                 f"{mean_viol_pre:.6f},{s1['mean_viol']:.6f},"
                 f"{med_viol_pre:.6f},{s1['med_viol']:.6f},"
                 f"{ill_pct_pre:.2f},{s1['ill_pct']:.2f},"
@@ -326,10 +357,14 @@ if __name__ == "__main__":
     parser.add_argument("--dataset-config", required=True)
     parser.add_argument("--loss-config",    required=True)
     parser.add_argument("--model-config",   required=True)
+    parser.add_argument("--seed", type=int, default=None,
+                        help="torch seed for model init; overrides the train config. "
+                             "Use to replicate an arm across initialisations.")
     args = parser.parse_args()
     train(
         train_config_path=args.train_config,
         dataset_config_path=args.dataset_config,
         loss_config_path=args.loss_config,
         model_config_path=args.model_config,
+        seed=args.seed,
     )

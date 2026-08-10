@@ -1,0 +1,10 @@
+# Cardinality ablation, N=196 arm (baseline: dataset/dataset_config_sph.yaml, N=49).
+# 14x14 lattice on the unit torus — spacing 1/14 = 0.0714.
+# Reach/box = 0.57: the receptive field covers just over half the box.
+points_per_cloud: 196
+dim: 2
+rd: 0.070              # 0.98 * spacing, same packing as the N=49 arm
+seed: 42
+periodic: true
+noise_scale_min: 0.0
+noise_scale_max: 0.042    # 0.6 * rd

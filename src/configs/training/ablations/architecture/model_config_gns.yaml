@@ -1,0 +1,20 @@
+# Architecture ablation: GNS-style baseline (Sanchez-Gonzalez et al. 2020).
+# Parameter-matched to model12 L4 hd128 (350,594): hidden_dim 107 -> 347,966 (-0.75%).
+#
+# The closest published architecture to model12 and the sharpest baseline here:
+# same radius graph at the same cutoff, same number of message-passing rounds,
+# same minimum-image geometry. It differs in exactly two mechanisms — messages
+# carried in a learned persistent edge latent instead of weighted by the fixed
+# (1-q^2)^2 SPH kernel, and aggregated by unweighted sum instead of a
+# kernel-weighted mean. model12 therefore reads as "GNS + SPH kernel weighting".
+architecture: gns_corrector
+model_file: models/architectures/gns/gns
+
+hidden_dim: 107
+num_layers: 4             # same number of processor rounds as model12 L4
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * constraint rd = 0.14, same bound as model12
+
+cutoff_rd: 0.286          # connectivity radius = model12's cutoff; measured degree
+                          # on a 7x7 lattice is mean 11.6 (min 7, max 19)

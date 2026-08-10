@@ -1,0 +1,10 @@
+# Cardinality ablation, N=100 arm (baseline: dataset/dataset_config_sph.yaml, N=49).
+# 10x10 lattice on the unit torus — spacing 1/10 = 0.10.
+# Reach/box = 0.80: the model's 8-spacing receptive field no longer wraps the box.
+points_per_cloud: 100
+dim: 2
+rd: 0.098              # 0.98 * spacing, same packing as the N=49 arm
+seed: 42
+periodic: true
+noise_scale_min: 0.0
+noise_scale_max: 0.0588   # 0.6 * rd

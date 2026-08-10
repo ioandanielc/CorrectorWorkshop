@@ -1,0 +1,13 @@
+name: rdsph_loss
+
+# Packing sweep, rd/spacing = 1.00. lambda3 holds the
+# symmetry:illegality ratio at its rd/s=0.98 value so the rungs stay
+# comparable; it varies only mildly (0.18 - 0.28) across the sweep.
+params:
+  lambda1: 7.0
+  lambda1_quad: 0
+  lambda2: 0.014583
+  lambda3: 0.2814
+
+  h_factor: 2.0
+  box:      1.0

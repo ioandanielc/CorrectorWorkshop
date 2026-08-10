@@ -1,0 +1,21 @@
+# Architecture bridge rung: knngraph.
+# Radius ball -> k nearest, rebuilt in feature space after round 0.
+# Isolates "physical cutoff" from "fixed neighbour count".
+#
+# Parameter-matched to model12 (350,594) within 0.3%; run with the
+# production dataset/loss/trainer configs so only the mechanism differs.
+architecture: model12_ablate
+model_file: models/architectures/model12_ablate/model12_ablate
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+cutoff_rd: 0.286
+
+graph: knn
+weight: kernel
+aggregation: wsum
+periodic: true
+k: 12                     # matched to the measured radius-graph degree 11.6

@@ -1,0 +1,21 @@
+# Architecture bridge rung: nokernel.
+# Fixed (1-q^2)^2 SPH kernel -> a learned linear gate on the edge
+# features. Isolates what writing the kernel into the wiring is worth.
+# The richly-learned version of this axis is the GNS baseline.
+#
+# Parameter-matched to model12 (350,594) within 0.3%; run with the
+# production dataset/loss/trainer configs so only the mechanism differs.
+architecture: model12_ablate
+model_file: models/architectures/model12_ablate/model12_ablate
+
+hidden_dim: 128
+num_layers: 4
+norm: layer
+activation: GELU
+max_displacement: 0.168
+cutoff_rd: 0.286
+
+graph: radius
+weight: learned
+aggregation: wsum
+periodic: true

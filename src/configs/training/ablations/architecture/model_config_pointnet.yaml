@@ -1,0 +1,11 @@
+# Architecture ablation: PointNet baseline (no-local-geometry floor).
+# Parameter-matched to model12 L4 hd128 (350,594): hidden_dim 264 -> 351,914 (+0.38%).
+# No pairwise term, so uses_box = False and it sees raw coordinates on the torus —
+# a property of the architecture, not a handicap imposed by the comparison.
+architecture: pointnet_corrector
+model_file: models/architectures/pointnet/pointnet
+
+hidden_dim: 264
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * constraint rd = 0.14, same bound as model12

@@ -1,0 +1,23 @@
+# Architecture ablation: PointNet++ baseline (Qi et al. 2017), the hierarchical arm.
+# Parameter-matched to model12 L4 hd128 (350,594): hidden_dim 186 -> 350,240 (-0.10%).
+#
+# The only model in the suite that grows its receptive field by pooling rather than
+# by iterating message passing: FPS centroids -> ball query -> mini-PointNet max-pool,
+# twice, then interpolated back with skip connections. Tests whether a coarse-to-fine
+# hierarchy substitutes for message-passing depth.
+#
+# Hierarchy is cramped at small N (49 -> 12 -> 3) and well proportioned at N=196
+# (196 -> 49 -> 12); report the N=49 column with that in mind.
+architecture: pointnet2_corrector
+model_file: models/architectures/pointnet2/pointnet2
+
+hidden_dim: 186
+norm: layer
+activation: GELU
+max_displacement: 0.168   # 1.2 * constraint rd = 0.14, same bound as model12
+
+npoint_frac: [4, 16]      # centroids at N/4 then N/16
+radius_spacings: [2.0, 4.0]   # ball-query radii in lattice spacings; 2.0 == cutoff_rd
+nsample: [12, 12]         # group size, matched to the measured radius-graph degree 11.6
+
+cutoff_rd: 0.286          # sets the base length scale: spacing = cutoff_rd / 2

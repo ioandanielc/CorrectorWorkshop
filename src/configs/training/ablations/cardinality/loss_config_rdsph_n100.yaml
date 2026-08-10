@@ -1,0 +1,15 @@
+name: rdsph_loss
+
+# Cardinality ablation, N=100 arm (baseline: loss/loss_config_rdsph_lam3_0p27.yaml).
+# lambda3 0.27 -> 0.070: |KG| ~ sqrt(N) and the illegality term ~ 1/N, so their
+# ratio grows as N^2 and lambda3 must fall as 1/N^2 to keep the same
+# violation<->symmetry trade-off. Measured at matched relative disorder:
+# sym:illeg = 2.67 at N=49, 10.37 at N=100 (see cardinality/README.md).
+params:
+  lambda1: 10.204     # 1 / rd, rd = 0.098
+  lambda1_quad: 0
+  lambda2: 0.010307   # 0.1 * lambda1 / (N-1), N = 100
+  lambda3: 0.070
+
+  h_factor: 2.0       # h = h_factor * dx; dx = box / sqrt(N), derived internally
+  box:      1.0
