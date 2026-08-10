@@ -11,16 +11,16 @@ garbage.
 
 ## SPH kernel-gradient corrector (model12)
 
-| File | Model config | N_train | rd_train | attention_rd |
+| File | Model config | N_train | rd_train | cutoff_rd |
 |---|---|---|---|---|
 | `model12_sph_l4.pt` | `src/configs/training/model/model_config_12_sph_L4.yaml` | 49 (7×7 periodic lattice) | 0.14 | 0.286 |
 
 model12 (`src/models/architectures/model12/model12.py`) does 4 rounds of
-message passing with smooth proximity attention (not violation-gated), so it
+message passing with a smooth proximity kernel (not violation-gated), so it
 sees the non-violating pairwise asymmetry that drives the SPH
 kernel-gradient symmetry term — trained against `rdsph_loss` (hybrid
 violation + displacement reg + λ3 × kernel-gradient symmetry). Calling
-convention: pass `rd=attention_rd` (not the constraint rd) and `box=`
+convention: pass `rd=cutoff_rd` (not the constraint rd) and `box=`
 (periodic minimum-image geometry) — see model12.py's docstring.
 `WholeCloudCorrector2D` carries the box-aware adapter; run via
 `src/configs/experiments/sph_tv/model12_wholecloud.yaml`. `forward()`

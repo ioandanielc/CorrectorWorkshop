@@ -76,9 +76,9 @@ One deployable checkpoint in `src/models/weights/` (details in `src/models/weigh
 
 | Checkpoint | N_train | rd_train | Used by |
 |---|---|---|---|
-| **model12_sph_l4** | 49 (7×7 lattice) | 0.14 (rd); attention_rd 0.286 | `src/configs/experiments/sph_tv/model12_*.yaml` — physics-informed (SPH KG symmetry) |
+| **model12_sph_l4** | 49 (7×7 lattice) | 0.14 (rd); cutoff_rd 0.286 | `src/configs/experiments/sph_tv/model12_*.yaml` — physics-informed (SPH KG symmetry) |
 
-Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` differ, will either error or silently produce garbage. Calling convention: `rd=attention_rd` (not the constraint rd), `box=` for periodic geometry; all correctors carry the adapter.
+Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` differ, will either error or silently produce garbage. Calling convention: `rd=cutoff_rd` (not the constraint rd), `box=` for periodic geometry; all correctors carry the adapter.
 
 ---
 
@@ -94,7 +94,7 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 0. **Domain**: give the true PBC box explicitly via `data.box` when known (the SPH case: 1.0; obstruction: its domain) — extent-based inference (`box: null`) undershoots on lattice-like clouds (see rough edges).
 
-1. **Whole-cloud sparse pass**: per pass, scale the cloud to the model's training rd, build the PBC edge list (`cKDTree.query_pairs` at `attention_rd`, both directions), one `forward_sparse` call, unscale, wrap. No tiles, no ghosts, no seams; ~0.26 s at N=2500. (The tiled grid/kdtree correctors were removed 2026-07-21 — on `main` if a tiled comparison is ever needed again; their measured numbers are recorded in the kg_sweep artifacts and memory.)
+1. **Whole-cloud sparse pass**: per pass, scale the cloud to the model's training rd, build the PBC edge list (`cKDTree.query_pairs` at `cutoff_rd`, both directions), one `forward_sparse` call, unscale, wrap. No tiles, no ghosts, no seams; ~0.26 s at N=2500. (The tiled grid/kdtree correctors were removed 2026-07-21 — on `main` if a tiled comparison is ever needed again; their measured numbers are recorded in the kg_sweep artifacts and memory.)
 
 2. **Coordinate scaling**: `scale = rd_train / rd_test`. Multiply coords by `scale` before the model call; divide displacements by `scale` after. Maps violations into the model's training distribution. Verified to extrapolate: obstruction runs at rd_test=0.012 (scale ≈ 11.7) on a bounded scene and converges to ~0.98·rd.
 
@@ -104,7 +104,7 @@ Don't cross checkpoint and model config — `hidden_dim` / `max_displacement` di
 
 **Interfaces (`src/inference/correctors/base.py`):**
 - `Corrector` — one method `apply(points, k=1) -> points`. Implemented by `WholeCloudCorrector2D/3D` (thin `DIM = 2/3` subclasses of a private ND body). Requires a **box-aware** model with `forward_sparse` (`uses_box`, model12-style) and raises otherwise; `model_file` is required in the model config (no default architecture). The config carries `checkpoint` + `model_config` + `rd_train`; everything re-exports from `inference.correctors`. (TV / grid / kdtree implementations were purged — TV comparisons use the precomputed `positions.npy` trajectory; tiled correctors live on `main`.)
-- `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `attention_rd`). Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly.
+- `WholeCloudCorrector2D/3D` — one `forward_sparse` call over the entire cloud per pass (PBC cKDTree edge list at `cutoff_rd`). Takes an optional explicit `data.box` — give the true PBC box when known (the SPH case does), which sidesteps the domain-undershoot issue below. Guarded by `tests/test_wholecloud.py`: must reproduce the sim-validated whole-cloud artifact bit-exactly.
 - `Experiment` — one method `run()`. Implemented by `ObstructionExperiment`; the sph_tv model12 script uses the same `experiment.corrector` step-builder pattern. Experiment-loop settings (`stride`, `k_*`, `corrector` kind…) live on the experiments, not on corrector configs.
 
 **Obstructions**: `src/inference/experiments/obstruction/obstruction.py` fills obstacle interiors (ellipse/polygon/gear masks) with ghost particles at spacing `rd` so the corrector pushes real particles away from the boundary; ghosts are re-pinned every pass and dropped from the output.

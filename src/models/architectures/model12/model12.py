@@ -1,7 +1,7 @@
 """
 model12: iterative message-passing corrector.
 
-Why it exists — model9's ceiling, diagnosed on the SPH-loss task:
+model9's ceiling, diagnosed on the SPH-loss task:
 one violation-gated interaction round means displacements depend only on a
 particle's own violating pairs. Non-violating asymmetry (which carries most of
 the kernel-gradient signal) is invisible, and coordinated multi-neighbour
@@ -10,7 +10,7 @@ rearrangement is out of reach. Training saturates within ~1-2k iterations.
 model12 changes three things:
 1. L message-passing rounds with residual node states — information propagates
    L hops, receptive field ~ L * rd.
-2. Smooth proximity attention: pairs within the attention radius rd get weight
+2. Smooth proximity kernel: pairs within the cutoff radius rd get weight
    (1 - (d/rd)^2)^2, normalised per particle — smooth to zero at the cutoff,
    nonzero for every near pair, violating or not. The violation feature
    relu(rd - d) stays in the edge features so overlap depth is still explicit.
@@ -18,8 +18,8 @@ model12 changes three things:
    positions under the minimum image, so wrap-seam pairs are visible during
    periodic training (model9 is blind to them).
 
-Calling convention: model(x, rd=attention_rd, box=None). rd is the ATTENTION
-radius (the checkpoint's model config carries it as attention_rd) — not
+Calling convention: model(x, rd=cutoff_rd, box=None). rd is the CUTOFF
+radius (the checkpoint's model config carries it as cutoff_rd) — not
 necessarily the constraint rd of the loss.
 
 Config keys: hidden_dim, num_layers, norm, activation, max_displacement.
@@ -55,10 +55,12 @@ class CorrectorModel(nn.Module):
             layers += [act(), nn.Linear(H, H)]
             return nn.Sequential(*layers)
 
+        # One round = an edge network + a node network; L rounds are stacked with
+        # their own weights (no sharing), giving an L-hop receptive field.
         edge_in = 2 * H + input_dim + 2       # h_i, h_j, rel_pos, dist, relu(rd-d)
-        self.edge_mlps = nn.ModuleList([mlp(edge_in) for _ in range(L)])
-        self.node_mlps = nn.ModuleList([mlp(H) for _ in range(L)])
-        self.out_mlp   = nn.Sequential(nn.Linear(H, H), act(),
+        self.edge_mlps = nn.ModuleList([mlp(edge_in) for _ in range(L)])  # pair    -> message
+        self.node_mlps = nn.ModuleList([mlp(H) for _ in range(L)])        # aggregated msgs -> node update
+        self.out_mlp   = nn.Sequential(nn.Linear(H, H), act(),            # final node state -> displacement
                                        nn.Linear(H, input_dim))
         self._initialize(initialization)
 
@@ -77,7 +79,7 @@ class CorrectorModel(nn.Module):
 
     def forward(self, x, rd=None, box=None):
         if rd is None:
-            raise ValueError("model12 requires rd (the attention radius)")
+            raise ValueError("model12 requires rd (the cutoff radius)")
         B, N, D = x.shape
 
         rel = x.unsqueeze(2) - x.unsqueeze(1)              # (B, N, N, D)
@@ -86,22 +88,27 @@ class CorrectorModel(nn.Module):
         dist = rel.norm(dim=-1)                            # (B, N, N)
         eye  = torch.eye(N, dtype=torch.bool, device=x.device)
 
-        # smooth proximity attention, zero at d >= rd, normalised per particle
+        # smooth proximity kernel: a FIXED geometric weight (not learned),
+        # zero at d >= rd, normalised per particle. Every near pair — violating
+        # or not — gets a nonzero weight that decays smoothly to 0 at the cutoff.
         q = (dist / rd).clamp(max=1.0)
         w = ((1.0 - q ** 2) ** 2).masked_fill(eye, 0.0)
         w = w / (w.sum(dim=-1, keepdim=True) + 1e-8)       # (B, N, N)
 
+        # per-pair geometric edge features, constant across all L rounds
         geo = torch.cat([rel, dist.unsqueeze(-1),
                          torch.relu(rd - dist).unsqueeze(-1)], dim=-1)
 
+        # node states start at zero — all initial signal comes from the geometry
         h = x.new_zeros(B, N, self.hidden_dim)
         for edge_mlp, node_mlp in zip(self.edge_mlps, self.node_mlps):
-            hi = h.unsqueeze(2).expand(-1, -1, N, -1)
-            hj = h.unsqueeze(1).expand(-1, N, -1, -1)
-            e  = edge_mlp(torch.cat([hi, hj, geo], dim=-1))    # (B, N, N, H)
-            msg = (w.unsqueeze(-1) * e).sum(dim=2)             # (B, N, H)
-            h   = h + node_mlp(msg)                            # residual update
+            hi = h.unsqueeze(2).expand(-1, -1, N, -1)          # receiver state i, broadcast over senders j
+            hj = h.unsqueeze(1).expand(-1, N, -1, -1)          # sender state j, broadcast over receivers i
+            e  = edge_mlp(torch.cat([hi, hj, geo], dim=-1))    # message i<-j from both states + geometry
+            msg = (w.unsqueeze(-1) * e).sum(dim=2)             # proximity-weighted sum over senders j
+            h   = h + node_mlp(msg)                            # residual update: signal reaches 1 hop further
 
+        # tanh bounds every displacement to +-max_disp regardless of node state
         return torch.tanh(self.out_mlp(h)) * self.max_disp
 
     def forward_sparse(self, x, edge_index, rd=None, box=None):
@@ -125,7 +132,7 @@ class CorrectorModel(nn.Module):
         rd, box    : same meaning as forward().
         """
         if rd is None:
-            raise ValueError("model12 requires rd (the attention radius)")
+            raise ValueError("model12 requires rd (the cutoff radius)")
         N = x.shape[0]
         dst, src = edge_index[0], edge_index[1]
 
@@ -134,7 +141,7 @@ class CorrectorModel(nn.Module):
             rel = rel - box * torch.round(rel / box)        # minimum image
         dist = rel.norm(dim=-1)                             # (E,)
 
-        # smooth proximity attention, normalised per receiver (matches forward())
+        # smooth proximity kernel, normalised per receiver (matches forward())
         q   = (dist / rd).clamp(max=1.0)
         w   = (1.0 - q ** 2) ** 2                           # (E,) 0 at d>=rd
         deg = x.new_zeros(N).index_add_(0, dst, w)          # sum_j w over receivers
@@ -143,11 +150,14 @@ class CorrectorModel(nn.Module):
         geo = torch.cat([rel, dist.unsqueeze(-1),
                          torch.relu(rd - dist).unsqueeze(-1)], dim=-1)   # (E, D+2)
 
+        # identical message passing to forward(), but gather/scatter over the
+        # edge list instead of a dense (N, N): h[dst]/h[src] gather the endpoint
+        # states, index_add_ scatters weighted messages back onto the receivers.
         h = x.new_zeros(N, self.hidden_dim)
         for edge_mlp, node_mlp in zip(self.edge_mlps, self.node_mlps):
-            e   = edge_mlp(torch.cat([h[dst], h[src], geo], dim=-1))     # (E, H)
+            e   = edge_mlp(torch.cat([h[dst], h[src], geo], dim=-1))     # message per edge (i<-j)
             msg = x.new_zeros(N, self.hidden_dim).index_add_(
-                0, dst, w.unsqueeze(-1) * e)                             # (N, H)
-            h   = h + node_mlp(msg)
+                0, dst, w.unsqueeze(-1) * e)                             # sum weighted msgs per receiver
+            h   = h + node_mlp(msg)                                      # residual node update
 
         return torch.tanh(self.out_mlp(h)) * self.max_disp

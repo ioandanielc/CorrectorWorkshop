@@ -60,7 +60,7 @@ relative to it; scripts put `src/` on `sys.path` themselves. Dependencies:
 
 | File | What | Why we need it |
 |---|---|---|
-| `model12/model12.py` | L rounds of message passing with a fixed SPH-kernel-shaped proximity weight `(1−(d/rd)²)²` over pairs within `attention_rd`; minimum-image geometry via `box=`. Two entry points: `forward()` (dense `(B,N,N)` edges, training-scale N) and `forward_sparse()` (edge list, whole-cloud N). | The corrector itself. Message passing sees *non-violating* pairwise asymmetry — the part of the KG signal a violation-gated net is blind to. `forward_sparse` removes the dense-edge memory ceiling, enabling one call over an entire N=2500 cloud (the deployment path). Translation-invariant by construction (only `rel = x_j−x_i` enters) and permutation-equivariant; NOT rotation-equivariant — deliberate for a fixed simulation frame. |
+| `model12/model12.py` | L rounds of message passing with a fixed SPH-kernel-shaped proximity weight `(1−(d/rd)²)²` over pairs within `cutoff_rd`; minimum-image geometry via `box=`. Two entry points: `forward()` (dense `(B,N,N)` edges, training-scale N) and `forward_sparse()` (edge list, whole-cloud N). | The corrector itself. Message passing sees *non-violating* pairwise asymmetry — the part of the KG signal a violation-gated net is blind to. `forward_sparse` removes the dense-edge memory ceiling, enabling one call over an entire N=2500 cloud (the deployment path). Translation-invariant by construction (only `rel = x_j−x_i` enters) and permutation-equivariant; NOT rotation-equivariant — deliberate for a fixed simulation frame. |
 
 ### Training — `src/training/`
 
@@ -85,7 +85,7 @@ relative to it; scripts put `src/` on `sys.path` themselves. Dependencies:
 |---|---|---|
 | `base.py` | `Corrector` ABC (`apply(points, k=1) -> points`) + `Experiment` ABC (`run()`). | The seam between model machinery and experiments: experiments consume the interface, never the model directly. This is what made three rounds of corrector swaps possible without touching experiment logic. |
 | `common/scaling.py` | `compute_scale(rd_train, rd_test)` — multiply coords by `rd_train/rd_test` before the model, divide displacements after. | The model trains at one rd (0.14) and deploys at others (SPH 0.02 → scale 7.0; obstruction 0.012 → scale 11.7). Scaling maps every deployment into the training distribution — verified to extrapolate. |
-| `wholecloud/wholecloud_corrector.py` | `WholeCloudCorrector2D/3D` + config dataclass. Per pass: scale → PBC `cKDTree.query_pairs(attention_rd)` edge list → one `forward_sparse` call → unscale → wrap. Optional explicit `data.box` (give the true PBC box when known — extent inference undershoots on lattice-like clouds). Requires a box-aware model with `forward_sparse`, raises otherwise. | THE deployment path: no tiles, no ghosts, no seams, ~0.26 s per N=2500 timestep (~20× faster than the removed tiled path) and equal-or-better KG everywhere. Dimension-generic body — `WholeCloudCorrector3D` is `DIM = 3`, so future 3D work costs nothing here. |
+| `wholecloud/wholecloud_corrector.py` | `WholeCloudCorrector2D/3D` + config dataclass. Per pass: scale → PBC `cKDTree.query_pairs(cutoff_rd)` edge list → one `forward_sparse` call → unscale → wrap. Optional explicit `data.box` (give the true PBC box when known — extent inference undershoots on lattice-like clouds). Requires a box-aware model with `forward_sparse`, raises otherwise. | THE deployment path: no tiles, no ghosts, no seams, ~0.26 s per N=2500 timestep (~20× faster than the removed tiled path) and equal-or-better KG everywhere. Dimension-generic body — `WholeCloudCorrector3D` is `DIM = 3`, so future 3D work costs nothing here. |
 
 ### Experiments — `src/inference/experiments/`
 
@@ -109,13 +109,13 @@ relative to it; scripts put `src/` on `sys.path` themselves. Dependencies:
 One in `src/models/weights/`. Details + provenance in
 `src/models/weights/README.md`.
 
-| Checkpoint | Model config | N_train | rd_train | attention_rd |
+| Checkpoint | Model config | N_train | rd_train | cutoff_rd |
 |---|---|---|---|---|
 | `model12_sph_l4.pt` | `src/configs/training/model/model_config_12_sph_L4.yaml` | 49 (7×7 lattice) | 0.14 | 0.286 |
 
 Never cross a checkpoint with another model config — different `hidden_dim` /
 `max_displacement`, will either error or silently produce garbage. Calling
-convention: `rd=attention_rd` (the attention radius, not the constraint rd)
+convention: `rd=cutoff_rd` (the cutoff radius, not the constraint rd)
 and `box=`; the corrector carries the adapter and requires a box-aware model.
 Shipped weights = the run's `model_best.pt` (best val loss), sha-verified.
 
@@ -152,9 +152,9 @@ params:
 # model/model_config_12_sph_L4.yaml — architecture (input_dim comes from dataset dim)
 model_file: models/architectures/model12/model12   # import path — REQUIRED
 hidden_dim: 128
-num_layers: 4           # receptive field ~ L·attention_rd
+num_layers: 4           # receptive field ~ L·cutoff_rd
 max_displacement: 0.168 # tanh clamp; 1.2·rd
-attention_rd: 0.286     # 2·dx — part of the checkpoint's calling convention
+cutoff_rd: 0.286        # 2·dx — part of the checkpoint's calling convention
 
 # trainer/train_config_sph_adamw.yaml — optimization
 batch_size: 32; num_iterations: 10000; unroll_steps: 3   # K-step unrolling

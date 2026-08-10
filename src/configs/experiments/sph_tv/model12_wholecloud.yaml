@@ -11,7 +11,7 @@ model:
   checkpoint: src/models/weights/model12_sph_l4.pt
   config:     src/configs/training/model/model_config_12_sph_L4.yaml
   rd_train:   0.14   # constraint rd (drives coordinate scaling; the edge cutoff
-                     # is the model config's attention_rd, read automatically)
+                     # is the model config's cutoff_rd, read automatically)
 
 data:
   without_tv: artifacts/inference/experiments/sph_tv/data/positions_without.npy

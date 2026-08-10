@@ -3,12 +3,12 @@ model_file: models/architectures/model12/model12
 
 hidden_dim: 128
 num_layers: 4             # sweep variant: one more round than the L=3 baseline —
-                          # receptive field ~ 4 * attention_rd
+                          # receptive field ~ 4 * cutoff_rd
 norm: layer
 activation: GELU
 max_displacement: 0.168   # 1.2 * constraint rd = 0.14
 
-# Attention radius passed to the model at every call (part of the checkpoint's
+# Cutoff radius passed to the model at every call (part of the checkpoint's
 # calling convention). 0.286 = 2*dx = h: first two neighbour shells; with
 # num_layers 4 the receptive field spans ~1.14 of the unit box (full coverage).
-attention_rd: 0.286
+cutoff_rd: 0.286

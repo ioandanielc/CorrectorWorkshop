@@ -12,7 +12,7 @@ def sph_loss(original_points, displaced_points, relaxation_distance,
 
     L = lambda_sph * mean_i |KG_i|^2  (+ optional lambda2 displacement reg).
     rd is unused by the objective; it is still passed to the model, whose
-    attention only activates on pairs closer than rd.
+    proximity kernel only activates on pairs closer than rd.
     """
     kg   = kernel_gradient(displaced_points, h_factor, box)
     loss = lambda_sph * (kg ** 2).sum(dim=-1).mean()

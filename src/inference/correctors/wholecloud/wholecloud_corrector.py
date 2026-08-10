@@ -76,7 +76,7 @@ class _WholeCloudCorrectorND(Corrector):
     """
     Whole-cloud sparse inference: per pass, scale the cloud to the model's
     training rd, build the PBC edge list (all ordered pairs within
-    attention_rd, both directions), run forward_sparse once, unscale the
+    cutoff_rd, both directions), run forward_sparse once, unscale the
     displacements, wrap back into the box. Dimension-generic body — concrete
     subclasses set DIM.
 
@@ -114,10 +114,10 @@ class _WholeCloudCorrectorND(Corrector):
                 f'(the removed model9 family) live on the main/simplify branches.')
 
         # The edge cutoff and the rd passed to forward_sparse are the model's
-        # attention radius (its calling convention), NOT the constraint rd —
+        # cutoff radius (its calling convention), NOT the constraint rd —
         # rd_train only drives the coordinate scaling above.
-        self.attention_rd = float(model_cfg.get('attention_rd', self.cfg.rd_train))
-        self.rd_t = torch.tensor(self.attention_rd, dtype=torch.float32, device=self.device)
+        self.cutoff_rd = float(model_cfg.get('cutoff_rd', self.cfg.rd_train))
+        self.rd_t = torch.tensor(self.cutoff_rd, dtype=torch.float32, device=self.device)
 
     def apply(self, points: np.ndarray, k: int = 1) -> np.ndarray:
         """
@@ -154,9 +154,9 @@ class _WholeCloudCorrectorND(Corrector):
         for _ in range(k):
             ps = np.clip((p * self.scale) % box_s, 0.0, edge)
             pairs = cKDTree(ps, boxsize=float(box_s)).query_pairs(
-                self.attention_rd, output_type='ndarray')
+                self.cutoff_rd, output_type='ndarray')
             if len(pairs) == 0:
-                break   # no pair within the attention radius — nothing to correct
+                break   # no pair within the cutoff radius — nothing to correct
             ei = torch.tensor(np.stack([np.concatenate([pairs[:, 0], pairs[:, 1]]),
                                         np.concatenate([pairs[:, 1], pairs[:, 0]])]),
                               dtype=torch.long, device=self.device)

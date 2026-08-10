@@ -10,4 +10,4 @@ norm: layer
 activation: GELU
 max_displacement: 0.168   # 1.2 * constraint rd = 0.14
 
-attention_rd: 0.286       # 2*dx = h, same calling convention as the real checkpoints
+cutoff_rd: 0.286          # 2*dx = h, same calling convention as the real checkpoints
