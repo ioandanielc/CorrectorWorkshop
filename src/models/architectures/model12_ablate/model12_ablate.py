@@ -84,6 +84,58 @@ class CorrectorModel(nn.Module):
                 if module.bias is not None:
                     init.zeros_(module.bias)
 
+    def forward_sparse(self, x, edge_index, rd=None, box=None):
+        """Weight-identical sparse version of forward() for a single cloud.
+
+        Radius-graph rungs only: a kNN graph is rebuilt in feature space each round, so
+        there is no fixed edge list to exploit and `graph='knn'` is rejected here.
+        Exact for the rungs it supports — the kernel weight is 0 at d >= rd and the
+        radius mask is 0/1, so omitted pairs contribute nothing to any aggregation.
+        """
+        if rd is None:
+            raise ValueError("model12_ablate requires rd (the cutoff radius)")
+        if self.graph != 'radius':
+            raise NotImplementedError(
+                "forward_sparse supports graph='radius' only; a feature-space kNN graph "
+                "has no fixed edge list")
+        if not self.periodic:
+            box = None
+        N = x.shape[0]
+        dst, src = edge_index[0], edge_index[1]
+
+        rel = x[dst] - x[src]
+        if box is not None:
+            rel = rel - box * torch.round(rel / box)
+        dist = rel.norm(dim=-1)
+        geo = torch.cat([rel, dist.unsqueeze(-1),
+                         torch.relu(rd - dist).unsqueeze(-1)], dim=-1)
+
+        h = x.new_zeros(N, self.hidden_dim)
+        for i, (edge_mlp, node_mlp) in enumerate(zip(self.edge_mlps, self.node_mlps)):
+            feat = torch.cat([h[dst], h[src], geo], dim=-1)
+            e = edge_mlp(feat)
+
+            if self.agg == 'max':
+                msg = x.new_full((N, self.hidden_dim), float('-inf')).scatter_reduce_(
+                    0, dst.unsqueeze(-1).expand(-1, self.hidden_dim), e,
+                    reduce='amax', include_self=True)
+                msg = torch.nan_to_num(msg, neginf=0.0)
+            else:
+                if self.weight == 'kernel':
+                    q = (dist / rd).clamp(max=1.0)
+                    w = (1.0 - q ** 2) ** 2
+                else:
+                    w = torch.sigmoid(self.weight_mlps[i](feat).squeeze(-1))
+                if self.agg == 'wsum':
+                    deg = x.new_zeros(N).index_add_(0, dst, w)
+                    w = w / (deg[dst] + 1e-8)
+                msg = x.new_zeros(N, self.hidden_dim).index_add_(
+                    0, dst, w.unsqueeze(-1) * e)
+
+            h = h + node_mlp(msg)
+
+        return torch.tanh(self.out_mlp(h)) * self.max_disp
+
     def _membership(self, dist, h, eye, rd):
         """Which pairs are neighbours: a radius ball, or the k nearest."""
         if self.graph == 'radius':
@@ -126,6 +178,10 @@ class CorrectorModel(nn.Module):
             member = self._membership(fd, h, eye, rd)
 
             if self.agg == 'max':
+                # NOTE: `weight` is inert here — a max over neighbours has nowhere to
+                # apply a per-edge scalar. So aggregation='max' changes TWO things at
+                # once (sum -> max, and weighting removed), unlike the other rungs which
+                # each change one. Read this rung accordingly.
                 msg = e.masked_fill(~member.unsqueeze(-1), float('-inf')).max(dim=2).values
                 msg = torch.nan_to_num(msg, neginf=0.0)   # isolated nodes get no message
             else:

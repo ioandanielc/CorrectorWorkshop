@@ -4,14 +4,63 @@
 \hline
 architecture & params & viol_red K5 & illegal\% K5 & mean nn & |KG| K5 & vs best \\
 \hline
-model12_n49_noise0.6 & 350,594 & 82.9\% & 0.69 & 0.1414 & 0.0216 & best \\
-model12_n49_noise1.0 & 350,594 & 82.0\% & 0.83 & 0.1412 & 0.0308 & +43\% \\
-dgcnn_n49_noise0.6 & 348,692 & 77.1\% & 0.92 & 0.1403 & 0.0272 & +26\% \\
-dgcnn_n49_noise1.0 & 348,692 & 0.2\% & 4.61 & 0.0919 & 0.3504 & +1521\% \\
-pointnet_n49_noise0.6 & 351,914 & 0.2\% & 4.02 & 0.1003 & 0.2258 & +945\% \\
-pointnet_n49_noise1.0 & 351,914 & 0.1\% & 4.62 & 0.0919 & 0.3502 & +1520\% \\
+gns_n49_noise1.0 & 347,966 & 91.5\% & 0.39 & 0.1415 & 0.0205 & best \\
+model12_n49_noise0.6 & 350,594 & 82.9\% & 0.69 & 0.1414 & 0.0216 & +6\% \\
+model12_n49_noise1.0 & 350,594 & 82.0\% & 0.83 & 0.1412 & 0.0308 & +51\% \\
+dgcnn_n49_noise0.6 & 348,692 & 77.1\% & 0.92 & 0.1403 & 0.0272 & +33\% \\
+gns_n49_noise0.6 & 347,966 & 62.5\% & 1.51 & 0.1388 & 0.0365 & +79\% \\
+pointnet2_n49_noise1.0 & 350,240 & 27.1\% & 3.37 & 0.1124 & 0.1249 & +510\% \\
+pointnet2_n49_noise0.6 & 350,240 & 19.1\% & 3.26 & 0.1161 & 0.1065 & +420\% \\
+dgcnn_n49_noise1.0 & 348,692 & 0.2\% & 4.61 & 0.0919 & 0.3504 & +1613\% \\
+pointnet_n49_noise0.6 & 351,914 & 0.2\% & 4.02 & 0.1003 & 0.2258 & +1004\% \\
+pointnet_n49_noise1.0 & 351,914 & 0.1\% & 4.62 & 0.0919 & 0.3502 & +1612\% \\
 \hline
 \end{tabular}
 \caption{E1 Architecture (matched params, identical loss)}
 \label{tab:e1}
+\end{table}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lrrrrrr}
+\hline
+loss variant & params & viol_red K5 & illegal\% K5 & mean nn & |KG| K5 & vs best \\
+\hline
+lam3_0 & 350,594 & 17.6\% & 3.32 & 0.1242 & 0.1407 & best \\
+\hline
+\end{tabular}
+\caption{E2 Loss ablation}
+\label{tab:e2}
+\end{table}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lrrr}
+\hline
+rd/spacing & dgcnn |KG| & model12 |KG| & model12 margin vs best baseline \\
+\hline
+1.00 & 0.2303 & 0.0214 & 91\% better \\
+\hline
+\end{tabular}
+\caption{E4 Packing limit: |KG| K5 by constraint rigidity}
+\label{tab:e4}
+\end{table}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{lrrrrrr}
+\hline
+rung & params & viol_red K5 & illegal\% K5 & mean nn & |KG| K5 & vs best \\
+\hline
+maxagg & 350,594 & 98.8\% & 0.05 & 0.1422 & 0.0106 & best \\
+nonorm & 350,594 & 86.8\% & 0.53 & 0.1416 & 0.0196 & +86\% \\
+baseline & 350,594 & 80.5\% & 0.79 & 0.1412 & 0.0245 & +132\% \\
+dgcnnmech & 351,638 & 76.6\% & 0.94 & 0.1406 & 0.0260 & +147\% \\
+nokernel & 351,638 & 0.0\% & 4.02 & 0.1003 & 0.2260 & +2041\% \\
+knngraph & 350,594 & 0.0\% & 4.02 & 0.1003 & 0.2260 & +2041\% \\
+noperiod & 350,594 & 0.0\% & 4.02 & 0.1003 & 0.2260 & +2041\% \\
+\hline
+\end{tabular}
+\caption{E5 Architecture bridge (one mechanism per rung)}
+\label{tab:e5}
 \end{table}

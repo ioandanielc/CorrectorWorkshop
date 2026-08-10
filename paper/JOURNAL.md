@@ -10,6 +10,243 @@ interrupt must not depend on it — or on conversation history.
 
 ## Observations log (newest first — read this for "what do we know")
 
+### 2026-08-10 16:20 — seed spread is LARGER than assumed; claim audit performed
+The bridge `baseline` rung is bit-identical to production model12, giving a third
+independent sample of the same recipe:
+
+| run | viol_red | \|KG\| |
+|---|---|---|
+| production (`train_run_..._10-40-18`) | 82.9% | 0.0216 |
+| shipped `model12_sph_l4.pt` | 84.3% | 0.0207 |
+| bridge baseline (`..._15-17-56`) | 80.5% | 0.0245 |
+
+**sigma ~9% on |KG| (18% range), +-2 points on viol_red** — larger than the +-10% range
+used all session. Re-audited every claim against it; the audit table now lives in
+`paper/RESULTS.md`. Outcome:
+
+- SOLID: the lambda3 ablation (6.5x synthetic, 11x trajectory), model12 vs PointNet
+  (10x), model12 vs GNS at matched production training (90%), maxagg's benchmark win (2x).
+- MARGINAL: model12 vs DGCNN at N=49 (26%, clears 18% only just); maxagg's deployment
+  loss (18%, exactly at threshold).
+- **NOT SEPARABLE, do not claim**: model12 vs GNS on the trajectory at each one's best
+  (4-7%); nonorm vs model12 (5-10%).
+
+Consequence: the "fixed kernel drives size transfer" grouping is **suggestive, not
+established** — it rests on one solid gap (GNS production) and one borderline gap
+(maxagg), with GNS-at-best inside the noise. RESULTS.md reworded accordingly. The
+aggregation null result (nonorm ~ model12) is still useful: it rules aggregation OUT as
+the mechanism even though it cannot positively confirm the kernel.
+
+Lead with the deployment result — a 90% gap is the only architecture comparison that is
+comfortably outside the noise.
+
+### 2026-08-10 16:20 — bridge complete: 3 of 7 rungs collapsed and are unreadable
+| rung | viol_red | \|KG\| | trajectory \|KG\| |
+|---|---|---|---|
+| maxagg | 98.8% | 0.0106 | 0.1495 |
+| nonorm | 86.8% | 0.0196 | 0.1204 |
+| baseline (= production model12) | 80.5% | 0.0245 | — |
+| dgcnnmech (all three swapped) | 76.6% | 0.0260 | — |
+| nokernel | collapsed | — | — |
+| knngraph | collapsed | — | — |
+| noperiod | collapsed | — | — |
+
+`dgcnnmech` swaps all three mechanisms at once and trained fine (76.6%) while three
+SINGLE-change rungs collapsed. That is incoherent as a mechanism signal and confirms the
+collapses are stochastic. Combined with the DGCNN seed data (2 of 4 collapse), the
+conclusion is that this recipe has a ~50/50 collapse mode at N=49 that is independent of
+architecture. A usable bridge needs ~3 seeds per rung (21 runs, ~4 h) — not run.
+
+### 2026-08-10 16:20 — seed chains complete
+- **lambda3 = 0: 4 of 4 collapse** (unseeded + seeds 1/2/3). CLAIMABLE.
+- **dgcnn @ noise 1.0: 2 of 4 collapse** (seeds 1 and 3 trained to 66.1% and 72.8%).
+  Bimodal, stays retracted.
+
+### 2026-08-10 16:00 — RETRACTED and REPLACED: it is the fixed KERNEL that transfers, not normalisation
+`bridge_nonorm` is model12 with per-particle normalisation removed and nothing else
+changed (fixed kernel weight kept, sum instead of weighted mean):
+
+| | N=49 \|KG\| | N=2500 \|KG\| |
+|---|---|---|
+| model12 | 0.0216 | 0.1269 |
+| nonorm | 0.0196 | **0.1204** |
+
+Removing normalisation does **not** break size transfer — it transfers marginally better.
+**The claim "model12 normalises per particle, which is what survives N=49 -> N=2500" is
+WRONG and is retracted** from `ARCHITECTURES.md` and `RESULTS.md`. It had been presented
+as a mechanism predicted a priori and then confirmed; the confirmation was a coincidence
+of GNS differing from model12 in several ways at once.
+
+**Replacement, and it is better supported.** Regrouping every deployed arm by whether the
+FIXED GEOMETRIC KERNEL is actually applied to messages:
+
+| arm | kernel weighting active | N=2500 \|KG\| |
+|---|---|---|
+| nonorm (kernel + sum) | yes | **0.1204** |
+| model12 (kernel + weighted mean) | yes | **0.1269** |
+| GNS (learned weights + sum) | no | 0.1319 best / 0.2417 production |
+| maxagg (max — weight is inert) | no | 0.1495 |
+
+Clean separation at 0.120-0.127 versus 0.132-0.242, across four architectures and three
+different aggregation schemes. **What buys size transfer is the fixed, distance-shaped
+kernel weighting — a scale-free geometric function — not normalisation and not the
+aggregation operator.** Learned weightings fit N=49 statistics and do not generalise;
+max discards the weighting entirely and also fails.
+
+This is a stronger result for the paper than the retracted one: it says the
+physics-shaped kernel is what makes the corrector deployable, which is the thesis.
+
+Note nonorm also disposes of the `maxagg` confound worry in the right direction: nonorm
+isolates aggregation (sum vs weighted mean, kernel kept) and shows aggregation barely
+matters. So maxagg's deployment failure is attributable to losing the kernel, not to max.
+
+### 2026-08-10 15:45 — `maxagg` reverses on deployment too: SECOND instance, key result
+`model12_ablate` gained a `forward_sparse` for radius-graph rungs (exact vs dense to
+4.4e-07 on all four), so the surprising rung could be deployed.
+
+| | N=49 \|KG\| | N=49 viol_red | **N=2500 \|KG\|** | N=2500 illegal% |
+|---|---|---|---|---|
+| model12 (production) | 0.0216 | 82.9% | **0.1269** | **82.0%** |
+| bridge `maxagg` | **0.0106** | **98.8%** | 0.1495 | 88.3% |
+
+**maxagg wins the synthetic benchmark by 2x on |KG| and loses deployment by 18%.** This
+is the SECOND architecture today to reverse between benchmark and deployment — GNS was
+the first. Two independent instances make "the small-N synthetic benchmark misranks
+architectures relative to the real task" the suite's most robust methodological finding,
+and it is no longer a one-off anecdote.
+
+Resolution of the max-aggregation argument: **partially retracted, and sharper for it.**
+The claim "max cannot express cancellation" is plainly WRONG at N=49, where max beats the
+kernel-weighted mean on every metric. It appears to hold where it matters — at N=2500,
+where neighbourhoods are genuinely local, discarding all but the extremal neighbour loses
+the balance information KG symmetry needs. At N=49 the receptive field spans the whole
+cloud (reach/box 1.14), so the model can recover that information by other routes.
+
+Caveat that must travel with this result: the `maxagg` rung changes TWO mechanisms (max
+AND weighting removed, since max has nowhere to apply a per-edge scalar), so the effect
+cannot be attributed to aggregation alone. A weighted-max rung is the clean follow-up.
+
+### 2026-08-10 15:45 — PointNet++ completes the architecture table
+`arch_pointnet2_n49_noise0.6`: viol_red 19.1%, |KG| 0.2260 -> 0.1065, nn_CV 34.9 -> 23.8%,
+drift 33%. Poor but not inert — clearly better than PointNet (0.2%, |KG| unchanged) and
+far behind every message-passing architecture. Consistent with the prediction that
+feature-propagation interpolation smooths away the sub-rd precision the task needs.
+
+### 2026-08-10 15:45 — lambda3=0 is 4/4 and DGCNN is 2/3
+lambda3=0: unseeded + seeds 1, 2 collapsed; seed 3 collapsed by iteration 6100. Four
+independent initialisations, all collapse. **Claimable.**
+dgcnn @ noise 1.0: unseeded collapsed, seed 1 trained (64.8%), seed 2 collapsed.
+Bimodal — **not claimable**, as already retracted.
+
+### 2026-08-10 15:25 — `maxagg` is beating the baseline, and the rung is confounded
+At iteration 4800 the max-aggregation rung reads 93.9% viol_red and |KG| 0.0157 against
+model12's baseline final of 85.7% / 0.0228. That directly contradicts the claim in
+`ARCHITECTURES.md` that "max aggregation cannot express cancellation ... the deepest
+structural mismatch with the KG objective". If it survives scoring, that argument is
+retracted.
+
+**Found while checking: the rung changes TWO things, not one.** In
+`model12_ablate.forward`, the `max` branch never applies the weight — a max over
+neighbours has nowhere to put a per-edge scalar. So `aggregation=max` is really
+"sum -> max AND weighting removed", unlike the other rungs which each change exactly one
+mechanism. Code comment added. Consequence: `maxagg` cannot be used to attribute an
+effect to aggregation alone, and its surprising strength may come from either change.
+
+A clean single-change version would be `max_j (w_ij * e_ij)` — weighted max. Not
+implemented; noted as the correct follow-up if this result matters to the paper.
+
+### 2026-08-10 15:25 — DGCNN @ noise 1.0 is BIMODAL across seeds: 2 of 3 collapse
+unseeded collapsed, seed 1 trained normally (64.8%), seed 2 collapsed by iteration 2700.
+So the outcome is not "collapses" or "trains" but a coin flip on initialisation. This is
+the sharpest possible demonstration of why the collapse claim was retracted, and it is
+worth one sentence in the paper's limitations: on this task DGCNN's training outcome at
+high disorder is initialisation-dependent, which is itself a robustness finding — just
+not the deterministic mechanism claim originally made.
+
+### 2026-08-10 15:00 — RETRACTED: the "KG floor ~0.111" is an artifact of k=5
+Swept correction passes on the real trajectory, production model12 checkpoint,
+15 timesteps t>=300:
+
+| k | \|KG\| | vs k=5 | mean nn | ill% | s/step |
+|---|---|---|---|---|---|
+| 0 (raw) | 0.3331 | — | 0.01457 | 99.4% | — |
+| 1 | **0.4661** | +267% | 0.01691 | 97.1% | 0.084 |
+| 2 | 0.2710 | | 0.01837 | 92.0% | 0.079 |
+| 3 | 0.1860 | | 0.01902 | 87.9% | 0.090 |
+| 5 (shipped) | 0.1269 | 0.0% | 0.01947 | 82.0% | 0.110 |
+| 8 | 0.0984 | -22.4% | 0.01963 | 79.2% | 0.143 |
+| 12 | **0.0846** | **-33.3%** | 0.01966 | 80.4% | 0.184 |
+
+Two findings:
+
+1. **The floor is not a floor.** The 0.1109 min / 0.1135 p10 recorded from the 702-step
+   sweep was measured at k=5 only. At k=12 the corrector reaches 0.0846 — well below it,
+   still descending — for 0.07 s/step more. The "fundamental violation<->symmetry
+   trade-off floor" framing in CLAUDE.md, RESULTS.md and private memory is WRONG as
+   stated; it is an operating-point artifact. Whether a true floor exists is now open
+   (extended sweep to k=40 running).
+2. **k=1 is actively harmful**: |KG| 0.4661 against raw 0.3331. One pass makes the cloud
+   a WORSE SPH restart than no correction. The corrector only becomes a net win from
+   k>=3. Worth stating explicitly — it is a deployment trap.
+
+Consequence for the paper: the headline improves. model12 at k=12 gives 0.0846 vs TV's
+0.274 = **3.2x**, not the 2.2x quoted from k=5. The sim validation was performed at k=5,
+so the k=5 number remains the *validated* one — quote both, and be explicit about which
+was simulated.
+
+### 2026-08-10 15:10 — extended sweep to k=40: no floor, and the real trade-off located
+| k | \|KG\| | ill% | s/step |
+|---|---|---|---|
+| 5 | 0.1269 | 82.0% | 0.121 |
+| 8 | 0.0984 | **79.2%** | 0.143 |
+| 12 | 0.0846 | 80.4% | 0.177 |
+| 16 | 0.0796 | 82.3% | 0.218 |
+| 20 | 0.0769 | 83.6% | 0.258 |
+| 30 | 0.0715 | 86.6% | 0.346 |
+| 40 | 0.0675 | 88.4% | 0.439 |
+
+**|KG| never floors** — monotone down to 0.0675 at k=40, still descending. So the floor
+claim is dead in its entirety, not merely mis-located.
+
+**But the violation<->symmetry trade-off is real; it just lives in k.** Illegal% bottoms
+at k=8 (79.2%) then climbs to 88.4% by k=40 while |KG| keeps improving, and nn saturates
+at 0.01966 from k=12. Pushing symmetry harder actively costs legality. That is the genuine
+physical trade-off the "floor" was a garbled version of — and it is a better paper result,
+because it is a curve the reader can act on rather than an asserted limit.
+
+Recommended operating points: k=5 (sim-validated), k=8 (best all-round: lowest illegal%,
+|KG| 22% better than k=5), k>=12 (symmetry-first).
+
+### 2026-08-10 14:40 — BEST RESULT: lambda3=0 on the real trajectory reproduces model9
+Deployed the physics-off checkpoint on N=2500, t>=300: **|KG| 0.3331 -> 1.4712**, i.e.
+4.4x WORSE than leaving the cloud alone, and adjacent to model9's 1.2775.
+
+| series | \|KG\| |
+|---|---|
+| raw | 0.326 |
+| model9 (prior work, no symmetry term) | 1.278 |
+| **model12 with lambda3=0** | **1.471** |
+| model12 with lambda3=0.27 | 0.127 |
+
+model9 is the checkpoint whose corrected clouds were unusable as SPH restarts — the
+failure that motivated model12. Ablating the KG term **recreates that failure**. This
+converts the loss claim from "our term improves a metric" to "this term is what fixed the
+thing that was broken", demonstrated by putting the breakage back. Cost: 5 minutes of
+scoring on a checkpoint we already had.
+
+Combined with lambda3=0 collapsing in 3 independent runs and the monotonic val-loss
+divergence, the loss ablation is now the most robust result in the suite.
+
+### 2026-08-10 14:40 — WATCH: bridge `maxagg` contradicts the max-aggregation argument
+At iteration 3300 the max-aggregation rung reads 92.3% violation reduction and |KG| 0.0157
+— better than model12's baseline final (85.7% / 0.0228). `paper/ARCHITECTURES.md` argues
+"max aggregation cannot express cancellation ... the deepest structural mismatch with the
+KG objective". If this holds to 10000 that argument is WRONG and must be retracted.
+Mid-run readings have misled twice today, so no conclusion until it finishes.
+
+Note `nokernel` (rung 1) finished collapsed at 0.0%. n=1, and collapses here are
+seed-fragile, so it is NOT interpreted.
+
 ### 2026-08-10 14:20 — CORRECTED: the "3x cheaper" claim does not hold at deployment
 That figure is TRAINING cost at N=49 dense (model12 0.073 vs GNS 0.223 s/iter). Measured
 deployment cost through the whole-cloud sparse path, N=2500, k=5, 5 timed repetitions:

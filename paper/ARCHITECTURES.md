@@ -20,11 +20,14 @@ things follow that must be stated rather than hidden:
 - **The shared recipe was originally tuned on model12** (the 2026-07-15 sweep chose
   L=4, lambda3=0.27, AdamW, lr 1e-3). So the shared settings are model12's settings.
   This is the honest asymmetry in the comparison and belongs in the limitations.
-- **The one catastrophic result is not a tuning artifact.** DGCNN reaches 79.4%
-  violation reduction at noise 0.6 and *exactly* 0.0% at noise 1.0 — same code, same
-  hyperparameters, same everything but the disorder level. A wrong learning rate would
-  be wrong at both. What changed is the task, which is the mechanism claim; it also
-  rules out an implementation fault, since the identical code path works at low noise.
+- **RETRACTED (2026-08-10): "DGCNN collapses on hard data" was an initialisation
+  artifact.** The unseeded run sat at exactly 0.0% for all 10k iterations at noise 1.0;
+  seed 1 of the identical config reached 64.8% (|KG| 0.0481). Under the rule fixed before
+  results were seen — 3/3 collapse required, any seed training normally kills the claim —
+  this does not go in the paper. **Collapse results in this setup are seed-fragile and a
+  single collapsed run means nothing.** What survives needs no collapse story: DGCNN is
+  simply worse than model12 at noise 0.6 (77.1% vs 82.9%, |KG| 0.0272 vs 0.0216), a gap
+  above the measured seed spread.
 
 Per-architecture hyperparameter searches were deliberately NOT run. They would improve
 the baselines by an unknown amount, cost a multiple of the whole suite, and replace a
@@ -236,6 +239,46 @@ prediction the measurements test — **architectures should separate much more o
 than on violation reduction.**
 
 ---
+
+## The benchmark and the deployment task disagree
+
+Scored, N=49 synthetic vs the real N=2500 trajectory:
+
+| | model12 | GNS | winner |
+|---|---|---|---|
+| N=49, noise 0.6 — viol_red / \|KG\| | **82.9% / 0.0216** | 62.5% / 0.0365 | model12 |
+| N=49, noise 1.0 — viol_red / \|KG\| | 82.0% / 0.0308 | **91.5% / 0.0205** | GNS |
+| **N=2500 trajectory — \|KG\|** (matched production training) | **0.127** | 0.242 | **model12** |
+| **N=2500 trajectory — \|KG\|** (each at its best) | **0.123** | 0.132 | model12 |
+
+**The synthetic benchmark misranks the architectures.** Selecting on N=49 high disorder
+alone would pick GNS and ship the worse deployer.
+
+**Mechanism (revised — see the retraction below).** This document originally attributed
+transfer to per-particle normalisation. The bridge's `nonorm` rung refutes that directly:
+model12 with normalisation removed transfers *better* (0.1204 vs 0.1269). Grouping every
+deployed arm by whether the fixed geometric kernel is applied instead gives a clean split
+— `nonorm` 0.1204 and model12 0.1269 (kernel active) versus GNS 0.1319/0.2417 and
+`maxagg` 0.1495 (kernel absent or inert). **What transfers is the fixed, distance-shaped
+kernel**, which is scale-free by construction; learned weightings fit the training
+cardinality and do not generalise, and max discards the weighting altogether.
+
+Caveat: the best-vs-best gap (7.2%) sits inside the measured +-10% seed spread on |KG|,
+so "model12 >= GNS" is solid while "model12 > GNS at best settings" would need seeds. The
+production-settings gap (90%) is far outside it.
+
+**Cost — quote deployment, not training.** GNS gained a `forward_sparse` (exact vs dense
+to 1.6e-07), which is what made this comparison possible at all:
+
+| | model12 | GNS | ratio |
+|---|---|---|---|
+| training, N=49, dense | 0.073 s/iter | 0.223 s/iter | 3.0x |
+| inference, N=2500, sparse, k=5, CPU | 0.189 s/step | 0.213 s/step | **1.13x** |
+| inference, N=2500, sparse, k=5, CUDA | 0.049 s/step | 0.068 s/step | **1.39x** |
+
+The 3x training gap is GNS's persistent `(B,N,N,H)` edge tensor; on the sparse path that
+becomes `(E,H)` and per-edge work is near-identical. **At deployment model12 is 1.1-1.4x
+cheaper, not 3x** — an earlier claim of 3x at deployment was wrong and is corrected here.
 
 ## Measured so far
 

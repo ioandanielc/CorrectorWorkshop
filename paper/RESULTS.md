@@ -12,9 +12,29 @@ schedule, same 10k iterations, same 5-step unrolling, same bounded
 `tanh * max_displacement` head, parameter counts matched within 0.8%. No per-architecture
 tuning, model12 included. The baselines are trained **with** the physics-informed KG term.
 
-**Uncertainty.** Two runs of the identical recipe differ by ±1.4 points of violation
-reduction and ±10% relative on |KG|. Every arm is n=1 unless stated. Gaps below that are
-not claimed.
+**Uncertainty.** Three independent runs of the identical model12 recipe (production run,
+shipped checkpoint, and the bridge `baseline` rung, which is bit-identical code) scored
+82.9% / 84.3% / 80.5% violation reduction and |KG| 0.0216 / 0.0207 / 0.0245. That is
+**σ ≈ 9% on |KG| (18% range) and ±2 points on violation reduction**. Every arm is n=1
+unless stated, so differences below ~18% on |KG| are not separable from initialisation.
+
+### Claim audit against that spread
+
+| claim | size | verdict |
+|---|---|---|
+| lambda3=0 vs 0.27, synthetic \|KG\| | 6.5x | **solid** |
+| lambda3=0 vs 0.27, trajectory \|KG\| | 11x | **solid** |
+| model12 vs PointNet | 10x | **solid** |
+| model12 vs GNS, trajectory, matched production | 90% | **solid** |
+| `maxagg` beats model12 on the N=49 benchmark | 2x | **solid** |
+| model12 vs DGCNN, N=49 \|KG\| | 26% | marginal — clears 18%, but only just |
+| `maxagg` loses deployment to model12 | 18% | **borderline — at the threshold** |
+| model12 vs GNS, trajectory, each at best | 4-7% | **NOT separable — do not claim** |
+| `nonorm` vs model12, both regimes | 5-10% | **NOT separable** (consistent with one group) |
+
+Everything that carries the paper is in the solid tier. The architecture-ranking details
+are where the noise bites, which is why the deployment result — a 90% gap — is the one to
+lead with.
 
 ---
 
@@ -45,6 +65,40 @@ Caveat: model12's 7.2% edge over GNS at *best* settings sits inside the ±10% se
 so "model12 >= GNS" is solid while "model12 > GNS at best settings" would need 3 seeds.
 The production-settings gap (90%) is far outside it and stands.
 
+### Correction passes: k=5 is not converged, and k=1 is harmful
+
+The shipped k=5 was never justified with a curve. Swept on the real trajectory:
+
+| k | \|KG\| | mean nn | ill% | s/step |
+|---|---|---|---|---|
+| 0 (raw) | 0.3331 | 0.01457 | 99.4% | — |
+| 1 | **0.4661** | 0.01691 | 97.1% | 0.084 |
+| 3 | 0.1860 | 0.01902 | 87.9% | 0.090 |
+| 5 (shipped, sim-validated) | 0.1269 | 0.01947 | 82.0% | 0.110 |
+| 8 | 0.0984 | 0.01963 | **79.2%** | 0.143 |
+| 12 | 0.0846 | 0.01966 | 80.4% | 0.177 |
+| 16 | 0.0796 | 0.01966 | 82.3% | 0.218 |
+| 20 | 0.0769 | 0.01966 | 83.6% | 0.258 |
+| 30 | 0.0715 | 0.01966 | 86.6% | 0.346 |
+| 40 | **0.0675** | 0.01965 | 88.4% | 0.439 |
+
+Three findings, and they replace the "floor" story entirely:
+
+- **A single pass is worse than no correction at all** (0.4661 vs 0.3331). The corrector
+  only becomes a net win from k >= 3 — a deployment trap worth stating explicitly.
+- **|KG| has no floor up to k=40** (0.0675, still descending). The previously reported
+  "KG floor ~0.111" was measured at k=5 only and is **retracted**: it was an
+  operating-point artifact, not a physical limit.
+- **The real trade-off is between symmetry and legality, and it appears in k.** Illegal%
+  reaches its minimum at **k=8 (79.2%)** and then rises steadily to 88.4% at k=40 while
+  |KG| keeps falling. nn saturates at 0.01966 from k=12. So driving symmetry harder
+  actively costs constraint satisfaction — which is the violation<->symmetry trade-off the
+  "floor" was mistakenly attributed to, correctly located.
+
+Operating points: **k=5** is the sim-validated setting; **k=8** is the best all-round
+choice (lowest illegal%, |KG| 22% better than k=5); **k=12+** if symmetry is the priority
+and legality can be traded. Quote k=5 for the validated claim and say so.
+
 ## 2. The physics term is an optimisation enabler, not a regulariser
 
 The strongest ablation result. Both scored from `model_best.pt`:
@@ -55,7 +109,23 @@ The strongest ablation result. Both scored from `model_best.pt`:
 | lambda3 = 0 (physics off) | 17.6% | 0.1407 | 13.5% |
 | lambda1 = lambda2 = 0 (pure symmetry, 2026-07-22) | — | real-data KG 0.357, *worse than raw 0.326* | — |
 
-Three independent signals:
+**On the real trajectory the ablation reproduces the historical failure mode.** Deployed
+on N=2500, t >= 300:
+
+| series | mean \|KG\| |
+|---|---|
+| raw (no correction) | 0.326 |
+| **model9** — prior work, loss had NO symmetry term | **1.278** |
+| **model12 with lambda3 = 0** — symmetry term ablated | **1.471** |
+| model12 with lambda3 = 0.27 | **0.127** |
+
+Removing the KG term does not merely fail to help: it makes the cloud **4.4x worse than
+doing nothing**, and lands next to model9 — the checkpoint whose corrected clouds were
+unusable as SPH restarts and which motivated this whole line of work. The ablation puts
+the breakage back. This is the causal claim, not a correlation: the KG term is what fixed
+model9's failure.
+
+Three further independent signals:
 
 1. **Removing the KG term costs 65 points of violation reduction** — and the ablated term
    is the *symmetry* term, yet the *violation* objective is what collapses.
@@ -82,9 +152,48 @@ N=49 synthetic, matched parameters, identical loss:
 | GNS | 62.5% | 0.0365 | 3.9% | | | | | |
 | PointNet | 0.2% | 0.2258 | 34.9% | | | | | |
 
-**The synthetic benchmark misranks the architectures relative to deployment.** GNS wins
-at N=49 high disorder; on the real N=2500 cloud model12 wins (§1). Anyone selecting on the
-benchmark alone would have shipped the worse deployer.
+**The synthetic benchmark misranks the architectures relative to deployment — twice,
+independently.** This is the suite's most robust methodological finding:
+
+| architecture | N=49 \|KG\| | N=2500 \|KG\| | verdict |
+|---|---|---|---|
+| model12 (production) | 0.0216 | **0.1269** | loses benchmark twice, wins deployment |
+| GNS (noise 1.0) | **0.0205** | 0.1319 | wins benchmark, loses deployment |
+| bridge `maxagg` | **0.0106** | 0.1495 | wins benchmark by 2x, loses deployment by 18% |
+
+Two architectures beat model12 on the small-N synthetic task and both lose on the real
+one. Anyone selecting on the benchmark alone would have shipped a worse deployer — twice.
+
+### What actually transfers: the fixed kernel, not normalisation or aggregation
+
+The bridge isolates this. `nonorm` is model12 with per-particle normalisation removed and
+nothing else changed — it transfers *better*, not worse. Grouping every deployed arm by
+whether the fixed geometric kernel is applied to messages:
+
+| arm | kernel weighting active | N=2500 \|KG\| |
+|---|---|---|
+| `nonorm` (kernel + sum) | **yes** | **0.1204** |
+| model12 (kernel + weighted mean) | **yes** | **0.1269** |
+| GNS (learned weights + sum) | no | 0.1319 best / 0.2417 production |
+| `maxagg` (max — weight inert) | no | 0.1495 |
+
+The ordering is 0.120–0.127 (kernel active) versus 0.132–0.242 (kernel absent or inert).
+Read against the ±18% seed spread, the tiers are **suggestive, not established**: the
+GNS-production gap (90%) is solid and the `maxagg` gap (18%) sits exactly at the
+threshold, but GNS-at-best (0.1319) is only 4% from model12 and is not separable. So the
+honest statement is:
+
+> **The fixed, distance-shaped kernel is scale-free by construction, and every arm that
+> keeps it transfers to N=2500 while the two that discard it do worse — decisively in one
+> case, marginally in the other.**
+
+Aggregation itself does not appear to matter (`nonorm` and model12 differ by 5%, inside
+the noise), which is a useful null result: it rules out the aggregation operator as the
+transfer mechanism even though it cannot positively confirm the kernel.
+
+An earlier version of this document attributed transfer to per-particle normalisation and
+presented it as predicted-then-confirmed. `nonorm` refutes that directly and it is
+retracted. Establishing the kernel claim properly would need ~3 seeds per arm.
 
 **The mechanism was predicted before the trajectory run.** model12 normalises messages
 per particle, so node states are independent of neighbour count and transfer from N=49 to
