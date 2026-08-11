@@ -78,6 +78,24 @@ round, in feature space, so there is no fixed edge list to exploit.
 spread of neighbour spacing relative to its mean. model12 is 3.5x more uniform than TV
 and 6.7x more uniform than raw. For an SPH restart this is what "well conditioned" means.
 
+### Generality: the bounded obstacle scene (scored 2026-08-10)
+
+The same production checkpoint, deployed without retraining on a qualitatively different
+scenario — 6,100 particles around a gear obstacle in a bounded non-periodic domain,
+rd = 0.012 (coordinate scale 11.7x vs 7.0x on the trajectory), 832 re-pinned ghosts:
+
+| | mean nn | nn CV | illegal% | knn_keep | drift |
+|---|---|---|---|---|---|
+| initial | 0.0076 | 35.6% | 96.1 | — | — |
+| corrected (k=5) | 0.0117 | **3.0%** | 85.1 | 0.64 | 5.8% |
+
+The structural signature matches the trajectory result (CV 3.0% vs 2.8%; drift and
+knn_keep inside the working-model bands), across different topology, boundary conditions,
+density and a 2.4x larger cloud. KG is not defined here (the primitive presumes a
+periodic domain) and no solver validation exists for this scene. Reproduces the July
+report exactly (nn 0.00757 -> 0.01172, ill 96.15 -> 85.11); arrays kept at
+`artifacts/inference/experiments/obstruction/runs/scored_2026-08-10/`.
+
 Caveat: model12's 7.2% edge over GNS at *best* settings sits inside the ±10% seed spread,
 so "model12 >= GNS" is solid while "model12 > GNS at best settings" would need 3 seeds.
 The production-settings gap (90%) is far outside it and stands.

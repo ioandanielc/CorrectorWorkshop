@@ -10,6 +10,19 @@ interrupt must not depend on it — or on conversation history.
 
 ## Observations log (newest first — read this for "what do we know")
 
+### 2026-08-10 22:30 — obstruction scene scored: the structural signature transfers
+Re-ran the seeded obstruction experiment (reproduces the July report exactly: nn
+0.00757 -> 0.01172, ill 96.15 -> 85.11) and scored it with the current metrics:
+**nn CV 35.6% -> 3.0%, knn_keep 0.639, drift 5.8%** — the same signature as the periodic
+trajectory (CV 2.8%, drift 2–9% band), in a bounded non-periodic domain with an obstacle,
+at 2.4x the particle count and 11.7x coordinate scale. KG not computed (the primitive
+presumes a periodic box). Arrays saved this time
+(`obstruction/runs/scored_2026-08-10/`) — the July run had kept only report.txt.
+
+This converts "one deployment scenario" into "two scenarios, same structural signature";
+added to the experiments-section draft as §4.2 Table 2 and the limitations bullet was
+updated accordingly.
+
 ### 2026-08-10 21:50 — ALL RUNS COMPLETE. Final bridge results, and a prediction that failed
 - **`noperiod` is 2/3 collapse, NOT 3/3.** Seed 2 trained (49.0% viol_red, |KG| 0.0606).
   An hour ago I predicted 3/3 on the reasoning that without minimum image the wrap-seam
