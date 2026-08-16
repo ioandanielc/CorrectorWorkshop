@@ -1,0 +1,146 @@
+% References for the workshop paper. Verification status per entry is tracked in
+% RELATED_WORK.md — entries marked [web-verified] had venue/volume/authors checked
+% against the publisher or arXiv on 2026-08-10; [standard] are canonical entries
+% whose page numbers should be double-checked at camera-ready.
+
+% ── SPH particle regularity (classical, solver-coupled) ─────────────────────
+
+@article{morris1997modeling,          % [web-verified] JCP 136:214-226
+  author  = {Morris, Joseph P. and Fox, Patrick J. and Zhu, Yi},
+  title   = {Modeling Low {R}eynolds Number Incompressible Flows Using {SPH}},
+  journal = {Journal of Computational Physics},
+  volume  = {136},
+  number  = {1},
+  pages   = {214--226},
+  year    = {1997}
+}
+
+@article{xu2009accuracy,              % [standard] note: Laurence, NOT Rogers
+  author  = {Xu, Rui and Stansby, Peter and Laurence, Dominique},
+  title   = {Accuracy and stability in incompressible {SPH} ({ISPH}) based on the projection method and a new approach},
+  journal = {Journal of Computational Physics},
+  volume  = {228},
+  number  = {18},
+  pages   = {6703--6725},
+  year    = {2009}
+}
+
+@article{lind2012incompressible,      % [standard]
+  author  = {Lind, Steven J. and Xu, Rui and Stansby, Peter K. and Rogers, Benedict D.},
+  title   = {Incompressible smoothed particle hydrodynamics for free-surface flows: A generalised diffusion-based algorithm for stability and validations for impulsive flows and propagating waves},
+  journal = {Journal of Computational Physics},
+  volume  = {231},
+  number  = {4},
+  pages   = {1499--1523},
+  year    = {2012}
+}
+
+@article{adami2013transport,          % [web-verified] JCP 241:292-307
+  author  = {Adami, Stefan and Hu, Xiangyu Y. and Adams, Nikolaus A.},
+  title   = {A transport-velocity formulation for smoothed particle hydrodynamics},
+  journal = {Journal of Computational Physics},
+  volume  = {241},
+  pages   = {292--307},
+  year    = {2013}
+}
+
+@article{colagrossi2012particle,      % [standard] CPC 183
+  author  = {Colagrossi, Andrea and Bouscasse, Benjamin and Antuono, Matteo and Marrone, Salvatore},
+  title   = {Particle packing algorithm for {SPH} schemes},
+  journal = {Computer Physics Communications},
+  volume  = {183},
+  number  = {8},
+  pages   = {1641--1653},
+  year    = {2012}
+}
+
+@article{diehl2015generating,         % [web-verified via arXiv 1211.0525]
+  author  = {Diehl, Steven and Rockefeller, Gabriel and Fryer, Christopher L. and Riethmiller, David and Statler, Thomas S.},
+  title   = {Generating Optimal Initial Conditions for Smoothed Particle Hydrodynamics Simulations},
+  journal = {Publications of the Astronomical Society of Australia},
+  volume  = {32},
+  pages   = {e048},
+  year    = {2015}
+}
+
+% ── Physics-informed learning ───────────────────────────────────────────────
+
+@article{raissi2019physics,           % [web-verified] JCP 378:686-707
+  author  = {Raissi, Maziar and Perdikaris, Paris and Karniadakis, George E.},
+  title   = {Physics-informed neural networks: A deep learning framework for solving forward and inverse problems involving nonlinear partial differential equations},
+  journal = {Journal of Computational Physics},
+  volume  = {378},
+  pages   = {686--707},
+  year    = {2019}
+}
+
+% ── Learned particle / mesh simulation ──────────────────────────────────────
+
+@inproceedings{sanchezgonzalez2020learning,   % [web-verified] PMLR 119
+  author    = {Sanchez-Gonzalez, Alvaro and Godwin, Jonathan and Pfaff, Tobias and Ying, Rex and Leskovec, Jure and Battaglia, Peter W.},
+  title     = {Learning to Simulate Complex Physics with Graph Networks},
+  booktitle = {Proceedings of the 37th International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {119},
+  pages     = {8459--8468},
+  year      = {2020}
+}
+
+@inproceedings{pfaff2021learning,     % [web-verified] ICLR 2021
+  author    = {Pfaff, Tobias and Fortunato, Meire and Sanchez-Gonzalez, Alvaro and Battaglia, Peter W.},
+  title     = {Learning Mesh-Based Simulation with Graph Networks},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2021}
+}
+
+@inproceedings{toshev2024neural,      % [web-verified] PMLR 235:48428-48452
+  author    = {Toshev, Artur P. and Erbesdobler, Jonas A. and Adams, Nikolaus A. and Brandstetter, Johannes},
+  title     = {Neural {SPH}: Improved Neural Modeling of {L}agrangian Fluid Dynamics},
+  booktitle = {Proceedings of the 41st International Conference on Machine Learning (ICML)},
+  series    = {PMLR},
+  volume    = {235},
+  pages     = {48428--48452},
+  year      = {2024}
+}
+
+@article{winchenbach2025diffsph,      % [web-verified] arXiv 2507.21684; JCP article in press (S0021999126001191)
+  author  = {Winchenbach, Rene and Thuerey, Nils},
+  title   = {diff{SPH}: Differentiable Smoothed Particle Hydrodynamics for Adjoint Optimization and Machine Learning},
+  journal = {arXiv preprint arXiv:2507.21684; Journal of Computational Physics, in press},
+  year    = {2025}
+}
+
+% ── Point-cloud architectures (baselines) ───────────────────────────────────
+
+@inproceedings{qi2017pointnet,        % [web-verified] CVPR 2017
+  author    = {Qi, Charles R. and Su, Hao and Mo, Kaichun and Guibas, Leonidas J.},
+  title     = {Point{N}et: Deep Learning on Point Sets for 3{D} Classification and Segmentation},
+  booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)},
+  year      = {2017}
+}
+
+@inproceedings{qi2017pointnetpp,      % [web-verified] NeurIPS 2017
+  author    = {Qi, Charles R. and Yi, Li and Su, Hao and Guibas, Leonidas J.},
+  title     = {Point{N}et++: Deep Hierarchical Feature Learning on Point Sets in a Metric Space},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2017}
+}
+
+@article{wang2019dynamic,             % [web-verified] ACM TOG 38(5)
+  author  = {Wang, Yue and Sun, Yongbin and Liu, Ziwei and Sarma, Sanjay E. and Bronstein, Michael M. and Solomon, Justin M.},
+  title   = {Dynamic Graph {CNN} for Learning on Point Clouds},
+  journal = {ACM Transactions on Graphics},
+  volume  = {38},
+  number  = {5},
+  pages   = {146:1--146:12},
+  year    = {2019}
+}
+
+% ── Sampling ────────────────────────────────────────────────────────────────
+
+@inproceedings{bridson2007fast,       % [standard]
+  author    = {Bridson, Robert},
+  title     = {Fast {P}oisson Disk Sampling in Arbitrary Dimensions},
+  booktitle = {ACM SIGGRAPH 2007 Sketches},
+  year      = {2007}
+}
