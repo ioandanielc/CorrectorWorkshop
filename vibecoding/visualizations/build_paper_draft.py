@@ -12,6 +12,8 @@ OUT = Path(r'C:\Users\ioand\AppData\Local\Temp\claude\e--VSCode-CorrectorWorksho
 L1, L2, L3 = '&lambda;<sub>1</sub>', '&lambda;<sub>2</sub>', '&lambda;<sub>3</sub>'
 BIB = ((ROOT / 'paper/references.bib').read_text(encoding='utf-8')
        .replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
+CHECKLIST = ((ROOT / 'paper/WRITING_CHECKLIST.txt').read_text(encoding='utf-8')
+             .replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'))
 
 
 def uri(name):
@@ -789,6 +791,15 @@ or arXiv on 2026-08-10, <code>[standard]</code> = canonical, re-check pages at
 camera-ready.</p>
 <div class="tablewrap"><pre style="font-size:11.5px;line-height:1.5;background:var(--surface);
 border:1px solid var(--line);border-radius:4px;padding:14px 18px;overflow-x:auto">{BIB}</pre></div>
+
+<h3>A.9 Writing checklist (verbatim)</h3>
+{chips('main')}
+<p class="muted" style="font-size:14px">Tickable copy of
+<code>paper/WRITING_CHECKLIST.txt</code> (commit 541dd2d) &mdash; every talking point,
+table row, figure and guard rail, for use while writing. The GUARD RAILS block at the
+end lists retracted claims that must not re-enter the paper.</p>
+<div class="tablewrap"><pre style="font-size:11.5px;line-height:1.55;background:var(--surface);
+border:1px solid var(--line);border-radius:4px;padding:14px 18px;overflow-x:auto">{CHECKLIST}</pre></div>
 
 <footer>
   Sources: <code>paper/results.csv</code> (73 scored arms, one scoring tool) &middot;
